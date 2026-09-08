@@ -13,26 +13,26 @@
 <style>
 body{font-family:Arial,sans-serif;margin:0;background:#f7f7f7}
 .header{background:#16a34a;color:white;padding:15px;display:flex;align-items:center}
-.header img{width:40px;height:40px;margin-right:10px}
 .tabs{display:flex;background:white;border-bottom:1px solid #ddd}
-.tab{padding:15px 20px;cursor:pointer;border-bottom:3px solid transparent}
+.tab{padding:15px;cursor:pointer;border-bottom:3px solid transparent;flex:1;text-align:center}
 .tab.active{border-bottom:3px solid #16a34a;color:#16a34a;font-weight:bold}
 .container{padding:20px}
 .card{background:white;padding:20px;border-radius:10px;margin-bottom:15px;box-shadow:0 1px 3px #ccc}
 .stat{display:flex;align-items:center;margin:15px 0}
 .stat-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-right:15px;font-size:20px}
-.btn-approve{background:#16a34a;color:white;border:0;padding:8px 15px;border-radius:5px;cursor:pointer}
-.btn-reject{background:#ef4444;color:white;border:0;padding:8px 15px;border-radius:5px;cursor:pointer}
+.btn-group{display:flex;gap:10px;margin:15px 0}
+.btn-filter{padding:8px 15px;border:1px solid #16a34a;background:white;color:#16a34a;border-radius:5px;cursor:pointer}
+.btn-filter.active{background:#16a34a;color:white}
+.btn-success{background:#16a34a;color:white;border:0;padding:8px 15px;border-radius:5px;cursor:pointer}
 .debug{background:#fffbeb;color:#b45309;padding:10px;border-radius:5px;font-family:monospace;font-size:12px;margin:15px 0}
+.order-card{border-left:4px solid #f59e0b}
+.order-card.delivered{border-left:4px solid #16a34a}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <img src="https://img.icons8.com/ios-filled/50/ffffff/shopping-cart.png"/>
-  <div>
-    <div style="font-size:18px;font-weight:bold">Lokoja Grocery Mall</div>
-  </div>
+  <div style="font-size:18px;font-weight:bold">🛒 Lokoja Grocery Mall</div>
 </div>
 
 <div style="padding:20px">
@@ -49,64 +49,116 @@ body{font-family:Arial,sans-serif;margin:0;background:#f7f7f7}
   <div class="tab active" onclick="showTab('overview')">📈 Overview</div>
   <div class="tab" onclick="showTab('vendors')">🏪 Vendors</div>
   <div class="tab" onclick="showTab('orders')">📦 Orders</div>
+  <div class="tab" onclick="showTab('delivery')">🚚 Delivery</div>
 </div>
 
 <div class="container">
   <div class="debug">DEBUG: Role=Admin | Email=admin@lokojamall.com</div>
 
+  <!-- 1. OVERVIEW WITH DAILY/WEEKLY/MONTHLY -->
   <div id="overview" class="tab-content">
-    <div class="card">
-      <div class="stat"><div class="stat-icon" style="background:#fef3c7">📦</div><div><div style="color:#666">Total Orders</div><div style="font-size:24px;font-weight:bold" id="totalOrders">0</div></div></div>
+    <div class="btn-group">
+      <button class="btn-filter active" onclick="filterSales('daily')">Daily</button>
+      <button class="btn-filter" onclick="filterSales('weekly')">Weekly</button>
+      <button class="btn-filter" onclick="filterSales('monthly')">Monthly</button>
     </div>
+    
     <div class="card">
-      <div class="stat"><div class="stat-icon" style="background:#dbeafe">🏪</div><div><div style="color:#666">Total Vendors</div><div style="font-size:24px;font-weight:bold" id="totalVendors">0</div></div></div>
+      <div class="stat"><div class="stat-icon" style="background:#d1fae5">📈</div>
+      <div><div style="color:#666" id="salesLabel">Today's Sales</div>
+      <div style="font-size:24px;font-weight:bold" id="totalSales">₦0</div></div></div>
     </div>
-    <div class="card">
-      <div class="stat"><div class="stat-icon" style="background:#d1fae5">📈</div><div><div style="color:#666">Total Sales</div><div style="font-size:24px;font-weight:bold">₦0</div></div></div>
-    </div>
-    <div class="card">
-      <div class="stat"><div class="stat-icon" style="background:#fee2e2">⏳</div><div><div style="color:#666">Pending Vendors</div><div style="font-size:24px;font-weight:bold" id="pendingVendors">0</div></div></div>
-    </div>
+    <div class="card"><div class="stat"><div class="stat-icon" style="background:#fef3c7">📦</div><div><div style="color:#666">Total Orders</div><div style="font-size:24px;font-weight:bold" id="totalOrders">0</div></div></div></div>
+    <div class="card"><div class="stat"><div class="stat-icon" style="background:#dbeafe">🏪</div><div><div style="color:#666">Total Vendors</div><div style="font-size:24px;font-weight:bold" id="totalVendors">0</div></div></div></div>
+    <div class="card"><div class="stat"><div class="stat-icon" style="background:#fee2e2">⏳</div><div><div style="color:#666">Pending Vendors</div><div style="font-size:24px;font-weight:bold" id="pendingVendors">0</div></div></div></div>
   </div>
 
+  <!-- 2. VENDORS TAB -->
   <div id="vendors" class="tab-content" style="display:none">
     <h3>Vendor Approval</h3>
     <div id="vendorList">No pending vendors</div>
   </div>
 
+  <!-- 3. ORDERS TAB -->
   <div id="orders" class="tab-content" style="display:none">
     <h3>All Orders</h3>
-    <p>No orders yet</p>
+    <div id="ordersList">No orders yet</div>
+  </div>
+
+  <!-- 4. NEW DELIVERY AGENTS TAB -->
+  <div id="delivery" class="tab-content" style="display:none">
+    <h3>Delivery Agents Activity</h3>
+    <div id="deliveryList">No active deliveries</div>
   </div>
 </div>
 
 <script>
+let salesFilter = 'daily';
+
 function showTab(tab){
   document.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(tab).style.display='block';
   event.target.classList.add('active');
   if(tab==='vendors') loadVendors();
+  if(tab==='orders') loadOrders();
+  if(tab==='delivery') loadDelivery();
 }
 
+// 1. DAILY WEEKLY MONTHLY SALES
+function filterSales(type){
+  salesFilter = type;
+  document.querySelectorAll('.btn-filter').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  let label = type==='daily'? "Today's Sales" : type==='weekly'? "This Week's Sales" : "This Month's Sales";
+  document.getElementById('salesLabel').innerText = label;
+  
+  // For now it's ₦0. Later we will connect to real orders
+  document.getElementById('totalSales').innerText = '₦0';
+}
+
+// 2. VENDOR APPROVAL
 function loadVendors(){
   let vendors = JSON.parse(localStorage.getItem('pendingVendors') || '[]');
-  document.getElementById('pendingVendors').innerText = vendors.length;
+  document.getElementById('pendingVendors').innerText = vendors.filter(v=>v.status==='pending').length;
   document.getElementById('totalVendors').innerText = vendors.filter(v=>v.status==='approved').length;
   
-  if(vendors.length === 0){
-    document.getElementById('vendorList').innerHTML = 'No pending vendors';
-    return;
-  }
+  if(vendors.length === 0){document.getElementById('vendorList').innerHTML = 'No pending vendors'; return;}
   document.getElementById('vendorList').innerHTML = vendors.map((v,i)=>`
     <div class="card">
-      <b>${v.name}</b><br>
-      Email: ${v.email}<br>
-      Phone: ${v.phone}<br><br>
-      <button class="btn-approve" onclick="approveVendor(${i})">Approve</button>
-      <button class="btn-reject" onclick="rejectVendor(${i})">Reject</button>
-    </div>
-  `).join('');
+      <b>${v.name}</b><br>Email: ${v.email}<br>Phone: ${v.phone}<br>
+      <button class="btn-success" onclick="approveVendor(${i})">Approve</button>
+    </div>`).join('');
+}
+
+// 3. ORDERS + 4. DELIVERY AGENTS
+function loadOrders(){
+  let orders = JSON.parse(localStorage.getItem('orders') || '[]');
+  document.getElementById('totalOrders').innerText = orders.length;
+  if(orders.length === 0){document.getElementById('ordersList').innerHTML = 'No orders yet'; return;}
+  document.getElementById('ordersList').innerHTML = orders.map(o=>`
+    <div class="card order-card ${o.status}">
+      <b>Order #${o.id}</b> - ₦${o.total}<br>
+      Customer: ${o.customer}<br>
+      Address: ${o.address}<br>
+      Status: <b>${o.status}</b>
+    </div>`).join('');
+}
+
+function loadDelivery(){
+  let orders = JSON.parse(localStorage.getItem('orders') || '[]').filter(o=>o.status==='out_for_delivery');
+  if(orders.length === 0){document.getElementById('deliveryList').innerHTML = 'No active deliveries'; return;}
+  document.getElementById('deliveryList').innerHTML = orders.map(o=>`
+    <div class="card">
+      <b>🚚 Order #${o.id}</b><br>
+      <b>Agent:</b> ${o.agent || 'Not Assigned'}<br>
+      <b>Customer:</b> ${o.customer}<br>
+      <b>Phone:</b> ${o.phone}<br>
+      <b>Address:</b> ${o.address}<br>
+      <b>Total:</b> ₦${o.total}<br><br>
+      <small>Waiting for customer to tap "Delivered"</small>
+    </div>`).join('');
 }
 
 function approveVendor(i){
@@ -117,15 +169,7 @@ function approveVendor(i){
   loadVendors();
 }
 
-function rejectVendor(i){
-  let vendors = JSON.parse(localStorage.getItem('pendingVendors') || '[]');
-  vendors.splice(i,1);
-  localStorage.setItem('pendingVendors', JSON.stringify(vendors));
-  alert('Vendor Rejected!');
-  loadVendors();
-}
-
-loadVendors();
+loadVendors(); loadOrders();
 </script>
 </body>
 </html>
