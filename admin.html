@@ -13,11 +13,11 @@
 <style>
 body{font-family:Arial,sans-serif;margin:0;background:#f7f7f7}
 .header{background:#16a34a;color:white;padding:15px;display:flex;align-items:center}
-.header img{width:35px;height:35px;margin-right:10px}
+.header img{width:35px;height:35px;margin-right:10px;border-radius:5px;object-fit:contain}
 .tabs{display:flex;background:white;border-bottom:1px solid #ddd}
-.tab{padding:15px;cursor:pointer;border-bottom:3px solid transparent;flex:1;text-align:center}
+.tab{padding:15px;cursor:pointer;border-bottom:3px solid transparent;flex:1;text-align:center;font-size:14px}
 .tab.active{border-bottom:3px solid #16a34a;color:#16a34a;font-weight:bold}
-.container{padding:20px}
+.container{padding:20px;min-height:60vh}
 .card{background:white;padding:20px;border-radius:10px;margin-bottom:15px;box-shadow:0 1px 3px #ccc}
 .stat{display:flex;align-items:center;margin:15px 0}
 .stat-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-right:15px;font-size:20px}
@@ -26,12 +26,11 @@ body{font-family:Arial,sans-serif;margin:0;background:#f7f7f7}
 .btn-filter.active{background:#16a34a;color:white}
 .btn-success{background:#16a34a;color:white;border:0;padding:8px 15px;border-radius:5px;cursor:pointer}
 .debug{background:#fffbeb;color:#b45309;padding:10px;border-radius:5px;font-family:monospace;font-size:12px;margin:15px 0}
-.order-card{border-left:4px solid #f59e0b}
-.order-card.delivered{border-left:4px solid #16a34a}
-/* FOOTER */
+
+/* FOOTER - BLACK WITH WHITE TEXT */
 .footer{background:#111;color:#ccc;padding:30px 20px;margin-top:40px}
-.footer h4{color:white;margin-bottom:10px}
-.footer a{color:#ccc;text-decoration:none;display:block;margin:5px 0}
+.footer h4{color:white;margin-bottom:10px;font-size:16px}
+.footer a{color:#ccc;text-decoration:none;display:block;margin:8px 0}
 .footer a:hover{color:white}
 .footer-bottom{text-align:center;padding:15px;border-top:1px solid #333;color:#999;font-size:12px}
 </style>
@@ -39,7 +38,7 @@ body{font-family:Arial,sans-serif;margin:0;background:#f7f7f7}
 <body>
 
 <div class="header">
-  <img src="https://img.icons8.com/ios-filled/50/ffffff/shopping-cart.png"/>
+  <img src="./logo.png"/>
   <div style="font-size:18px;font-weight:bold">Lokoja Grocery Mall</div>
 </div>
 
@@ -70,7 +69,7 @@ body{font-family:Arial,sans-serif;margin:0;background:#f7f7f7}
       <button class="btn-filter" onclick="filterSales('monthly',this)">Monthly</button>
     </div>
     <div class="card"><div class="stat"><div class="stat-icon" style="background:#d1fae5">📈</div><div><div style="color:#666" id="salesLabel">Today's Sales</div><div style="font-size:24px;font-weight:bold" id="totalSales">₦0</div></div></div></div>
-    <div class="card"><div class="stat"><div class="stat-icon" style="background:#fef3c7">📦</div><div><div style="color:#666">Total Orders</div><div style="font-size:24px;font-weight:bold" id="totalOrders">0</div></div></div></div>
+    <div class="card"><div class="stat"><div class="stat-icon" style="background:#fef3c7">📦</div><div><div style="color:#666">Total Orders</div><div style="font-size:24px;font-weight:bold" id="totalOrders">0</div></div></div>
     <div class="card"><div class="stat"><div class="stat-icon" style="background:#dbeafe">🏪</div><div><div style="color:#666">Total Vendors</div><div style="font-size:24px;font-weight:bold" id="totalVendors">0</div></div></div></div>
     <div class="card"><div class="stat"><div class="stat-icon" style="background:#fee2e2">⏳</div><div><div style="color:#666">Pending Vendors</div><div style="font-size:24px;font-weight:bold" id="pendingVendors">0</div></div></div></div>
   </div>
@@ -82,9 +81,9 @@ body{font-family:Arial,sans-serif;margin:0;background:#f7f7f7}
 
 <!-- FOOTER -->
 <div class="footer">
-  <div style="display:flex;flex-wrap:wrap;gap:30px">
-    <div style="flex:1;min-width:200px">
-      <img src="https://img.icons8.com/ios-filled/50/16a34a/shopping-cart.png" style="width:30px;vertical-align:middle"/>
+  <div style="display:flex;flex-wrap:wrap;gap:30px;max-width:1200px;margin:auto">
+    <div style="flex:1;min-width:250px">
+      <img src="./logo.png" style="width:30px;vertical-align:middle;border-radius:5px"/>
       <b style="color:white;font-size:18px"> Lokoja Grocery Mall</b>
       <p>Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State. Fresh produce, meat, foodstuff and more — delivered to your door.</p>
     </div>
@@ -142,7 +141,7 @@ function loadOrders(){
   let orders = JSON.parse(localStorage.getItem('orders') || '[]');
   document.getElementById('totalOrders').innerText = orders.length;
   if(orders.length === 0){document.getElementById('ordersList').innerHTML = 'No orders yet'; return;}
-  document.getElementById('ordersList').innerHTML = orders.map(o=>`<div class="card order-card ${o.status}"><b>Order #${o.id}</b> - ₦${o.total}<br>Customer: ${o.customer}<br>Address: ${o.address}<br>Status: <b>${o.status}</b></div>`).join('');
+  document.getElementById('ordersList').innerHTML = orders.map(o=>`<div class="card"><b>Order #${o.id}</b> - ₦${o.total}<br>Customer: ${o.customer}<br>Address: ${o.address}<br>Status: <b>${o.status}</b></div>`).join('');
 }
 function loadDelivery(){
   let orders = JSON.parse(localStorage.getItem('orders') || '[]').filter(o=>o.status==='out_for_delivery');
