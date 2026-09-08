@@ -84,6 +84,32 @@ function approveAgent(id){
 
 renderAgents();
 </script>
+<script type="module">
+import { auth, db, createUserWithEmailAndPassword, collection, addDoc, serverTimestamp } from './firebase.js';
 
-</body>
-</html>
+const form = document.querySelector('form');
+if(form){
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const role = document.querySelector('input[name="role"]:checked').value;
+    const name = document.getElementById('name').value;
+
+    try {
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      await addDoc(collection(db, "users"), {
+        uid: userCred.user.uid,
+        name,
+        email,
+        role,
+        createdAt: serverTimestamp()
+      });
+      alert('Account created successfully! You are now a ' + role);
+      window.location.href = 'dashboard.html';
+    } catch(err) {
+      alert('Error: ' + err.message);
+    }
+  });
+}
+</script>
