@@ -20,6 +20,20 @@
 
   <!-- PENDING DELIVERY AGENTS -->
   <div class="form-card">
+    <!-- VENDOR SIGNUP FORM -->
+<div style="max-width:600px; margin:20px auto; padding:20px; background:white; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+  <h2 style="color:green; text-align:center;">Vendor Registration</h2>
+  <form id="vendorForm">
+    <input type="text" id="storeName" placeholder="Store Name" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
+    <input type="text" id="ownerName" placeholder="Owner Name" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
+    <input type="email" id="email" placeholder="Email" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
+    <input type="password" id="password" placeholder="Password" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
+    <input type="tel" id="phone" placeholder="Phone Number" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
+    <button type="submit" style="width:100%; padding:12px; background:green; color:white; border:none; border-radius:5px; font-weight:bold;">Create Account</button>
+  </form>
+  <p id="message" style="text-align:center; margin-top:10px; font-weight:bold;"></p>
+</div>
+<hr style="margin:30px 0;">
     <h3>Pending Delivery Agents</h3>
     <div id="pendingDeliveryList"></div>
   </div>
@@ -85,31 +99,48 @@ function approveAgent(id){
 renderAgents();
 </script>
 <script type="module">
-import { auth, db, createUserWithEmailAndPassword, collection, addDoc, serverTimestamp } from './firebase.js';
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const form = document.querySelector('form');
-if(form){
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const role = document.querySelector('input[name="role"]:checked').value;
-    const name = document.getElementById('name').value;
+  const firebaseConfig = {
+    apiKey: "AIzaSyChrVZh6NUm7N5W7FMXnxztmU7NXRYrVa0",
+    authDomain: "lokoja-grocery-mall.firebaseapp.com",
+    projectId: "lokoja-grocery-mall",
+    storageBucket: "lokoja-grocery-mall.firebasestorage.app",
+    messagingSenderId: "642467126038",
+    appId: "1:642467126038:web:420d7c0e33119b7fa24e37"
+  };
 
-    try {
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
-      await addDoc(collection(db, "users"), {
-        uid: userCred.user.uid,
-        name,
-        email,
-        role,
-        createdAt: serverTimestamp()
-      });
-      alert('Account created successfully! You are now a ' + role);
-      window.location.href = 'dashboard.html';
-    } catch(err) {
-      alert('Error: ' + err.message);
-    }
-  });
-}
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const form = document.querySelector('form');
+  if(form){
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const role = document.querySelector('select[name="role"]').value;
+      const name = document.getElementById('name').value;
+
+      try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, "users", userCred.user.uid), {
+          uid: userCred.user.uid,
+          name,
+          email,
+          role,
+          status: "pending",
+          createdAt: serverTimestamp()
+        });
+        alert('Account created successfully! Waiting for admin approval');
+        window.location.href = 'dashboard.html';
+      } catch(err) {
+        alert('Error: ' + err.message);
+      }
+    });
+  }
+</script>
 </script>
