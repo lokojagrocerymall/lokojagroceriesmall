@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Browse Products - LGM</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="logo"><img src="logo.png" alt="LGM"></div>
+    <span>Lokoja Grocery Mall</span>
+  </div>
+  <div class="header-icons">
+    <a href="cart.html">🛒</a>
+    <span onclick="toggleMenu()">☰</span>
+  </div>
+</header>
+
+<div id="sideMenu" class="side-menu">
+  <a href="index.html">Home</a>
+  <a href="browse.html">Browse</a>
+  <a href="vendors.html">Vendors</a>
+  <a href="login.html" class="btn-primary" style="margin:15px">Sign In / Sign Up</a>
+</div>
+
+<main class="container">
+  <!-- SEARCH + FILTER BUTTON -->
+  <div style="display:flex;gap:10px;margin:15px 0">
+    <div style="flex:1;position:relative">
+      <input type="text" placeholder="Search products..." style="width:100%;padding:12px 12px 12px 40px;border:1px solid #ddd;border-radius:10px">
+      <span style="position:absolute;left:12px;top:12px">🔍</span>
+    </div>
+    <button onclick="toggleFilters()" style="padding:12px 16px;background:#f0fdf4;border:1px solid #16a34a;color:#16a34a;border-radius:10px;font-weight:700">⚙️ Filters</button>
+  </div>
+
+  <!-- CATEGORY TABS -->
+  <div class="category-tabs">
+    <button class="tab active">All</button>
+    <button class="tab">Fruits & Vegetables</button>
+    <button class="tab">Meat & Fish</button>
+    <button class="tab">Foodstuff</button>
+    <button class="tab">Drinks</button>
+    <button class="tab">Household</button>
+    <button class="tab">Baby</button>
+  </div>
+
+  <!-- SORT + COUNT -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:15px 0">
+    <span style="color:#666;font-size:13px">0 products found</span>
+    <select id="sortSelect" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px">
+      <option>Newest</option>
+      <option>Price: Low to High</option>
+      <option>Price: High to Low</option>
+      <option>Top Rated</option>
+    </select>
+  </div>
+
+  <!-- FILTER DROPDOWN -->
+  <div id="filterPanel" class="filter-panel">
+    <div style="display:flex;justify-content:space-between;margin-bottom:15px">
+      <h4>Filters</h4>
+      <span onclick="clearFilters()" style="color:#16a34a;font-size:13px;cursor:pointer">Clear all</span>
+    </div>
+    
+    <h5>PRICE RANGE</h5>
+    <div style="display:flex;gap:8px;margin-bottom:15px">
+      <input type="number" placeholder="Min" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px">
+      <span>—</span>
+      <input type="number" placeholder="Max" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px">
+    </div>
+
+    <h5>LOCATION IN LOKOJA</h5>
+    <div class="location-list">
+      <label><input type="checkbox"> Jimgbe</label>
+      <label><input type="checkbox"> Ganaja</label>
+      <label><input type="checkbox"> Ibaji Qtrs</label>
+      <label><input type="checkbox"> Gadumo/Anebo Qtrs</label>
+      <label><input type="checkbox"> Old Poly Qtrs</label>
+      <label><input type="checkbox"> Kabba Junction</label>
+      <label><input type="checkbox"> Zango</label>
+      <label><input type="checkbox"> Barracks/Shetima/Otokiti</label>
+      <label><input type="checkbox"> Zone 8</label>
+      <label><input type="checkbox"> Phase 2</label>
+      <label><input type="checkbox"> Phase 1</label>
+      <label><input type="checkbox"> Ganaja Junction</label>
+      <label><input type="checkbox"> Specialist Hospital/Deeper Life</label>
+      <label><input type="checkbox"> Government House/Zenith Bank</label>
+      <label><input type="checkbox"> Adankolo Newlayout</label>
+      <label><input type="checkbox"> Hydro Junction</label>
+      <label><input type="checkbox"> Adankolo Junction/Adankolo</label>
+      <label><input type="checkbox"> Post Office</label>
+      <label><input type="checkbox"> NUJ</label>
+      <label><input type="checkbox"> NEPA Office/Baptist Church</label>
+      <label><input type="checkbox"> Crusher</label>
+      <label><input type="checkbox"> FUL</label>
+      <label><input type="checkbox"> Felele</label>
+      <label><input type="checkbox"> Poly</label>
+      <label><input type="checkbox"> Nataco</label>
+      <label><input type="checkbox"> Int'l Market</label>
+      <label><input type="checkbox"> Como</label>
+      <label><input type="checkbox"> Kabawa</label>
+      <label><input type="checkbox"> Maigeri Palace</label>
+      <label><input type="checkbox"> Karaworo</label>
+      <label><input type="checkbox"> Old Market</label>
+      <label><input type="checkbox"> Kpata Market</label>
+      <label><input type="checkbox"> Marine</label>
+      <label><input type="checkbox"> Kogi Traveler</label>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:40px 0;color:#888">
+    <div style="font-size:40px">🏪</div>
+    <p>No products yet. Add products from vendor dashboard</p>
+  </div>
+</main>
+
+<footer class="app-footer-dark">
+  <div class="container">
+    <div class="footer-brand">
+      <div class="logo"><img src="logo.png" alt="LGM"></div>
+      <span>Lokoja Grocery Mall</span>
+    </div>
+    <p>Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State.</p>
+    <div class="footer-bottom">
+      <p>© 2026 Lokoja Grocery Mall. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+function toggleMenu(){document.getElementById('sideMenu').classList.toggle('active')}
+function toggleFilters(){document.getElementById('filterPanel').classList.toggle('active')}
+function clearFilters(){document.querySelectorAll('.location-list input').forEach(i=>i.checked=false)}
+</script>
+</body>
+</html>
