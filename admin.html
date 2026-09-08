@@ -1,102 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard - LGM</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-<header class="app-header">
-  <div class="brand">
-    <div class="logo">LGM</div>
-    <span>Admin Dashboard</span>
-  </div>
-</header>
-
-<main class="container">
-  <h2 style="margin-bottom:20px">Pending Approvals</h2>
-
-  <!-- PENDING DELIVERY AGENTS -->
-  <div class="form-card">
-    <!-- VENDOR SIGNUP FORM -->
-<div style="max-width:600px; margin:20px auto; padding:20px; background:white; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-  <h2 style="color:green; text-align:center;">Vendor Registration</h2>
-  <form id="vendorForm">
-    <input type="text" id="storeName" placeholder="Store Name" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
-    <input type="text" id="ownerName" placeholder="Owner Name" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
-    <input type="email" id="email" placeholder="Email" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
-    <input type="password" id="password" placeholder="Password" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
-    <input type="tel" id="phone" placeholder="Phone Number" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
-    <button type="submit" style="width:100%; padding:12px; background:green; color:white; border:none; border-radius:5px; font-weight:bold;">Create Account</button>
-  </form>
-  <p id="message" style="text-align:center; margin-top:10px; font-weight:bold;"></p>
-</div>
-<hr style="margin:30px 0;">
-    <h3>Pending Delivery Agents</h3>
-    <div id="pendingDeliveryList"></div>
-  </div>
-
-  <!-- PENDING VENDORS -->
-  <div class="form-card">
-    <h3>Pending Vendors</h3>
-    <p style="font-size:13px;color:#666">Vendor list will appear here</p>
-  </div>
-
-</main>
-
-<footer class="app-footer">© 2026 Lokoja Grocery Mall Admin</footer>
-
-<script>
-// SAMPLE DATA - Replace this with your real data from database
-const pendingAgents = [
-  {id:1, name:"Ahmad Musa", phone:"08031234567", driverrider:"yes", nin:"12345678901", status:"pending"},
-  {id:2, name:"John Doe", phone:"08099887766", driverrider:"no", nin:"98765432109", status:"pending"},
-  {id:3, name:"Fatima Bello", phone:"08123456789", driverrider:"yes", nin:"11223344556", status:"pending"}
-];
-
-function renderAgents(){
-  const list = document.getElementById('pendingDeliveryList');
-  list.innerHTML = '';
-  
-  pendingAgents.forEach(agent => {
-    const isRejected = agent.driverrider === 'no';
-    const cardColor = isRejected ? '#fee2e2' : '#f0fdf4';
-    const borderColor = isRejected ? '#ef4444' : '#16a34a';
-    
-    list.innerHTML += `
-      <div style="background:${cardColor};border:2px solid ${borderColor};border-radius:12px;padding:15px;margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-          <div>
-            <h4 style="margin:0;font-size:15px">${agent.name}</h4>
-            <p style="margin:4px 0;font-size:12px;color:#666">Phone: ${agent.phone} | NIN: ${agent.nin}</p>
-            <p style="margin:4px 0;font-size:12px">
-              Driver & Rider: 
-              <b style="color:${isRejected ? '#dc2626' : '#16a34a'}">
-                ${agent.driverrider === 'yes' ? 'YES ✓' : 'NO ✗ AUTO-REJECT'}
-              </b>
-            </p>
-          </div>
-          <div>
-            ${isRejected 
-              ? `<button disabled style="padding:8px 12px;background:#ccc;color:white;border:none;border-radius:8px">Rejected</button>`
-              : `<button onclick="approveAgent(${agent.id})" style="padding:8px 12px;background:#16a34a;color:white;border:none;border-radius:8px;cursor:pointer">Approve</button>`
-            }
-          </div>
-        </div>
-        ${isRejected ? `<p style="font-size:11px;color:#dc2626;margin-top:8px">*Did not meet "Driver and Rider" requirement</p>` : ''}
-      </div>
-    `;
-  });
-}
-
-function approveAgent(id){
-  alert('Agent ' + id + ' Approved! Bank details field will now open for them.');
-  // Here you will update database: status = 'approved'
-}
-
-renderAgents();
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -115,19 +16,75 @@ renderAgents();
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  const form = document.querySelector('form');
+  // SAMPLE DATA - Delivery Agents
+  const pendingAgents = [
+    {id:1, name:"Ahmad Musa", phone:"08031234567", driverrider:"yes", nin:"12345678901", status:"pending"},
+    {id:2, name:"John Doe", phone:"08099887766", driverrider:"no", nin:"98765432109", status:"pending"},
+    {id:3, name:"Fatima Bello", phone:"08123456789", driverrider:"yes", nin:"11223344556", status:"pending"}
+  ];
+
+  function renderAgents(){
+    const list = document.getElementById('pendingDeliveryList');
+    list.innerHTML = '';
+    
+    pendingAgents.forEach(agent => {
+      const isRejected = agent.driverrider === 'no';
+      const cardColor = isRejected ? '#fee2e2' : '#f0fdf4';
+      const borderColor = isRejected ? '#ef4444' : '#16a34a';
+      
+      list.innerHTML += `
+        <div style="background:${cardColor};border:2px solid ${borderColor};border-radius:12px;padding:15px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <div>
+              <h4 style="margin:0;font-size:15px">${agent.name}</h4>
+              <p style="margin:4px 0;font-size:12px;color:#666">Phone: ${agent.phone} | NIN: ${agent.nin}</p>
+              <p style="margin:4px 0;font-size:12px">
+                Driver & Rider: 
+                <b style="color:${isRejected ? '#dc2626' : '#16a34a'}">
+                  ${agent.driverrider === 'yes' ? 'YES ✓' : 'NO ✗ AUTO-REJECT'}
+                </b>
+              </p>
+            </div>
+            <div>
+              ${isRejected 
+                ? `<button disabled style="padding:8px 12px;background:#ccc;color:white;border:none;border-radius:8px">Rejected</button>`
+                : `<button onclick="approveAgent(${agent.id})" style="padding:8px 12px;background:#16a34a;color:white;border:none;border-radius:8px;cursor:pointer">Approve</button>`
+              }
+            </div>
+          </div>
+          ${isRejected ? `<p style="font-size:11px;color:#dc2626;margin-top:8px">*Did not meet "Driver and Rider" requirement</p>` : ''}
+        </div>
+      `;
+    });
+  }
+
+  window.approveAgent = function(id){
+    alert('Agent ' + id + ' Approved! Bank details field will now open for them.');
+  }
+
+  renderAgents();
+
+  // VENDOR FORM SUBMIT - THIS IS THE FIX
   const form = document.getElementById('vendorForm');
-      e.preventDefault();
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const storeName = document.getElementById('storeName').value;
-      const ownerName = document.getElementById('ownerName').value;
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const phone = document.getElementById('phone').value;
-        await setDoc(doc(db, "users", userCred.user.uid), {
-          uid: userCred.user.uid,
-          await setDoc(doc(db, "vendors", userCred.user.uid), {
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); // STOPS THE WIPE
+
+    const storeName = document.getElementById('storeName').value;
+    const ownerName = document.getElementById('ownerName').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const phone = document.getElementById('phone').value;
+    const messageEl = document.getElementById('message');
+
+    try {
+      messageEl.innerHTML = "Creating account...";
+      
+      // 1. Create user in Firebase Auth
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // 2. Save vendor data to Firestore
+      await setDoc(doc(db, "vendors", userCred.user.uid), {
+        uid: userCred.user.uid,
         storeName,
         ownerName,
         email,
@@ -135,12 +92,15 @@ renderAgents();
         status: "pending",
         createdAt: serverTimestamp()
       });
-        document.getElementById('message').innerHTML = "✅ Account created! Waiting for admin approval";
+
+      messageEl.innerHTML = "✅ Account created! Waiting for admin approval";
+      messageEl.style.color = "green";
       form.reset();
-      } catch(err) {
-        alert('Error: ' + err.message);
-      }
-    });
-  }
-</script>
+      
+    } catch(err) {
+      messageEl.innerHTML = "❌ Error: " + err.message;
+      messageEl.style.color = "red";
+      console.error(err);
+    }
+  });
 </script>
