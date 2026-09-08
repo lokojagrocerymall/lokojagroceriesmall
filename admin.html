@@ -1,6 +1,6 @@
 <script>
   const pass = prompt("Enter Admin Password");
-  if(pass !== "KogiState2026"){
+  if(pass!== "KogiState2026"){
     alert("Wrong Password!");
     window.location.href = "index.html";
   }
@@ -8,60 +8,124 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Admin - Lokoja Grocery Mall</title>
+<title>Admin Panel - Lokoja Grocery Mall</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{font-family:sans-serif;padding:20px;background:#f5f5f5}
-.card{background:white;padding:20px;border-radius:10px;margin-bottom:20px;box-shadow:0 2px 5px #ccc}
-input{padding:10px;width:95%;margin:5px 0;border:1px solid #ddd;border-radius:5px}
-button{background:#4CAF50;color:white;border:0;padding:12px 20px;border-radius:5px;cursor:pointer;font-weight:bold}
-.product-item{border-bottom:1px solid #eee;padding:10px 0}
+body{font-family:Arial,sans-serif;margin:0;background:#f7f7f7}
+.header{background:#16a34a;color:white;padding:15px;display:flex;align-items:center}
+.header img{width:40px;height:40px;margin-right:10px}
+.tabs{display:flex;background:white;border-bottom:1px solid #ddd}
+.tab{padding:15px 20px;cursor:pointer;border-bottom:3px solid transparent}
+.tab.active{border-bottom:3px solid #16a34a;color:#16a34a;font-weight:bold}
+.container{padding:20px}
+.card{background:white;padding:20px;border-radius:10px;margin-bottom:15px;box-shadow:0 1px 3px #ccc}
+.stat{display:flex;align-items:center;margin:15px 0}
+.stat-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-right:15px;font-size:20px}
+.btn-approve{background:#16a34a;color:white;border:0;padding:8px 15px;border-radius:5px;cursor:pointer}
+.btn-reject{background:#ef4444;color:white;border:0;padding:8px 15px;border-radius:5px;cursor:pointer}
+.debug{background:#fffbeb;color:#b45309;padding:10px;border-radius:5px;font-family:monospace;font-size:12px;margin:15px 0}
 </style>
 </head>
 <body>
-<h1>👑 Admin Dashboard</h1>
 
-<div class="card">
-<h2>Add New Product</h2>
-<input id="pName" placeholder="Product Name e.g Rice 5kg">
-<input id="pPrice" placeholder="Price e.g 12000" type="number">
-<input id="pImg" placeholder="Image URL from internet">
-<button onclick="addProduct()">Add Product</button>
+<div class="header">
+  <img src="https://img.icons8.com/ios-filled/50/ffffff/shopping-cart.png"/>
+  <div>
+    <div style="font-size:18px;font-weight:bold">Lokoja Grocery Mall</div>
+  </div>
 </div>
 
-<div class="card">
-<h2>All Products</h2>
-<div id="productList">No products yet. Add one above.</div>
+<div style="padding:20px">
+  <div style="display:flex;align-items:center;margin-bottom:20px">
+    <div style="background:#16a34a;padding:10px;border-radius:10px;margin-right:10px">🛡️</div>
+    <div>
+      <div style="font-size:22px;font-weight:bold">Admin Panel</div>
+      <div style="color:#666">Lokoja Grocery Mall Management</div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('overview')">📈 Overview</div>
+  <div class="tab" onclick="showTab('vendors')">🏪 Vendors</div>
+  <div class="tab" onclick="showTab('orders')">📦 Orders</div>
+</div>
+
+<div class="container">
+  <div class="debug">DEBUG: Role=Admin | Email=admin@lokojamall.com</div>
+
+  <div id="overview" class="tab-content">
+    <div class="card">
+      <div class="stat"><div class="stat-icon" style="background:#fef3c7">📦</div><div><div style="color:#666">Total Orders</div><div style="font-size:24px;font-weight:bold" id="totalOrders">0</div></div></div>
+    </div>
+    <div class="card">
+      <div class="stat"><div class="stat-icon" style="background:#dbeafe">🏪</div><div><div style="color:#666">Total Vendors</div><div style="font-size:24px;font-weight:bold" id="totalVendors">0</div></div></div>
+    </div>
+    <div class="card">
+      <div class="stat"><div class="stat-icon" style="background:#d1fae5">📈</div><div><div style="color:#666">Total Sales</div><div style="font-size:24px;font-weight:bold">₦0</div></div></div>
+    </div>
+    <div class="card">
+      <div class="stat"><div class="stat-icon" style="background:#fee2e2">⏳</div><div><div style="color:#666">Pending Vendors</div><div style="font-size:24px;font-weight:bold" id="pendingVendors">0</div></div></div>
+    </div>
+  </div>
+
+  <div id="vendors" class="tab-content" style="display:none">
+    <h3>Vendor Approval</h3>
+    <div id="vendorList">No pending vendors</div>
+  </div>
+
+  <div id="orders" class="tab-content" style="display:none">
+    <h3>All Orders</h3>
+    <p>No orders yet</p>
+  </div>
 </div>
 
 <script>
-function addProduct(){
-  const name = document.getElementById('pName').value;
-  const price = document.getElementById('pPrice').value;
-  const img = document.getElementById('pImg').value;
-  if(!name || !price){alert('Name and Price required'); return;}
-  
-  let products = JSON.parse(localStorage.getItem('products') || '[]');
-  products.push({name, price, img});
-  localStorage.setItem('products', JSON.stringify(products));
-  alert('Product Added!');
-  document.getElementById('pName').value = '';
-  document.getElementById('pPrice').value = '';
-  document.getElementById('pImg').value = '';
-  loadProducts();
+function showTab(tab){
+  document.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(tab).style.display='block';
+  event.target.classList.add('active');
+  if(tab==='vendors') loadVendors();
 }
 
-function loadProducts(){
-  let products = JSON.parse(localStorage.getItem('products') || '[]');
-  if(products.length === 0){
-    document.getElementById('productList').innerHTML = 'No products yet. Add one above.';
+function loadVendors(){
+  let vendors = JSON.parse(localStorage.getItem('pendingVendors') || '[]');
+  document.getElementById('pendingVendors').innerText = vendors.length;
+  document.getElementById('totalVendors').innerText = vendors.filter(v=>v.status==='approved').length;
+  
+  if(vendors.length === 0){
+    document.getElementById('vendorList').innerHTML = 'No pending vendors';
     return;
   }
-  document.getElementById('productList').innerHTML = products.map((p,i) => 
-    `<div class="product-item"><b>${p.name}</b> - ₦${p.price}</div>`
-  ).join('');
+  document.getElementById('vendorList').innerHTML = vendors.map((v,i)=>`
+    <div class="card">
+      <b>${v.name}</b><br>
+      Email: ${v.email}<br>
+      Phone: ${v.phone}<br><br>
+      <button class="btn-approve" onclick="approveVendor(${i})">Approve</button>
+      <button class="btn-reject" onclick="rejectVendor(${i})">Reject</button>
+    </div>
+  `).join('');
 }
-loadProducts();
+
+function approveVendor(i){
+  let vendors = JSON.parse(localStorage.getItem('pendingVendors') || '[]');
+  vendors[i].status = 'approved';
+  localStorage.setItem('pendingVendors', JSON.stringify(vendors));
+  alert('Vendor Approved!');
+  loadVendors();
+}
+
+function rejectVendor(i){
+  let vendors = JSON.parse(localStorage.getItem('pendingVendors') || '[]');
+  vendors.splice(i,1);
+  localStorage.setItem('pendingVendors', JSON.stringify(vendors));
+  alert('Vendor Rejected!');
+  loadVendors();
+}
+
+loadVendors();
 </script>
 </body>
 </html>
