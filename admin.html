@@ -1,0 +1,52 @@
+﻿<!DOCTYPE html>
+<html>
+<head><title>Admin - Lokoja Grocery Mall</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{font-family:sans-serif;padding:20px;background:#f5f5f5} 
+.card{background:white;padding:20px;border-radius:10px;box-shadow:0 2px 5px #ccc;margin-bottom:15px} 
+input{padding:10px;width:90%}
+button{background:#4CAF50;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>👑 Admin Dashboard</h1>
+
+<div class="card">
+  <h2>Total Vendors: <span id="vendorCount">0</span></h2>
+  <h2>Total Orders: <span id="orderCount">0</span></h2>
+  <h2>Total Sales: ₦<span id="salesTotal">0</span></h2>
+</div>
+
+<div class="card">
+  <h3>Add New Vendor</h3>
+  <input id="vName" placeholder="Vendor Name"><br><br>
+  <input id="vStore" placeholder="Store Name"><br><br>
+  <button onclick="addVendor()">Add Vendor</button>
+</div>
+
+<div class="card">
+  <h3>🚚 Assign Delivery Agent</h3>
+  <input id="orderId" placeholder="Order ID"><br><br>
+  <input id="agentId" placeholder="Delivery Agent ID"><br><br>
+  <button onclick="assignAgent()">Assign Agent</button>
+</div>
+
+<script type="module">
+import { db } from './firebase.js';
+import { collection, addDoc, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+async function addVendor(){
+  await addDoc(collection(db, "vendors"), {name: vName.value, store: vStore.value, status: "active"});
+  alert("Vendor Added!"); vName.value=""; vStore.value="";
+}
+
+async function assignAgent(){
+  await updateDoc(doc(db, "orders", orderId.value), {deliveryAgentId: agentId.value, status: "assigned"});
+  alert("Delivery Agent Assigned!"); orderId.value=""; agentId.value="";
+}
+
+onSnapshot(collection(db,"vendors"), (snap)=> vendorCount.innerText = snap.size);
+onSnapshot(collection(db,"orders"), (snap)=> orderCount.innerText = snap.size);
+</script>
+</body></html>
