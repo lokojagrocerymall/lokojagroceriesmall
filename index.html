@@ -3,135 +3,142 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lokoja Grocery Mall - Sign Up</title>
+<title>Lokoja Grocery Mall - Home</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- HEADER -->
 <header class="app-header">
   <div class="brand">
-        <div class="logo"><img src="logo.png" alt="LGM"></div>
+    <div class="logo"><img src="logo.png" alt="LGM"></div>
     <span>Lokoja Grocery Mall</span>
+  </div>
+  <div class="header-icons">
+    <a href="cart.html">🛒</a>
+    <span onclick="toggleMenu()">☰</span>
   </div>
 </header>
 
-<main class="container">
-<div class="form-card">
-  <div style="text-align:center;margin-bottom:15px">
-    <div style="width:56px;height:56px;background:#16a34a;border-radius:16px;display:inline-flex;align-items:center;justify-content:center">
-      <svg width="28" height="28" fill="white"><path d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19.82L18.88 20.88C18.8 21.79 18.04 22.5 17.13 22.5H6.87C5.96 22.5 5.2 21.79 5.12 20.88L4.18 6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 4H15V3H9V4ZM5.21 6L6.1 20.1C6.12 20.27 6.26 20.4 6.43 20.4H17.57C17.74 20.4 17.88 20.27 17.9 20.1L18.79 6H5.21Z"/></svg>
-    </div>
-  </div>
-  <h2 class="form-title">Create Customer Account</h2>
-  <p class="form-subtitle">Shop groceries and get them delivered</p>
-
-  <!-- ROLE SELECTOR -->
-  <p style="font-size:13px;color:#666;margin-bottom:8px">I want to join as</p>
-  <div class="role-selector">
-    <div class="role-btn active" data-role="customer">🛒<br>Customer</div>
-    <div class="role-btn" data-role="vendor">🏪<br>Vendor</div>
-    <div class="role-btn" data-role="delivery">🚚<br>Delivery Agent</div>
-  </div>
-
-  <form id="signupForm">
-    <!-- CUSTOMER FIELDS -->
-    <div class="role-fields customer-fields">
-      <div class="input-group"><label>Full Name *</label><input type="text" name="fullname" required></div>
-      <div class="input-group"><label>Phone Number *</label><input type="tel" name="phone" required></div>
-      <div class="input-group"><label>House Address *</label><input type="text" name="address" required></div>
-      <div class="input-group"><label>Email *</label><input type="email" name="email" required></div>
-      <div class="input-group"><label>Nearest Bus Stop *</label><input type="text" name="busstop" required></div>
-    </div>
-
-    <!-- VENDOR FIELDS -->
-    <div class="role-fields vendor-fields" style="display:none">
-      <div class="input-group"><label>Full Name *</label><input type="text" name="fullname" required></div>
-      <div class="input-group"><label>Phone Number *</label><input type="tel" name="phone" required></div>
-      <div class="input-group"><label>Shop Address *</label><input type="text" name="shopaddress" required></div>
-      <div class="input-group"><label>Email *</label><input type="email" name="email" required></div>
-      <p style="font-size:11px;color:#888;margin-top:-10px">*Bank details will be added after admin approval</p>
-    </div>
-
-    <!-- DELIVERY AGENT FIELDS -->
-    <div class="role-fields delivery-fields" style="display:none">
-      <h4 style="margin:15px 0 10px;font-size:14px">Agent Details</h4>
-
-      <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:10px;margin-bottom:15px">
-        <p style="font-size:12px;color:#9a3412;margin:0">
-          <b>Note:</b> Delivery Agent must be a <b>Driver</b> and <b>Rider</b>. 
-          Valid driver's license and motorcycle/tricycle/van required.
-        </p>
-      </div>
-
-      <div class="input-group"><label>Full Name *</label><input type="text" name="fullname" required></div>
-      <div class="input-group"><label>Phone Number *</label><input type="tel" name="phone" required></div>
-      <div class="input-group"><label>House Address *</label><input type="text" name="address" required></div>
-      <div class="input-group"><label>Nearest Bus Stop *</label><input type="text" name="busstop" required></div>
-      <div class="input-group"><label>Email *</label><input type="email" name="email" required></div>
-      <div class="input-group"><label>NIN *</label><input type="text" name="nin" required></div>
-      <div class="input-group"><label>NIN Picture Upload *</label><input type="file" name="ninpic" accept="image/*" required></div>
-      <div class="input-group"><label>Passport Photograph *</label><input type="file" name="passport" accept="image/*" required></div>
-      
-      <div class="input-group">
-        <label>Driver and Rider *</label>
-        <select name="driverrider" required style="width:100%;padding:12px 14px;border:1px solid #ddd;border-radius:10px;font-size:14px;background:#fafafa">
-          <option value="">-- Select --</option>
-          <option value="yes">Yes, I am a Driver and Rider</option>
-          <option value="no">No</option>
-        </select>
-        <p style="font-size:11px;color:#dc2626;margin-top:4px">*This field is compulsory for approval</p>
-      </div>
-
-      <h4 style="margin:20px 0 10px;font-size:14px;border-top:1px solid #eee;padding-top:15px">Guarantor Details *</h4>
-      <div class="input-group"><label>Guarantor Full Name *</label><input type="text" name="gfullname" required></div>
-      <div class="input-group"><label>Guarantor Phone Number *</label><input type="tel" name="gphone" required></div>
-      <div class="input-group"><label>Guarantor House Address *</label><input type="text" name="gaddress" required></div>
-      <div class="input-group"><label>Guarantor NIN *</label><input type="text" name="gnin" required></div>
-      <div class="input-group"><label>Guarantor NIN Picture *</label><input type="file" name="gninpic" accept="image/*" required></div>
-      <div class="input-group"><label>Guarantor Photograph *</label><input type="file" name="gpassport" accept="image/*" required></div>
-    </div>
-
-    <button type="submit" class="btn-primary">Create Account</button>
-  </form>
-
-  <p style="text-align:center;margin-top:15px;font-size:13px;color:#666">
-    Already have an account? <a href="login.html" style="color:#16a34a;font-weight:600;text-decoration:none">Sign in</a>
-  </p>
+<!-- MOBILE MENU -->
+<div id="sideMenu" class="side-menu">
+  <a href="home.html">Home</a>
+  <a href="browse.html">Browse</a>
+  <a href="vendors.html">Vendors</a>
+  <a href="index.html" class="btn-primary" style="margin:15px">Sign In / Sign Up</a>
 </div>
+
+<main>
+<!-- HERO SECTION -->
+<section class="hero">
+  <div class="location-tag">📍 Lokoja, Kogi State</div>
+  <h1>Fresh groceries from local vendors, delivered across Lokoja</h1>
+  <p>Shop from multiple vendors in one cart. Fruits, meat, foodstuff, drinks and more — pay once, delivered fast.</p>
+  <div class="search-bar">
+    <input type="text" placeholder="Search for rice, tomato...">
+    <button>Search</button>
+  </div>
+</section>
+
+<!-- FEATURE CARDS -->
+<section class="feature-grid">
+  <div class="feature-card">
+    <div>🚚</div>
+    <b>Fast Delivery</b>
+    <span>Across Lokoja</span>
+  </div>
+  <div class="feature-card">
+    <div>🛡️</div>
+    <b>Secure Payment</b>
+    <span>Paystack protected</span>
+  </div>
+  <div class="feature-card">
+    <div>🏪</div>
+    <b>Local Vendors</b>
+    <span>Support local shops</span>
+  </div>
+</section>
+
+<!-- BANNER SLIDER -->
+<section class="banner-slider">
+  <div class="banner">
+    <h2>Free Delivery in Ganaja</h2>
+    <p>On orders above ₦5,000 this week</p>
+  </div>
+  <div class="banner" style="background:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)), url('https://images.unsplash.com/photo-1543339308-43e59d6b73a6?q=80&w=1200') center/cover;">
+    <h2>Sallah Sales</h2>
+    <p>Up to 25% off meat & foodstuff</p>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="container">
+  <h3>Shop by Category</h3>
+  <div class="category-grid">
+    <a href="browse.html?cat=fruits"><div>🥬<br>Fruits & Vegetables</div></a>
+    <a href="browse.html?cat=meat"><div>🐟<br>Meat & Fish</div></a>
+    <a href="browse.html?cat=foodstuff"><div>🌾<br>Foodstuff</div></a>
+    <a href="browse.html?cat=drinks"><div>🥤<br>Drinks</div></a>
+    <a href="browse.html?cat=household"><div>🏠<br>Household</div></a>
+    <a href="browse.html?cat=baby"><div>🍼<br>Baby</div></a>
+  </div>
+</section>
+
+<!-- FRESH ARRIVALS -->
+<section class="container">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+    <h3>📈 Fresh Arrivals</h3>
+    <a href="browse.html" style="color:#16a34a;font-size:13px">View all ></a>
+  </div>
+  <p style="text-align:center;color:#888">Products will appear here</p>
+</section>
+
 </main>
 
-<footer class="app-footer">© 2026 Lokoja Grocery Mall</footer>
+<!-- FOOTER -->
+<footer class="app-footer-dark">
+  <div class="container">
+    <div class="footer-brand">
+      <div class="logo"><img src="logo.png" alt="LGM"></div>
+      <span>Lokoja Grocery Mall</span>
+    </div>
+    <p>Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State. Fresh produce, meat, foodstuff and more — delivered to your door.</p>
+    
+    <div class="footer-links">
+      <div>
+        <h4>Shop</h4>
+        <a href="browse.html">All Products</a>
+        <a href="vendors.html">Vendors</a>
+        <a href="browse.html?cat=fruits">Fruits & Vegetables</a>
+        <a href="browse.html?cat=meat">Meat & Fish</a>
+      </div>
+      <div>
+        <h4>Account</h4>
+        <a href="orders.html">My Orders</a>
+        <a href="cart.html">Cart</a>
+        <a href="index.html">Become a Vendor</a>
+        <a href="login.html">Sign In</a>
+      </div>
+    </div>
+
+    <div class="footer-contact">
+      <h4>Contact</h4>
+      <p>📍 Lokoja, Kogi State</p>
+      <p>📞 08052941223</p>
+      <p>✉️ lokojagrocerymall@gmail.com</p>
+    </div>
+
+    <div class="footer-bottom">
+      <p>© 2026 Lokoja Grocery Mall. All rights reserved.</p>
+      <p>Payments secured by Paystack</p>
+    </div>
+  </div>
+</footer>
 
 <script>
-const roleBtns = document.querySelectorAll('.role-btn');
-const formTitle = document.querySelector('.form-title');
-const formSubtitle = document.querySelector('.form-subtitle');
-const allFields = document.querySelectorAll('.role-fields');
-
-roleBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    roleBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const role = btn.dataset.role;
-    
-    allFields.forEach(f => f.style.display = 'none');
-    document.querySelector(`.${role}-fields`).style.display = 'block';
-
-    if(role === 'customer'){
-      formTitle.innerText = 'Create Customer Account';
-      formSubtitle.innerText = 'Shop groceries and get them delivered';
-    }
-    if(role === 'vendor'){
-      formTitle.innerText = 'Create Vendor Account';
-      formSubtitle.innerText = 'Start selling on Lokoja Grocery Mall';
-    }
-    if(role === 'delivery'){
-      formTitle.innerText = 'Create Delivery Agent Account';
-      formSubtitle.innerText = 'Earn money delivering orders';
-    }
-  });
-});
+function toggleMenu(){
+  document.getElementById('sideMenu').classList.toggle('active')
+}
 </script>
-
 </body>
 </html>
