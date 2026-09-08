@@ -97,7 +97,6 @@ function approveAgent(id){
 }
 
 renderAgents();
-</script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -117,26 +116,27 @@ renderAgents();
   const db = getFirestore(app);
 
   const form = document.querySelector('form');
-  if(form){
-    form.addEventListener('submit', async (e) => {
+  const form = document.getElementById('vendorForm');
       e.preventDefault();
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      const role = document.querySelector('select[name="role"]').value;
-      const name = document.getElementById('name').value;
-
-      try {
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      const storeName = document.getElementById('storeName').value;
+      const ownerName = document.getElementById('ownerName').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const phone = document.getElementById('phone').value;
         await setDoc(doc(db, "users", userCred.user.uid), {
           uid: userCred.user.uid,
-          name,
-          email,
-          role,
-          status: "pending",
-          createdAt: serverTimestamp()
-        });
-        alert('Account created successfully! Waiting for admin approval');
-        window.location.href = 'dashboard.html';
+          await setDoc(doc(db, "vendors", userCred.user.uid), {
+        storeName,
+        ownerName,
+        email,
+        phone,
+        status: "pending",
+        createdAt: serverTimestamp()
+      });
+        document.getElementById('message').innerHTML = "✅ Account created! Waiting for admin approval";
+      form.reset();
       } catch(err) {
         alert('Error: ' + err.message);
       }
