@@ -1,164 +1,89 @@
-<script>
-  const pass = prompt("Enter Admin Password");
-  if(pass!== "KogiState2026"){
-    alert("Wrong Password!");
-    window.location.href = "index.html";
-  }
-</script>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Admin Panel - Lokoja Grocery Mall</title>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-body{font-family:Arial,sans-serif;margin:0;background:#f7f7f7}
-.header{background:#16a34a;color:white;padding:15px;display:flex;align-items:center}
-.header img{width:35px;height:35px;margin-right:10px;border-radius:5px;object-fit:contain}
-.tabs{display:flex;background:white;border-bottom:1px solid #ddd}
-.tab{padding:15px;cursor:pointer;border-bottom:3px solid transparent;flex:1;text-align:center;font-size:14px}
-.tab.active{border-bottom:3px solid #16a34a;color:#16a34a;font-weight:bold}
-.container{padding:20px;min-height:60vh}
-.card{background:white;padding:20px;border-radius:10px;margin-bottom:15px;box-shadow:0 1px 3px #ccc}
-.stat{display:flex;align-items:center;margin:15px 0}
-.stat-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-right:15px;font-size:20px}
-.btn-group{display:flex;gap:10px;margin:15px 0}
-.btn-filter{padding:8px 15px;border:1px solid #16a34a;background:white;color:#16a34a;border-radius:5px;cursor:pointer}
-.btn-filter.active{background:#16a34a;color:white}
-.btn-success{background:#16a34a;color:white;border:0;padding:8px 15px;border-radius:5px;cursor:pointer}
-.debug{background:#fffbeb;color:#b45309;padding:10px;border-radius:5px;font-family:monospace;font-size:12px;margin:15px 0}
-
-/* FOOTER - ULTRA COMPACT FOR ADMIN */
-.footer{background:#111;color:#ccc;padding:10px 10px;margin-top:15px;font-size:11px}
-.footer-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;max-width:1200px;margin:0 auto}
-.footer h4{color:white;margin-bottom:5px;font-size:12px}
-.footer a{color:#ccc;text-decoration:none;display:block;margin:3px 0;font-size:11px}
-.footer a:hover{color:white}
-.footer p{margin:3px 0;line-height:1.2}
-.footer img{width:20px !important;margin-right:5px}
-.footer-bottom{text-align:center;padding:8px;border-top:1px solid #222;color:#888;font-size:10px;margin-top:8px}
-</style>
+<title>Admin Dashboard - LGM</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="header">
-  <img src="./logo.png"/>
-  <div style="font-size:18px;font-weight:bold">Lokoja Grocery Mall</div>
-</div>
-
-<div style="padding:20px">
-  <div style="display:flex;align-items:center;margin-bottom:20px">
-    <div style="background:#16a34a;padding:10px;border-radius:10px;margin-right:10px">🛡️</div>
-    <div>
-      <div style="font-size:22px;font-weight:bold">Admin Panel</div>
-      <div style="color:#666">Lokoja Grocery Mall Management</div>
-    </div>
+<header class="app-header">
+  <div class="brand">
+    <div class="logo">LGM</div>
+    <span>Admin Dashboard</span>
   </div>
-</div>
+</header>
 
-<div class="tabs">
-  <div class="tab active" onclick="showTab('overview')">📈 Overview</div>
-  <div class="tab" onclick="showTab('vendors')">🏪 Vendors</div>
-  <div class="tab" onclick="showTab('orders')">📦 Orders</div>
-  <div class="tab" onclick="showTab('delivery')">🚚 Delivery</div>
-</div>
+<main class="container">
+  <h2 style="margin-bottom:20px">Pending Approvals</h2>
 
-<div class="container">
-  <div class="debug">DEBUG: Role=Admin | Email=admin@lokojamall.com</div>
-
-  <div id="overview" class="tab-content">
-    <div class="btn-group">
-      <button class="btn-filter active" onclick="filterSales('daily',this)">Daily</button>
-      <button class="btn-filter" onclick="filterSales('weekly',this)">Weekly</button>
-      <button class="btn-filter" onclick="filterSales('monthly',this)">Monthly</button>
-    </div>
-    <div class="card"><div class="stat"><div class="stat-icon" style="background:#d1fae5">📈</div><div><div style="color:#666" id="salesLabel">Today's Sales</div><div style="font-size:24px;font-weight:bold" id="totalSales">₦0</div></div></div></div>
-    <div class="card"><div class="stat"><div class="stat-icon" style="background:#fef3c7">📦</div><div><div style="color:#666">Total Orders</div><div style="font-size:24px;font-weight:bold" id="totalOrders">0</div></div></div>
-    <div class="card"><div class="stat"><div class="stat-icon" style="background:#dbeafe">🏪</div><div><div style="color:#666">Total Vendors</div><div style="font-size:24px;font-weight:bold" id="totalVendors">0</div></div></div></div>
-    <div class="card"><div class="stat"><div class="stat-icon" style="background:#fee2e2">⏳</div><div><div style="color:#666">Pending Vendors</div><div style="font-size:24px;font-weight:bold" id="pendingVendors">0</div></div></div></div>
+  <!-- PENDING DELIVERY AGENTS -->
+  <div class="form-card">
+    <h3>Pending Delivery Agents</h3>
+    <div id="pendingDeliveryList"></div>
   </div>
 
-  <div id="vendors" class="tab-content" style="display:none"><h3>Vendor Approval</h3><div id="vendorList">No pending vendors</div></div>
-  <div id="orders" class="tab-content" style="display:none"><h3>All Orders</h3><div id="ordersList">No orders yet</div></div>
-  <div id="delivery" class="tab-content" style="display:none"><h3>Delivery Agents Activity</h3><div id="deliveryList">No active deliveries</div></div>
-</div>
-
-<!-- FOOTER -->
-<div class="footer">
-  <div style="display:flex;flex-wrap:wrap;gap:30px;max-width:1200px;margin:auto">
-    <div style="flex:1;min-width:250px">
-      <img src="./logo.png" style="width:30px;vertical-align:middle;border-radius:5px"/>
-      <b style="color:white;font-size:18px"> Lokoja Grocery Mall</b>
-      <p>Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State. Fresh produce, meat, foodstuff and more — delivered to your door.</p>
-    </div>
-    <div style="flex:1;min-width:150px">
-      <h4>Shop</h4>
-      <a href="index.html">All Products</a>
-      <a href="vendor.html">Vendors</a>
-      <a href="#">Fruits & Vegetables</a>
-      <a href="#">Meat & Fish</a>
-    </div>
-    <div style="flex:1;min-width:150px">
-      <h4>Account</h4>
-      <a href="#">My Orders</a>
-      <a href="#">Cart</a>
-      <a href="vendor.html">Become a Vendor</a>
-      <a href="#">Sign In</a>
-    </div>
-    <div style="flex:1;min-width:200px">
-      <h4>Contact</h4>
-      <p>📍 Lokoja, Kogi State</p>
-      <p>📞 08052941223</p>
-      <p>✉️ lokojagrocerymall@gmail.com</p>
-    </div>
+  <!-- PENDING VENDORS -->
+  <div class="form-card">
+    <h3>Pending Vendors</h3>
+    <p style="font-size:13px;color:#666">Vendor list will appear here</p>
   </div>
-  <div class="footer-bottom">© 2026 Lokoja Grocery Mall. All rights reserved.</div>
-</div>
+
+</main>
+
+<footer class="app-footer">© 2026 Lokoja Grocery Mall Admin</footer>
 
 <script>
-let salesFilter = 'daily';
-function showTab(tab){
-  document.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById(tab).style.display='block';
-  event.target.classList.add('active');
-  if(tab==='vendors') loadVendors();
-  if(tab==='orders') loadOrders();
-  if(tab==='delivery') loadDelivery();
+// SAMPLE DATA - Replace this with your real data from database
+const pendingAgents = [
+  {id:1, name:"Ahmad Musa", phone:"08031234567", driverrider:"yes", nin:"12345678901", status:"pending"},
+  {id:2, name:"John Doe", phone:"08099887766", driverrider:"no", nin:"98765432109", status:"pending"},
+  {id:3, name:"Fatima Bello", phone:"08123456789", driverrider:"yes", nin:"11223344556", status:"pending"}
+];
+
+function renderAgents(){
+  const list = document.getElementById('pendingDeliveryList');
+  list.innerHTML = '';
+  
+  pendingAgents.forEach(agent => {
+    const isRejected = agent.driverrider === 'no';
+    const cardColor = isRejected ? '#fee2e2' : '#f0fdf4';
+    const borderColor = isRejected ? '#ef4444' : '#16a34a';
+    
+    list.innerHTML += `
+      <div style="background:${cardColor};border:2px solid ${borderColor};border-radius:12px;padding:15px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div>
+            <h4 style="margin:0;font-size:15px">${agent.name}</h4>
+            <p style="margin:4px 0;font-size:12px;color:#666">Phone: ${agent.phone} | NIN: ${agent.nin}</p>
+            <p style="margin:4px 0;font-size:12px">
+              Driver & Rider: 
+              <b style="color:${isRejected ? '#dc2626' : '#16a34a'}">
+                ${agent.driverrider === 'yes' ? 'YES ✓' : 'NO ✗ AUTO-REJECT'}
+              </b>
+            </p>
+          </div>
+          <div>
+            ${isRejected 
+              ? `<button disabled style="padding:8px 12px;background:#ccc;color:white;border:none;border-radius:8px">Rejected</button>`
+              : `<button onclick="approveAgent(${agent.id})" style="padding:8px 12px;background:#16a34a;color:white;border:none;border-radius:8px;cursor:pointer">Approve</button>`
+            }
+          </div>
+        </div>
+        ${isRejected ? `<p style="font-size:11px;color:#dc2626;margin-top:8px">*Did not meet "Driver and Rider" requirement</p>` : ''}
+      </div>
+    `;
+  });
 }
-function filterSales(type,btn){
-  salesFilter = type;
-  document.querySelectorAll('.btn-filter').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  let label = type==='daily'? "Today's Sales" : type==='weekly'? "This Week's Sales" : "This Month's Sales";
-  document.getElementById('salesLabel').innerText = label;
-  document.getElementById('totalSales').innerText = '₦0';
+
+function approveAgent(id){
+  alert('Agent ' + id + ' Approved! Bank details field will now open for them.');
+  // Here you will update database: status = 'approved'
 }
-function loadVendors(){
-  let vendors = JSON.parse(localStorage.getItem('pendingVendors') || '[]');
-  document.getElementById('pendingVendors').innerText = vendors.filter(v=>v.status==='pending').length;
-  document.getElementById('totalVendors').innerText = vendors.filter(v=>v.status==='approved').length;
-  if(vendors.length === 0){document.getElementById('vendorList').innerHTML = 'No pending vendors'; return;}
-  document.getElementById('vendorList').innerHTML = vendors.map((v,i)=>`<div class="card"><b>${v.name}</b><br>Email: ${v.email}<br>Phone: ${v.phone}<br><button class="btn-success" onclick="approveVendor(${i})">Approve</button></div>`).join('');
-}
-function loadOrders(){
-  let orders = JSON.parse(localStorage.getItem('orders') || '[]');
-  document.getElementById('totalOrders').innerText = orders.length;
-  if(orders.length === 0){document.getElementById('ordersList').innerHTML = 'No orders yet'; return;}
-  document.getElementById('ordersList').innerHTML = orders.map(o=>`<div class="card"><b>Order #${o.id}</b> - ₦${o.total}<br>Customer: ${o.customer}<br>Address: ${o.address}<br>Status: <b>${o.status}</b></div>`).join('');
-}
-function loadDelivery(){
-  let orders = JSON.parse(localStorage.getItem('orders') || '[]').filter(o=>o.status==='out_for_delivery');
-  if(orders.length === 0){document.getElementById('deliveryList').innerHTML = 'No active deliveries'; return;}
-  document.getElementById('deliveryList').innerHTML = orders.map(o=>`<div class="card"><b>🚚 Order #${o.id}</b><br><b>Agent:</b> ${o.agent || 'Not Assigned'}<br><b>Customer:</b> ${o.customer}<br><b>Phone:</b> ${o.phone}<br><b>Address:</b> ${o.address}<br><b>Total:</b> ₦${o.total}<br><br><small>Waiting for customer to tap "Delivered"</small></div>`).join('');
-}
-function approveVendor(i){
-  let vendors = JSON.parse(localStorage.getItem('pendingVendors') || '[]');
-  vendors[i].status = 'approved';
-  localStorage.setItem('pendingVendors', JSON.stringify(vendors));
-  alert('Vendor Approved!');
-  loadVendors();
-}
-loadVendors(); loadOrders();
+
+renderAgents();
 </script>
+
 </body>
 </html>
