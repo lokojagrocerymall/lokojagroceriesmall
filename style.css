@@ -1,0 +1,89 @@
+* {box-sizing: border-box;margin: 0;padding: 0;font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;}
+body {background: #f5f5f5;color: #333;}
+.container {max-width: 480px;margin: 0 auto;padding: 20px;}
+
+.app-header {
+  background: #16a34a;
+  color: white;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.brand {display: flex;align-items: center;gap: 10px;font-weight: 700;font-size: 16px;}
+.logo {
+  width: 32px;
+  height: 32px;
+  background: white;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.logo img {width: 24px;height: 24px;object-fit: contain;}
+
+.form-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-top: 20px;
+}
+.form-title {font-size: 24px;font-weight: 700;text-align: center;margin-bottom: 8px;}
+.form-subtitle {font-size: 14px;color: #666;text-align: center;margin-bottom: 20px;}
+
+.role-selector {display: flex;gap: 10px;margin-bottom: 20px;}
+.role-btn {
+  flex: 1;
+  padding: 12px 8px;
+  border: 2px solid #e5e5e5;
+  border-radius: 12px;
+  background: white;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.role-btn.active {border-color: #16a34a;background: #f0fdf4;color: #16a34a;}
+
+.input-group {margin-bottom: 16px;}
+.input-group label {display: block;font-size: 13px;font-weight: 600;margin-bottom: 6px;color: #333;}
+.input-group input, .input-group select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #fafafa;
+}
+.input-group input:focus {border-color: #16a34a;outline: none;background: white;}
+
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 10px;
+}
+.btn-primary:hover {background: #15803d;}
+
+.app-footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+  color: #888;
+  margin-top: 40px;
+}
+input[type="file"]{padding:8px;border:1px dashed #ccc;background:white}
+h4{color:#333}
