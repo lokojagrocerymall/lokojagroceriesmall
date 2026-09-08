@@ -1,42 +1,65 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
+<title>Lokoja Grocery Mall</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lokoja Grocery Mall - LGM</title>
-<link rel="icon" href="favicon.ico">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
-body{background:#F0FDF4}
-.container{max-width:600px;margin:0 auto;padding:16px}
-header{background:white;padding:12px;border-bottom:1px solid #ddd}
-.logo{display:flex;align-items:center;gap:10px}
-.logo img{width:40px;height:40px;border-radius:50%}
-.center{text-align:center;margin:30px 0}
-.center img{width:140px;height:140px;border-radius:50%;box-shadow:0 4px 10px rgba(34,197,94,0.3)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.card{background:white;padding:12px;border-radius:12px}
-.card button{background:#22C55E;color:white;border:none;padding:8px;width:100%;border-radius:8px}
-.btn{background:#22C55E;color:white;padding:12px;border:none;border-radius:8px;width:100%;margin-top:10px}
-nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:10px;border-top:1px solid #ddd}
+body{font-family:Arial;margin:0}
+.header{background:#16a34a;color:white;padding:15px;display:flex;align-items:center}
+.header img{width:35px;height:35px;margin-right:10px}
+.container{padding:20px}
+/* FOOTER */
+.footer{background:#111;color:#ccc;padding:30px 20px;margin-top:40px}
+.footer h4{color:white;margin-bottom:10px}
+.footer a{color:#ccc;text-decoration:none;display:block;margin:5px 0}
+.footer a:hover{color:white}
+.footer-bottom{text-align:center;padding:15px;border-top:1px solid #333;color:#999;font-size:12px}
 </style>
 </head>
 <body>
-<header><div class="container logo"><img src="logo.png"><b>Lokoja Grocery Mall</b></div></header>
-<div class="container">
-<div class="center"><img src="logo.png"><p id="count">Cart: 0</p></div>
-<div id="products" class="grid"></div>
-<div id="cart"></div>
+
+<div class="header">
+  <img src="https://img.icons8.com/ios-filled/50/ffffff/shopping-cart.png"/>
+  <div style="font-size:18px;font-weight:bold">Lokoja Grocery Mall</div>
 </div>
-<nav><button onclick="show('shop')">Home</button><button onclick="show('cart')">Cart</button></nav>
-<script>
-let products=[{id:1,name:"Tomatoes 1kg",price:2500,sub:"RS_DEMO"}];
-let cart=[];
-function show(s){document.getElementById('products').style.display=s=='shop'?'grid':'none';document.getElementById('cart').style.display=s=='cart'?'block':'none';load()}
-function load(){document.getElementById('products').innerHTML=products.map(p=>`<div class=card><b>${p.name}</b><p>₦${p.price}</p><button onclick="add(${p.id})">Add</button></div>`).join('');document.getElementById('count').innerText='Cart: '+cart.length;document.getElementById('cart').innerHTML=cart.map(p=>`<p>${p.name} - ₦${p.price}</p>`).join('')+'<button class=btn onclick=pay()>Pay</button>'}
-function add(id){cart.push(products.find(p=>p.id==id));load()}
-function pay(){alert('Add FLW key in Vercel')}
-load();
-</script>
+
+<div class="container">
+  <h1>Welcome to LGM</h1>
+  <p>Your products will show here soon</p>
+  <a href="admin.html">Admin</a> | <a href="vendor.html">Become a Vendor</a>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div style="display:flex;flex-wrap:wrap;gap:30px">
+    <div style="flex:1;min-width:200px">
+      <img src="https://img.icons8.com/ios-filled/50/16a34a/shopping-cart.png" style="width:30px;vertical-align:middle"/>
+      <b style="color:white;font-size:18px"> Lokoja Grocery Mall</b>
+      <p>Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State. Fresh produce, meat, foodstuff and more — delivered to your door.</p>
+    </div>
+    <div style="flex:1;min-width:150px">
+      <h4>Shop</h4>
+      <a href="index.html">All Products</a>
+      <a href="vendor.html">Vendors</a>
+      <a href="#">Fruits & Vegetables</a>
+      <a href="#">Meat & Fish</a>
+    </div>
+    <div style="flex:1;min-width:150px">
+      <h4>Account</h4>
+      <a href="#">My Orders</a>
+      <a href="#">Cart</a>
+      <a href="vendor.html">Become a Vendor</a>
+      <a href="#">Sign In</a>
+    </div>
+    <div style="flex:1;min-width:200px">
+      <h4>Contact</h4>
+      <p>📍 Lokoja, Kogi State</p>
+      <p>📞 08052941223</p>
+      <p>✉️ lokojagrocerymall@gmail.com</p>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 Lokoja Grocery Mall. All rights reserved.</div>
+</div>
+
 </body>
 </html>
