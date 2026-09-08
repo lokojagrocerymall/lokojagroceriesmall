@@ -4,14 +4,16 @@
 <title>Lokoja Grocery Mall</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{font-family:Arial;margin:0}
+body{font-family:Arial;margin:0;background:#f7f7f7}
 .header{background:#16a34a;color:white;padding:15px;display:flex;align-items:center}
 .header img{width:35px;height:35px;margin-right:10px}
-.container{padding:20px}
-/* FOOTER */
+.container{padding:20px;min-height:60vh}
+.btn{background:#16a34a;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;display:inline-block;margin:5px}
+
+/* FOOTER - BLACK WITH WHITE TEXT */
 .footer{background:#111;color:#ccc;padding:30px 20px;margin-top:40px}
-.footer h4{color:white;margin-bottom:10px}
-.footer a{color:#ccc;text-decoration:none;display:block;margin:5px 0}
+.footer h4{color:white;margin-bottom:10px;font-size:16px}
+.footer a{color:#ccc;text-decoration:none;display:block;margin:8px 0}
 .footer a:hover{color:white}
 .footer-bottom{text-align:center;padding:15px;border-top:1px solid #333;color:#999;font-size:12px}
 </style>
@@ -25,14 +27,15 @@ body{font-family:Arial;margin:0}
 
 <div class="container">
   <h1>Welcome to LGM</h1>
-  <p>Your products will show here soon</p>
-  <a href="admin.html">Admin</a> | <a href="vendor.html">Become a Vendor</a>
+  <p>Your trusted multi-vendor grocery marketplace in Lokoja</p>
+  <a href="admin.html" class="btn">Admin Login</a> 
+  <a href="vendor.html" class="btn">Become a Vendor</a>
 </div>
 
 <!-- FOOTER -->
 <div class="footer">
-  <div style="display:flex;flex-wrap:wrap;gap:30px">
-    <div style="flex:1;min-width:200px">
+  <div style="display:flex;flex-wrap:wrap;gap:30px;max-width:1200px;margin:auto">
+    <div style="flex:1;min-width:250px">
       <img src="https://img.icons8.com/ios-filled/50/16a34a/shopping-cart.png" style="width:30px;vertical-align:middle"/>
       <b style="color:white;font-size:18px"> Lokoja Grocery Mall</b>
       <p>Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State. Fresh produce, meat, foodstuff and more — delivered to your door.</p>
