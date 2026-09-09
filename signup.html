@@ -6,14 +6,7 @@
 <title>Join Lokoja Grocery Mall</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  body { background: #f8f9fa; padding-top: 60px; }
-  
-  .app-header {
-    position: fixed; top: 0; left: 0; width: 100%;
-    background: #16a34a; color: white; padding: 14px 16px;
-    display: flex; align-items: center; gap: 12px; z-index: 1000;
-  }
-  .app-header .logo { width: 32px; height: 32px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  body { background: #f8f9fa; }
   
   .container { max-width: 480px; margin: 20px auto; padding: 0 16px; }
   
@@ -57,10 +50,28 @@
 </head>
 <body>
 
-<header class="app-header">
-  <div class="logo">🛒</div>
-  <strong>Lokoja Grocery Mall</strong>
+<!-- NEW HEADER - SAME AS HOMEPAGE -->
+<header class="app-header" style="background:#fff; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:999; box-shadow:0 2px 8px rgba(0,0,0,0.08); height:65px;">
+  <div class="brand" style="display:flex; align-items:center; gap:10px;">
+    <div style="background:#16a34a; width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+      <img src="./logo.png" alt="LGM" style="width:36px; height:36px; object-fit:contain;">
+    </div>
+    <span style="color:#111; font-size:18px; font-weight:900;">Lokoja Grocery Mall</span>
+  </div>
+  
+  <div class="header-icons" style="display:flex; align-items:center; gap:18px;">
+    <a href="cart.html" style="font-size:24px; text-decoration:none; color:#333;">🛒</a>
+    <span onclick="toggleMenu()" style="font-size:26px; color:#333; cursor:pointer;">☰</span>
+  </div>
 </header>
+
+<!-- MENU DROPDOWN -->
+<div id="mobileMenu" style="display:none; position:fixed; top:65px; left:0; width:100%; background:#fff; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:998; padding:15px 20px;">
+  <a href="index.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Home</a>
+  <a href="browse.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Browse</a>
+  <a href="vendors.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Vendors</a>
+  <a href="signup.html" style="display:block; margin-top:12px; padding:14px; background:#16a34a; color:#fff; text-align:center; border-radius:10px; font-weight:900; font-size:16px; text-decoration:none;">Join Us</a>
+</div>
 
 <div class="container">
   <div class="basket-icon">🧺</div>
@@ -86,12 +97,12 @@
     <div class="role-desc" id="roleDesc">Shop and order groceries</div>
   </div>
   
-  <form>
+  <form id="signupForm">
     <div class="form-group">
       <label class="form-label">Full Name</label>
       <div class="input-wrapper">
         <span class="input-icon">👤</span>
-        <input type="text" class="form-input" placeholder="Your full name">
+        <input type="text" id="name" class="form-input" placeholder="Your full name" required>
       </div>
     </div>
     
@@ -99,7 +110,7 @@
       <label class="form-label">Phone Number</label>
       <div class="input-wrapper">
         <span class="input-icon">📞</span>
-        <input type="tel" class="form-input" placeholder="0803...">
+        <input type="tel" id="phone" class="form-input" placeholder="0803..." required>
       </div>
     </div>
     
@@ -107,7 +118,7 @@
       <label class="form-label">Email</label>
       <div class="input-wrapper">
         <span class="input-icon">✉️</span>
-        <input type="email" class="form-input" placeholder="you@email.com">
+        <input type="email" id="email" class="form-input" placeholder="you@email.com" required>
       </div>
     </div>
     
@@ -115,8 +126,37 @@
   </form>
 </div>
 
+<!-- NEW FOOTER -->
+<footer style="background:#111827; color:#fff; padding:40px 20px 20px; margin-top:50px;">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:30px;">
+      <div style="background:#16a34a; width:48px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <img src="./logo.png" alt="LGM" style="width:38px; height:38px; object-fit:contain;">
+      </div>
+      <div>
+        <h3 style="margin:0 0 10px; font-size:18px; font-weight:900; color:#fff;">Lokoja Grocery Mall</h3>
+        <p style="margin:0; color:#9ca3af; line-height:1.6; font-size:14px;">Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State.</p>
+      </div>
+    </div>
+    <div style="border-top:1px solid #374151; padding-top:20px; text-align:center; color:#6b7280; font-size:13px;">
+      © 2026 Lokoja Grocery Mall. All rights reserved.
+    </div>
+  </div>
+</footer>
+
 <script>
 let selectedRole = "Customer";
+
+function toggleMenu() {
+  const menu = document.getElementById('mobileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+document.addEventListener('click', function(e){
+  const menu = document.getElementById('mobileMenu');
+  if(!e.target.closest('.app-header') && !e.target.closest('#mobileMenu')){
+    menu.style.display = 'none';
+  }
+});
 
 function selectRole(el) {
   document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
@@ -129,12 +169,12 @@ function selectRole(el) {
   if(selectedRole.includes('Delivery')) desc.innerText = 'Deliver orders and earn money';
 }
 
-document.querySelector('form').addEventListener('submit', function(e) {
+document.getElementById('signupForm').addEventListener('submit', function(e) {
   e.preventDefault(); // THIS STOPS THE WIPING
   
-  const name = document.querySelector('input[type="text"]').value;
-  const phone = document.querySelector('input[type="tel"]').value;
-  const email = document.querySelector('input[type="email"]').value;
+  const name = document.getElementById('name').value;
+  const phone = document.getElementById('phone').value;
+  const email = document.getElementById('email').value;
   
   if(name === "" || phone === "" || email === ""){
     alert("Please fill all fields");
