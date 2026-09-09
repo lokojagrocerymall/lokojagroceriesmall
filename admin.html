@@ -86,7 +86,7 @@
         <div style="background:${cardColor};border:2px solid ${borderColor};border-radius:12px;padding:15px;margin-bottom:12px">
           <h4>${agent.name}</h4>
           <p>Phone: ${agent.phone}</p>
-          ${isRejected ? `<button disabled>Rejected</button>` : `<button onclick="approveAgent(${agent.id})">Approve</button>`}
+          ${isRejected ? `<button disabled style="padding:8px 12px;background:#ccc;color:white;border:none;border-radius:8px">Rejected</button>` : `<button onclick="approveAgent(${agent.id})" style="padding:8px 12px;background:#16a34a;color:white;border:none;border-radius:8px;cursor:pointer">Approve</button>`}
         </div>
       `;
     });
@@ -102,7 +102,6 @@
   const form = document.getElementById('vendorForm');
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const storeName = document.getElementById('storeName').value;
     const ownerName = document.getElementById('ownerName').value;
     const email = document.getElementById('email').value;
@@ -124,7 +123,7 @@
       messageEl.innerHTML = "✅ Account created! Waiting for admin approval";
       messageEl.style.color = "green";
       form.reset();
-      loadPendingVendors(); // refresh list
+      loadPendingVendors();
     } catch(err) {
       messageEl.innerHTML = "❌ Error: " + err.message;
       messageEl.style.color = "red";
@@ -160,7 +159,7 @@
         `;
       });
     } catch(err) {
-      list.innerHTML = "<p style='color:red'>Error loading vendors: " + err.message + "</p>";
+      list.innerHTML = "<p style='color:red'>Error: " + err.message + "</p>";
       console.error(err);
     }
   }
