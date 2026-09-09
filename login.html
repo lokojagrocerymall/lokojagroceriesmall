@@ -5,105 +5,59 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login - Lokoja Grocery Mall</title>
 <style>
-  body { background:#f5f5f5; padding:20px; font-family:sans-serif; }
- .container { max-width:400px; margin:50px auto; background:#fff; padding:25px; border-radius:12px; }
-  label { font-weight:600; font-size:14px; margin-bottom:5px; display:block; }
-  input { width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:10px; }
- .password-box { position:relative; }
- .toggle-pass { position:absolute; right:12px; top:38px; cursor:pointer; font-size:12px; color:#16a34a; font-weight:700; }
- .btn { background:#16a34a; color:#fff; border:none; padding:14px; border-radius:8px; font-weight:700; width:100%; cursor:pointer; }
- .link { text-align:center; margin-top:15px; font-size:14px; }
- .link a { color:#16a34a; font-weight:700; text-decoration:none; }
- .error { color:#ef4444; font-size:13px; margin-bottom:10px; }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  body { background:#f5f5f5; display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
+  .login-box { background:#fff; padding:30px; border-radius:12px; width:100%; max-width:400px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+  h2 { text-align:center; margin-bottom:20px; color:#16a34a; }
+  .error { color:#ef4444; font-size:14px; margin-bottom:15px; text-align:center; display:none; }
+  label { font-weight:600; margin-bottom:8px; display:block; }
+  input { width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px; }
+  .btn { background:#16a34a; color:#fff; border:none; padding:14px; border-radius:8px; font-weight:700; width:100%; cursor:pointer; }
+  .link { text-align:center; margin-top:15px; }
+  .link a { color:#16a34a; text-decoration:none; font-weight:600; }
 </style>
 </head>
 <body>
-
-<div class="container">
-  <h2 style="margin-bottom:20px; text-align:center;">Login to Lokoja Grocery Mall</h2>
-  <p id="errorMsg" class="error"></p>
+<div class="login-box">
+  <h2>Login to Lokoja Grocery Mall</h2>
+  <div id="errorMsg" class="error">Invalid email or password</div>
   
   <label>Email</label>
-  <input type="email" id="email" placeholder="your@email.com">
+  <input type="email" id="email" value="roundabout@gmail.com">
   
   <label>Password</label>
-  <div class="password-box">
-    <input type="password" id="password" placeholder="Enter password">
-    <span class="toggle-pass" onclick="togglePassword()">Show</span>
-  </div>
+  <input type="password" id="password" value="Ganaja1">
   
-  <button class="btn" onclick="loginUser()">Login</button>
+  <button class="btn" onclick="login()">Login</button>
   
-  <div class="link">
-    <a href="#" onclick="forgotPassword()">Forgot Password?</a>
-  </div>
   <div class="link">
     Don't have an account? <a href="signup.html">Sign Up</a>
   </div>
 </div>
 
 <script>
-function togglePassword() {
-  const passInput = document.getElementById('password');
-  const toggleBtn = document.querySelector('.toggle-pass');
+function login() {
+  const email = document.getElementById('email').value.trim().toLowerCase();
+  const password = document.getElementById('password').value;
   
-  if(passInput.type === 'password') {
-    passInput.type = 'text';
-    toggleBtn.innerText = 'Hide';
+  let allUsers = JSON.parse(localStorage.getItem('allUsers')) || [];
+  
+  // Find user by email AND password
+  let user = allUsers.find(u => u.email.toLowerCase() === email && u.password === password);
+  
+  if(user) {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    
+    // Redirect based on role
+    if(user.role === 'vendor') {
+      window.location.href = 'vendor.html';
+    } else {
+      window.location.href = 'index.html';
+    }
   } else {
-    passInput.type = 'password';
-    toggleBtn.innerText = 'Show';
+    document.getElementById('errorMsg').style.display = 'block';
+    console.log("Users in storage:", allUsers); // for debugging
   }
-}
-
-function loginUser() {
-  const email = document.getElementById("email").value.toLowerCase();
-  const password = document.getElementById("password").value;
-  const errorMsg = document.getElementById("errorMsg");
-  
-  let allUsers = JSON.parse(localStorage.getItem('allUsers')) || [];
-  let user = allUsers.find(u => u.email === email && u.password === password);
-  
-  if(!user) {
-    errorMsg.innerText = "Invalid email or password";
-    return;
-  }
-  
-  if(user.role === 'Vendor' && user.status!== 'approved') {
-    errorMsg.innerText = "Your vendor account is still pending approval";
-    return;
-  }
-  
-  localStorage.setItem('currentUser', JSON.stringify(user));
-  
-  if(user.role === 'Admin') window.location.href = "admin.html";
-  if(user.role === 'Vendor') window.location.href = "vendor.html";
-  if(user.role === 'Customer') window.location.href = "index.html";
-  if(user.role === 'Delivery Agent') window.location.href = "delivery.html";
-}
-
-function forgotPassword() {
-  const email = prompt("Enter your registered email address:");
-  if(!email) return;
-  
-  let allUsers = JSON.parse(localStorage.getItem('allUsers')) || [];
-  let userIndex = allUsers.findIndex(u => u.email === email.toLowerCase());
-  
-  if(userIndex === -1) {
-    alert("No account found with this email");
-    return;
-  }
-  
-  const newPassword = prompt("Enter your new password:");
-  if(!newPassword || newPassword.length < 4) {
-    alert("Password must be at least 4 characters");
-    return;
-  }
-  
-  allUsers[userIndex].password = newPassword;
-  localStorage.setItem('allUsers', JSON.stringify(allUsers));
-  
-  alert("Password reset successful! You can now login with your new password.");
 }
 </script>
 </body>
