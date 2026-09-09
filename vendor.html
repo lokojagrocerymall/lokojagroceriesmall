@@ -11,9 +11,14 @@
   .card { background:#fff; padding:20px; border-radius:12px; margin-bottom:15px; }
   input, select { width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px; }
   .btn { background:#16a34a; color:#fff; border:none; padding:14px; border-radius:8px; font-weight:700; width:100%; cursor:pointer; }
-  .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; }
-  .modal-content { background:#fff; padding:25px; border-radius:12px; width:90%; max-width:400px; }
+  .btn-small { padding:8px 12px; font-size:13px; margin-right:5px; width:auto; }
+  .btn-edit { background:#2563eb; }
+  .btn-delete { background:#ef4444; }
+  .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; overflow-y:auto; }
+  .modal-content { background:#fff; padding:25px; border-radius:12px; width:90%; max-width:400px; margin:20px 0; }
   .hidden { display:none; }
+  .product-item { border:1px solid #ddd; padding:12px; border-radius:8px; margin-top:10px; display:flex; gap:10px; }
+  .product-item img { width:60px; height:60px; object-fit:cover; border-radius:8px; }
 </style>
 </head>
 <body>
@@ -48,45 +53,29 @@
     <label>Bank</label>
     <select id="bankName">
       <option value="">Select Bank</option>
-      <option>Access Bank</option>
-      <option>First Bank</option>
-      <option>GTBank</option>
-      <option>Zenith Bank</option>
-      <option>UBA</option>
-      <option>Polaris Bank</option>
-      <option>Fidelity Bank</option>
-      <option>Union Bank</option>
-      <option>Stanbic IBTC</option>
-      <option>Keystone Bank</option>
-      <option>Ecobank</option>
-      <option>Jaiz Bank</option>
-      <option>Wema Bank</option>
-      <option>Unity Bank</option>
-      <option>First City Monument Bank</option>
-      <option>Heritage Bank</option>
-      <option>Opay</option>
-      <option>Palmpay</option>
-      <option>Kuda Bank</option>
-      <option>Moniepoint</option>
+      <option>Access Bank</option><option>First Bank</option><option>GTBank</option><option>Zenith Bank</option>
+      <option>UBA</option><option>Polaris Bank</option><option>Fidelity Bank</option><option>Union Bank</option>
+      <option>Stanbic IBTC</option><option>Keystone Bank</option><option>Ecobank</option><option>Jaiz Bank</option>
+      <option>Wema Bank</option><option>Unity Bank</option><option>FCMB</option><option>Heritage Bank</option>
+      <option>Opay</option><option>Palmpay</option><option>Kuda Bank</option><option>Moniepoint</option>
     </select>
     <button class="btn" onclick="saveBankDetails()">Save & Activate Store</button>
   </div>
 </div>
 
-<!-- ADD PRODUCT MODAL -->
+<!-- ADD/EDIT PRODUCT MODAL -->
 <div id="productModal" class="modal hidden">
   <div class="modal-content">
-    <h3>Add New Product</h3>
+    <h3 id="modalTitle">Add New Product</h3>
     <label>Product Name</label>
     <input type="text" id="productName" placeholder="e.g Rice 50kg">
+    <label>Product Image</label>
+    <input type="file" id="productImage" accept="image/*">
     <label>Price ₦</label>
     <input type="number" id="productPrice" placeholder="e.g 45000">
     <label>Category</label>
     <select id="productCategory">
-      <option>Foodstuffs</option>
-      <option>Drinks</option>
-      <option>Household</option>
-      <option>Personal Care</option>
+      <option>Foodstuffs</option><option>Drinks</option><option>Household</option><option>Personal Care</option>
     </select>
     <label>Stock Quantity</label>
     <input type="number" id="productStock" placeholder="e.g 20">
@@ -97,6 +86,7 @@
 
 <script>
 let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+let editingProductId = null;
 
 document.getElementById('welcomeName').innerText = `Welcome, ${currentUser.name}!`;
 
@@ -121,6 +111,11 @@ function saveBankDetails() {
 }
 
 function showAddProduct() {
+  editingProductId = null;
+  document.getElementById('modalTitle').innerText = 'Add New Product';
+  document.getElementById('productName').value = '';
+  document.getElementById('productPrice').value = '';
+  document.getElementById('productStock').value = '';
   document.getElementById('productModal').classList.remove('hidden');
 }
 
@@ -129,22 +124,64 @@ function closeProduct() {
 }
 
 function saveProduct() {
-  const product = {
-    id: Date.now(),
-    vendorId: currentUser.id,
-    name: document.getElementById('productName').value,
-    price: document.getElementById('productPrice').value,
-    category: document.getElementById('productCategory').value,
-    stock: document.getElementById('productStock').value
-  };
+  const reader = new FileReader();
+  const imageFile = document.getElementById('productImage').files[0];
   
+  const saveData = (imageData) => {
+    const product = {
+      id: editingProductId || Date.now(),
+      vendorId: currentUser.id,
+      name: document.getElementById('productName').value,
+      price: document.getElementById('productPrice').value,
+      category: document.getElementById('productCategory').value,
+      stock: document.getElementById('productStock').value,
+      image: imageData || ''
+    };
+    
+    let products = JSON.parse(localStorage.getItem('products')) || [];
+    
+    if(editingProductId) {
+      let index = products.findIndex(p => p.id === editingProductId);
+      products[index] = product;
+    } else {
+      products.push(product);
+    }
+    
+    localStorage.setItem('products', JSON.stringify(products));
+    alert(editingProductId ? 'Product Updated!' : 'Product Added Successfully!');
+    closeProduct();
+    loadProducts();
+  }
+  
+  if(imageFile) {
+    reader.onload = (e) => saveData(e.target.result);
+    reader.readAsDataURL(imageFile);
+  } else {
+    saveData('');
+  }
+}
+
+function editProduct(id) {
+  editingProductId = id;
   let products = JSON.parse(localStorage.getItem('products')) || [];
-  products.push(product);
-  localStorage.setItem('products', JSON.stringify(products));
+  let product = products.find(p => p.id === id);
   
-  alert('Product Added Successfully!');
-  closeProduct();
-  loadProducts();
+  document.getElementById('modalTitle').innerText = 'Edit Product';
+  document.getElementById('productName').value = product.name;
+  document.getElementById('productPrice').value = product.price;
+  document.getElementById('productStock').value = product.stock;
+  document.getElementById('productCategory').value = product.category;
+  
+  document.getElementById('productModal').classList.remove('hidden');
+}
+
+function deleteProduct(id) {
+  if(confirm('Delete this product?')) {
+    let products = JSON.parse(localStorage.getItem('products')) || [];
+    products = products.filter(p => p.id !== id);
+    localStorage.setItem('products', JSON.stringify(products));
+    loadProducts();
+  }
 }
 
 function loadProducts() {
@@ -153,9 +190,14 @@ function loadProducts() {
   
   let html = '';
   vendorProducts.forEach(p => {
-    html += `<div style="border:1px solid #ddd; padding:10px; border-radius:8px; margin-top:10px;">
-      <b>${p.name}</b> - ₦${p.price}<br>
-      <small>Stock: ${p.stock} | ${p.category}</small>
+    html += `<div class="product-item">
+      <img src="${p.image || 'https://via.placeholder.com/60'}" alt="${p.name}">
+      <div style="flex:1;">
+        <b>${p.name}</b> - ₦${p.price}<br>
+        <small>Stock: ${p.stock} | ${p.category}</small><br>
+        <button class="btn btn-small btn-edit" onclick="editProduct(${p.id})">Edit</button>
+        <button class="btn btn-small btn-delete" onclick="deleteProduct(${p.id})">Delete</button>
+      </div>
     </div>`;
   });
   
