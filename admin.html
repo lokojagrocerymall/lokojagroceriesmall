@@ -68,11 +68,8 @@
   const db = getFirestore(app);
 
   // SAMPLE DATA
-  const pendingAgents = [
-    {id:1, name:"Ahmad Musa", phone:"08031234567", driverrider:"yes", nin:"12345678901", status:"pending"},
-    {id:2, name:"John Doe", phone:"08099887766", driverrider:"no", nin:"98765432109", status:"pending"},
-    {id:3, name:"Fatima Bello", phone:"08123456789", driverrider:"yes", nin:"11223344556", status:"pending"}
-  ];
+  // SAMPLE DATA - REMOVED
+const pendingAgents = [];
 
   function renderAgents(){
     const list = document.getElementById('pendingDeliveryList');
