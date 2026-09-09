@@ -3,173 +3,175 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard - LGM</title>
-<link rel="stylesheet" href="style.css">
+<title>Admin Dashboard - Lokoja Grocery Mall</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  body { background:#f5f5f5; }
+  .container { max-width:1200px; margin:20px auto; padding:20px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:20px; }
+  .stat-card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
+  .stat-card h4 { color:#6b7280; font-size:13px; }
+  .stat-card h2 { color:#111; font-size:24px; margin-top:5px; }
+  .tabs { display:flex; gap:10px; margin-bottom:20px; border-bottom:2px solid #e5e7eb; }
+  .tab { padding:12px 20px; background:none; border:none; border-bottom:3px solid transparent; font-weight:700; cursor:pointer; }
+  .tab.active { border-bottom:3px solid #16a34a; color:#16a34a; }
+  .vendor-card { background:#fff; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+  .btn-approve { background:#16a34a; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:700; cursor:pointer; }
+  .btn-reject { background:#ef4444; color:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:700; cursor:pointer; }
+  .loading { opacity:0.6; pointer-events:none; }
+</style>
 </head>
 <body>
 
-<header class="app-header">
-  <div class="brand">
-    <div class="logo">LGM</div>
-    <span>Admin Dashboard</span>
+<!-- HEADER -->
+<header style="background:#fff; padding:10px 16px; display:flex; align-items:center; gap:10px; box-shadow:0 2px 8px rgba(0,0,0,0.08); height:65px;">
+  <div style="background:#16a34a; width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+    <img src="./logo.png" alt="LGM" style="width:36px; height:36px; object-fit:contain;">
   </div>
+  <span style="color:#111; font-size:18px; font-weight:900;">Lokoja Grocery Mall Admin</span>
 </header>
 
-<main class="container">
-  <h2 style="margin-bottom:20px">Pending Approvals</h2>
-
-  <!-- VENDOR SIGNUP FORM -->
-  <div style="max-width:600px; margin:20px auto; padding:20px; background:white; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-    <h2 style="color:green; text-align:center;">Vendor Registration</h2>
-    <form id="vendorForm">
-      <input type="text" id="storeName" placeholder="Store Name" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
-      <input type="text" id="ownerName" placeholder="Owner Name" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
-      <input type="email" id="email" placeholder="Email" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
-      <input type="password" id="password" placeholder="Password" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
-      <input type="tel" id="phone" placeholder="Phone Number" required style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px;"><br>
-      <button type="submit" style="width:100%; padding:12px; background:green; color:white; border:none; border-radius:5px; font-weight:bold;">Create Account</button>
-    </form>
-    <p id="message" style="text-align:center; margin-top:10px; font-weight:bold;"></p>
-  </div>
-  <hr style="margin:30px 0;">
-
-  <!-- PENDING DELIVERY AGENTS -->
-  <div class="form-card">
-    <h3>Pending Delivery Agents</h3>
-    <div id="pendingDeliveryList"></div>
-  </div>
-
-  <!-- PENDING VENDORS -->
-  <div class="card">
-    <h3>Pending Vendors</h3>
-    <div id="pendingVendorList">Loading vendors...</div>
-  </div>
-
-</main>
-
-<footer class="app-footer">© 2026 Lokoja Grocery Mall Admin</footer>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getFirestore, doc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<div class="container">
+  <h2 style="margin-bottom:15px;">Dashboard Overview</h2>
   
-  const firebaseConfig = {
-    apiKey: "AIzaSyChrVZh6NUm7N5W7FMXnxztmU7NXRYrVa0",
-    authDomain: "lokoja-grocery-mall.firebaseapp.com",
-    projectId: "lokoja-grocery-mall",
-    storageBucket: "lokoja-grocery-mall.firebasestorage.app",
-    messagingSenderId: "642467126038",
-    appId: "1:642467126038:web:420d7c0e33119b7fa24e37"
-  };
+  <div class="stats">
+    <div class="stat-card"><h4>Total Vendors</h4><h2 id="totalVendors">0</h2></div>
+    <div class="stat-card"><h4>Pending</h4><h2 id="pendingCount">0</h2></div>
+    <div class="stat-card"><h4>Approved</h4><h2 id="approvedCount">0</h2></div>
+    <div class="stat-card"><h4>Revenue</h4><h2>₦0</h2></div>
+  </div>
+  
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('pending')">Pending Approvals</button>
+    <button class="tab" onclick="showTab('vendors')">All Vendors</button>
+  </div>
+  
+  <div id="pendingTab">
+    <h3>Pending Vendors</h3>
+    <div id="pendingList">Loading...</div>
+  </div>
+</div>
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+<!-- FOOTER -->
+<footer style="background:#111827; color:#fff; padding:20px; text-align:center; margin-top:50px;">
+  © 2026 Lokoja Grocery Mall Admin
+</footer>
 
-  // SAMPLE DATA
-  // SAMPLE DATA - REMOVED
-const pendingAgents = [];
+<script>
+let allUsers = JSON.parse(localStorage.getItem('allUsers')) || [];
 
-  function renderAgents(){
-    const list = document.getElementById('pendingDeliveryList');
-    if(!list) return;
-    list.innerHTML = '';
-    pendingAgents.forEach(agent => {
-      const isRejected = agent.driverrider === 'no';
-      const cardColor = isRejected ? '#fee2e2' : '#f0fdf4';
-      const borderColor = isRejected ? '#ef4444' : '#16a34a';
-      list.innerHTML += `
-        <div style="background:${cardColor};border:2px solid ${borderColor};border-radius:12px;padding:15px;margin-bottom:12px">
-          <h4>${agent.name}</h4>
-          <p>Phone: ${agent.phone}</p>
-          ${isRejected ? `<button disabled style="padding:8px 12px;background:#ccc;color:white;border:none;border-radius:8px">Rejected</button>` : `<button onclick="approveAgent(${agent.id})" style="padding:8px 12px;background:#16a34a;color:white;border:none;border-radius:8px;cursor:pointer">Approve</button>`}
-        </div>
-      `;
-    });
+function loadStats() {
+  const vendors = allUsers.filter(u => u.role === 'Vendor');
+  const pending = vendors.filter(u => u.status === 'pending');
+  const approved = vendors.filter(u => u.status === 'approved');
+  document.getElementById('totalVendors').innerText = vendors.length;
+  document.getElementById('pendingCount').innerText = pending.length;
+  document.getElementById('approvedCount').innerText = approved.length;
+}
+
+function loadPending() {
+  const pending = allUsers.filter(u => u.role === 'Vendor' && u.status === 'pending');
+  
+  if(pending.length === 0) {
+    document.getElementById('pendingList').innerHTML = '<p style="color:#6b7280;">No pending vendors</p>';
+    return;
   }
+  
+  document.getElementById('pendingList').innerHTML = pending.map(v => `
+    <div class="vendor-card" id="vendor-${v.id}">
+      <div>
+        <h4>${v.name}</h4>
+        <p style="color:#6b7280; font-size:13px;">${v.email} | ${v.phone}</p>
+        <p style="color:#6b7280; font-size:12px;">Applied: ${new Date(v.id).toLocaleDateString()}</p>
+      </div>
+      <div>
+        <button class="btn-approve" onclick="approveVendor('${v.id}', this)">Approve</button>
+        <button class="btn-reject" onclick="rejectVendor('${v.id}')">Reject</button>
+      </div>
+    </div>
+  `).join('');
+}
 
-  window.approveAgent = function(id){
-    alert('Agent ' + id + ' Approved!');
-  }
-
-  renderAgents();
-
-  // VENDOR FORM
-  const form = document.getElementById('vendorForm');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const storeName = document.getElementById('storeName').value;
-    const ownerName = document.getElementById('ownerName').value;
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const phone = document.getElementById('phone').value;
-    const messageEl = document.getElementById('message');
-
-    try {
-      messageEl.innerHTML = "Creating account...";
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
-      
-      await setDoc(doc(db, "vendors", userCred.user.uid), {
-        uid: userCred.user.uid,
-        storeName, ownerName, email, phone,
-        status: "pending",
-        createdAt: serverTimestamp()
-      });
-
-      messageEl.innerHTML = "✅ Account created! Waiting for admin approval";
-      messageEl.style.color = "green";
-      form.reset();
-      loadPendingVendors();
-    } catch(err) {
-      messageEl.innerHTML = "❌ Error: " + err.message;
-      messageEl.style.color = "red";
-    }
-  });
-
-  // LOAD PENDING VENDORS
-  async function loadPendingVendors(){
-    const list = document.getElementById('pendingVendorList');
-    if(!list) return;
-    list.innerHTML = "Loading...";
+async function approveVendor(id, btn) {
+  btn.innerText = 'Approving...';
+  btn.parentElement.parentElement.classList.add('loading');
+  
+  let users = JSON.parse(localStorage.getItem('allUsers'));
+  const vendor = users.find(u => u.id == id);
+  
+  // 1. CALL FLUTTERWAVE TO CREATE SUBACCOUNT
+  try {
+    const subaccount = await createFlutterwaveSubaccount(vendor);
     
-    try {
-      const q = query(collection(db, "vendors"), where("status", "==", "pending"));
-      const querySnapshot = await getDocs(q);
-      
-      if(querySnapshot.empty){
-        list.innerHTML = "<p>No pending vendors</p>";
-        return;
-      }
-      
-      list.innerHTML = '';
-      querySnapshot.forEach((docSnap) => {
-        const v = docSnap.data();
-        list.innerHTML += `
-          <div style="background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;padding:15px;margin-bottom:12px">
-            <h4>${v.storeName}</h4>
-            <p><b>Owner:</b> ${v.ownerName}</p>
-            <p><b>Email:</b> ${v.email}</p>
-            <p><b>Phone:</b> ${v.phone}</p>
-            <button onclick="approveVendor('${docSnap.id}')" style="padding:8px 12px;background:#16a34a;color:white;border:none;border-radius:8px;cursor:pointer">Approve</button>
-          </div>
-        `;
-      });
-    } catch(err) {
-      list.innerHTML = "<p style='color:red'>Error: " + err.message + "</p>";
-      console.error(err);
-    }
+    // 2. UPDATE VENDOR STATUS
+    users = users.map(u => u.id == id ? {...u, status: 'approved', subaccount_id: subaccount.id} : u);
+    localStorage.setItem('allUsers', JSON.stringify(users));
+    
+    alert(`✅ ${vendor.name} Approved!\nFlutterwave Subaccount: ${subaccount.id}`);
+    
+  } catch(e) {
+    alert('Error: ' + e.message);
   }
+  
+  loadStats();
+  loadPending();
+}
 
-  window.approveVendor = async (id) => {
-    await updateDoc(doc(db, "vendors", id), { status: "approved" });
-    alert("Vendor Approved!");
-    loadPendingVendors();
+function rejectVendor(id) {
+  if(!confirm('Reject this vendor?')) return;
+  let users = JSON.parse(localStorage.getItem('allUsers'));
+  users = users.filter(u => u.id != id);
+  localStorage.setItem('allUsers', JSON.stringify(users));
+  alert('Vendor Rejected');
+  loadStats();
+  loadPending();
+}
+
+// THIS IS WHERE WE CALL FLUTTERWAVE
+async function createFlutterwaveSubaccount(vendor) {
+  // FOR NOW: SIMULATION. Later replace with real API call
+  console.log("Creating subaccount for:", vendor.name);
+  
+  // SIMULATED RESPONSE
+  await new Promise(resolve => setTimeout(resolve, 1500)); // fake loading
+  
+  return {
+    id: 'RS_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+    business_name: vendor.name,
+    status: 'active'
   }
+  
+  /* 
+  // REAL FLUTTERWAVE CODE - USE THIS WITH BACKEND LATER
+  const res = await fetch('https://api.flutterwave.com/v3/subaccounts', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_SECRET_KEY', // MUST BE FROM BACKEND
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      account_bank: vendor.bank_code, // We will collect this later
+      account_number: vendor.account_number,
+      business_name: vendor.name,
+      business_email: vendor.email,
+      business_mobile: vendor.phone,
+      country: "NG",
+      split_type: "percentage",
+      split_value: 10 // Your 10% commission
+    })
+  });
+  const data = await res.json();
+  return data.data;
+  */
+}
 
-  // RUN IT WHEN PAGE LOADS
-  loadPendingVendors();
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+loadStats();
+loadPending();
 </script>
-
 </body>
 </html>
