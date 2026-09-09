@@ -115,16 +115,43 @@
   </form>
 </div>
 
-
 <script>
+let selectedRole = "Customer";
+
 function selectRole(el) {
   document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  const desc = el.querySelector('.role-name').innerText;
-  if(desc.includes('Customer')) document.getElementById('roleDesc').innerText = 'Shop and order groceries';
-  if(desc.includes('Vendor')) document.getElementById('roleDesc').innerText = 'Sell your products on the platform';
-  if(desc.includes('Delivery')) document.getElementById('roleDesc').innerText = 'Deliver orders and earn money';
+  selectedRole = el.querySelector('.role-name').innerText;
+  
+  const desc = document.getElementById('roleDesc');
+  if(selectedRole.includes('Customer')) desc.innerText = 'Shop and order groceries';
+  if(selectedRole.includes('Vendor')) desc.innerText = 'Sell your products on the platform';
+  if(selectedRole.includes('Delivery')) desc.innerText = 'Deliver orders and earn money';
 }
+
+document.querySelector('form').addEventListener('submit', function(e) {
+  e.preventDefault(); // THIS STOPS THE WIPING
+  
+  const name = document.querySelector('input[type="text"]').value;
+  const phone = document.querySelector('input[type="tel"]').value;
+  const email = document.querySelector('input[type="email"]').value;
+  
+  if(name === "" || phone === "" || email === ""){
+    alert("Please fill all fields");
+    return;
+  }
+  
+  // Save to browser for now
+  const userData = { role: selectedRole, name, phone, email };
+  localStorage.setItem("newUser", JSON.stringify(userData));
+  
+  alert("Account created as " + selectedRole + "!");
+  
+  // Redirect based on role
+  if(selectedRole.includes("Customer")) window.location.href = "index.html";
+  if(selectedRole.includes("Vendor")) window.location.href = "vendor.html";
+  if(selectedRole.includes("Delivery")) window.location.href = "delivery-agent.html";
+});
 </script>
 
 </body>
