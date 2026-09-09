@@ -11,11 +11,8 @@
   .role-select { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
   .role-btn { padding:12px 5px; border:2px solid #e5e7eb; border-radius:10px; background:#fff; cursor:pointer; text-align:center; font-size:13px; font-weight:600; }
   .role-btn.active { border-color:#16a34a; background:#f0fdf4; }
-  .role-btn img { font-size:24px; margin-bottom:5px; }
   label { font-weight:600; font-size:14px; margin-bottom:5px; display:block; }
-  input, select { width:100%; padding:12px 12px 12px 40px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px; }
-  .input-wrap { position:relative; }
-  .input-wrap .icon { position:absolute; left:12px; top:12px; }
+  input, select { width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px; }
   .btn { background:#16a34a; color:#fff; border:none; padding:14px; border-radius:8px; font-weight:700; width:100%; cursor:pointer; font-size:16px; }
   .hidden { display:none; }
   .sub-text { color:#6b7280; font-size:12px; margin-top:-10px; margin-bottom:15px; }
@@ -28,15 +25,15 @@
   
   <p style="margin-bottom:10px; font-weight:600;">I want to join as</p>
   <div class="role-select">
-    <div class="role-btn" onclick="selectRole('Customer')">
+    <div class="role-btn" onclick="selectRole(this, 'Customer')">
       <div>🛒</div>
       <div>Customer</div>
     </div>
-    <div class="role-btn active" onclick="selectRole('Vendor')">
+    <div class="role-btn active" onclick="selectRole(this, 'Vendor')">
       <div>🏪</div>
       <div>Vendor</div>
     </div>
-    <div class="role-btn" onclick="selectRole('Delivery Agent')">
+    <div class="role-btn" onclick="selectRole(this, 'Delivery Agent')">
       <div>🚚</div>
       <div>Delivery<br>Agent</div>
     </div>
@@ -44,14 +41,9 @@
   <p class="sub-text" id="roleDesc">Sell your products on the platform</p>
   
   <form id="signupForm">
-    <!-- COMMON FIELDS -->
     <label>Full Name</label>
-    <div class="input-wrap">
-      <span class="icon">👤</span>
-      <input type="text" id="fullName" required>
-    </div>
+    <input type="text" id="fullName" required>
     
-    <!-- VENDOR ONLY FIELDS -->
     <div id="vendorFields">
       <label>Location in Lokoja</label>
       <select id="location" required>
@@ -65,32 +57,19 @@
       </select>
       
       <label>Shop Address</label>
-      <div class="input-wrap">
-        <span class="icon">📍</span>
-        <input type="text" id="shopAddress" placeholder="e.g No 5, Ganaja Junction" required>
-      </div>
+      <input type="text" id="shopAddress" placeholder="e.g No 5, Ganaja Junction" required>
       
       <label>WhatsApp Number</label>
-      <div class="input-wrap">
-        <span class="icon">📞</span>
-        <input type="tel" id="whatsapp" placeholder="08031234567" required>
-      </div>
+      <input type="tel" id="whatsapp" placeholder="08031234567" required>
     </div>
     
-    <!-- CUSTOMER/AGENT PHONE -->
     <div id="simpleFields" class="hidden">
       <label>Phone Number</label>
-      <div class="input-wrap">
-        <span class="icon">📞</span>
-        <input type="tel" id="phone" required>
-      </div>
+      <input type="tel" id="phone" required>
     </div>
     
     <label>Email</label>
-    <div class="input-wrap">
-      <span class="icon">✉️</span>
-      <input type="email" id="email" required>
-    </div>
+    <input type="email" id="email" required>
     
     <label>Password</label>
     <input type="password" id="password" placeholder="Create password" required>
@@ -102,10 +81,10 @@
 <script>
 let selectedRole = 'Vendor';
 
-function selectRole(role) {
+function selectRole(element, role) {
   selectedRole = role;
   document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
-  event.target.closest('.role-btn').classList.add('active');
+  element.classList.add('active');
   
   if(role === 'Vendor') {
     document.getElementById('vendorFields').classList.remove('hidden');
@@ -147,7 +126,7 @@ document.getElementById("signupForm").addEventListener("submit", function(e) {
   localStorage.setItem('allUsers', JSON.stringify(allUsers));
   
   alert("Application submitted! Wait for admin approval.");
-  window.location.href = "login.html";
+  window.location.href = "admin.html"; // Changed to admin for now so we can test
 });
 </script>
 </body>
