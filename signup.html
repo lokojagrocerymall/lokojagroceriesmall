@@ -3,196 +3,152 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Join Lokoja Grocery Mall</title>
+<title>Sign Up - Lokoja Grocery Mall</title>
 <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  body { background: #f8f9fa; }
-  
-  .container { max-width: 480px; margin: 20px auto; padding: 0 16px; }
-  
-  .basket-icon { width: 60px; height: 60px; background: #16a34a; border-radius: 16px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
-  
-  h1 { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 8px; }
-  .subtitle { text-align: center; color: #6b7280; margin-bottom: 24px; }
-  
-  .role-selector { background: white; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
-  .role-label { font-size: 14px; color: #374151; margin-bottom: 12px; font-weight: 500; }
-  .role-options { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-  
-  .role-btn {
-    border: 2px solid #e5e7eb; border-radius: 12px; padding: 16px 8px;
-    text-align: center; cursor: pointer; background: white; transition: all 0.2s;
-  }
-  .role-btn.active {
-    border-color: #16a34a; background: #f0fdf4;
-  }
-  .role-icon { font-size: 24px; margin-bottom: 6px; }
-  .role-name { font-size: 13px; font-weight: 600; color: #111827; }
-  .role-desc { font-size: 11px; color: #6b7280; margin-top: 6px; }
-  
-  .form-group { margin-bottom: 16px; }
-  .form-label { font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px; display: block; }
-  .input-wrapper { position: relative; }
-  .input-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; }
-  .form-input {
-    width: 100%; padding: 12px 12px 12px 40px; border: 1px solid #d1d5db;
-    border-radius: 10px; font-size: 15px; background: white;
-  }
-  .form-input:focus { outline: none; border-color: #16a34a; }
-  
-  .btn-submit {
-    width: 100%; padding: 14px; background: #16a34a; color: white;
-    border: none; border-radius: 10px; font-size: 16px; font-weight: 700;
-    margin-top: 8px; cursor: pointer;
-  }
-  
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  body { background:#f5f5f5; padding:20px; }
+  .container { max-width:500px; margin:0 auto; background:#fff; padding:25px; border-radius:12px; }
+  .role-select { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+  .role-btn { padding:12px 5px; border:2px solid #e5e7eb; border-radius:10px; background:#fff; cursor:pointer; text-align:center; font-size:13px; font-weight:600; }
+  .role-btn.active { border-color:#16a34a; background:#f0fdf4; }
+  .role-btn img { font-size:24px; margin-bottom:5px; }
+  label { font-weight:600; font-size:14px; margin-bottom:5px; display:block; }
+  input, select { width:100%; padding:12px 12px 12px 40px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px; }
+  .input-wrap { position:relative; }
+  .input-wrap .icon { position:absolute; left:12px; top:12px; }
+  .btn { background:#16a34a; color:#fff; border:none; padding:14px; border-radius:8px; font-weight:700; width:100%; cursor:pointer; font-size:16px; }
+  .hidden { display:none; }
+  .sub-text { color:#6b7280; font-size:12px; margin-top:-10px; margin-bottom:15px; }
 </style>
 </head>
 <body>
 
-<!-- NEW HEADER - SAME AS HOMEPAGE -->
-<header class="app-header" style="background:#fff; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:999; box-shadow:0 2px 8px rgba(0,0,0,0.08); height:65px;">
-  <div class="brand" style="display:flex; align-items:center; gap:10px;">
-    <div style="background:#16a34a; width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-      <img src="./logo.png" alt="LGM" style="width:36px; height:36px; object-fit:contain;">
-    </div>
-    <span style="color:#111; font-size:18px; font-weight:900;">Lokoja Grocery Mall</span>
-  </div>
-  
-  <div class="header-icons" style="display:flex; align-items:center; gap:18px;">
-    <a href="cart.html" style="font-size:24px; text-decoration:none; color:#333;">🛒</a>
-    <span onclick="toggleMenu()" style="font-size:26px; color:#333; cursor:pointer;">☰</span>
-  </div>
-</header>
-
-<!-- MENU DROPDOWN -->
-<div id="mobileMenu" style="display:none; position:fixed; top:65px; left:0; width:100%; background:#fff; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:998; padding:15px 20px;">
-  <a href="index.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Home</a>
-  <a href="browse.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Browse</a>
-  <a href="vendors.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Vendors</a>
-  <a href="signup.html" style="display:block; margin-top:12px; padding:14px; background:#16a34a; color:#fff; text-align:center; border-radius:10px; font-weight:900; font-size:16px; text-decoration:none;">Join Us</a>
-</div>
-
 <div class="container">
-  <div class="basket-icon">🧺</div>
-  <h1>Create Account</h1>
-  <p class="subtitle">Join Lokoja Grocery Mall today</p>
+  <h2 style="margin-bottom:8px;">Join Lokoja Grocery Mall</h2>
   
-  <div class="role-selector">
-    <div class="role-label">I want to join as</div>
-    <div class="role-options">
-      <div class="role-btn active" onclick="selectRole(this)">
-        <div class="role-icon">🛒</div>
-        <div class="role-name">Customer</div>
-      </div>
-      <div class="role-btn" onclick="selectRole(this)">
-        <div class="role-icon">🏪</div>
-        <div class="role-name">Vendor</div>
-      </div>
-      <div class="role-btn" onclick="selectRole(this)">
-        <div class="role-icon">🚚</div>
-        <div class="role-name">Delivery<br>Agent</div>
-      </div>
+  <p style="margin-bottom:10px; font-weight:600;">I want to join as</p>
+  <div class="role-select">
+    <div class="role-btn" onclick="selectRole('Customer')">
+      <div>🛒</div>
+      <div>Customer</div>
     </div>
-    <div class="role-desc" id="roleDesc">Shop and order groceries</div>
+    <div class="role-btn active" onclick="selectRole('Vendor')">
+      <div>🏪</div>
+      <div>Vendor</div>
+    </div>
+    <div class="role-btn" onclick="selectRole('Delivery Agent')">
+      <div>🚚</div>
+      <div>Delivery<br>Agent</div>
+    </div>
   </div>
+  <p class="sub-text" id="roleDesc">Sell your products on the platform</p>
   
   <form id="signupForm">
-    <div class="form-group">
-      <label class="form-label">Full Name</label>
-      <div class="input-wrapper">
-        <span class="input-icon">👤</span>
-        <input type="text" id="name" class="form-input" placeholder="Your full name" required>
+    <!-- COMMON FIELDS -->
+    <label>Full Name</label>
+    <div class="input-wrap">
+      <span class="icon">👤</span>
+      <input type="text" id="fullName" required>
+    </div>
+    
+    <!-- VENDOR ONLY FIELDS -->
+    <div id="vendorFields">
+      <label>Location in Lokoja</label>
+      <select id="location" required>
+        <option value="">Select Area</option>
+        <option>Ganaja</option>
+        <option>Felele</option>
+        <option>Adankolo</option>
+        <option>Nataco</option>
+        <option>Zango</option>
+        <option>Other</option>
+      </select>
+      
+      <label>Shop Address</label>
+      <div class="input-wrap">
+        <span class="icon">📍</span>
+        <input type="text" id="shopAddress" placeholder="e.g No 5, Ganaja Junction" required>
+      </div>
+      
+      <label>WhatsApp Number</label>
+      <div class="input-wrap">
+        <span class="icon">📞</span>
+        <input type="tel" id="whatsapp" placeholder="08031234567" required>
       </div>
     </div>
     
-    <div class="form-group">
-      <label class="form-label">Phone Number</label>
-      <div class="input-wrapper">
-        <span class="input-icon">📞</span>
-        <input type="tel" id="phone" class="form-input" placeholder="0803..." required>
+    <!-- CUSTOMER/AGENT PHONE -->
+    <div id="simpleFields" class="hidden">
+      <label>Phone Number</label>
+      <div class="input-wrap">
+        <span class="icon">📞</span>
+        <input type="tel" id="phone" required>
       </div>
     </div>
     
-    <div class="form-group">
-      <label class="form-label">Email</label>
-      <div class="input-wrapper">
-        <span class="input-icon">✉️</span>
-        <input type="email" id="email" class="form-input" placeholder="you@email.com" required>
-      </div>
+    <label>Email</label>
+    <div class="input-wrap">
+      <span class="icon">✉️</span>
+      <input type="email" id="email" required>
     </div>
     
-    <button type="submit" class="btn-submit">Continue</button>
+    <label>Password</label>
+    <input type="password" id="password" placeholder="Create password" required>
+    
+    <button type="submit" class="btn">Continue</button>
   </form>
 </div>
 
-<!-- NEW FOOTER -->
-<footer style="background:#111827; color:#fff; padding:40px 20px 20px; margin-top:50px;">
-  <div style="max-width:1200px; margin:0 auto;">
-    <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:30px;">
-      <div style="background:#16a34a; width:48px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-        <img src="./logo.png" alt="LGM" style="width:38px; height:38px; object-fit:contain;">
-      </div>
-      <div>
-        <h3 style="margin:0 0 10px; font-size:18px; font-weight:900; color:#fff;">Lokoja Grocery Mall</h3>
-        <p style="margin:0; color:#9ca3af; line-height:1.6; font-size:14px;">Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State.</p>
-      </div>
-    </div>
-    <div style="border-top:1px solid #374151; padding-top:20px; text-align:center; color:#6b7280; font-size:13px;">
-      © 2026 Lokoja Grocery Mall. All rights reserved.
-    </div>
-  </div>
-</footer>
-
 <script>
-let selectedRole = "Customer";
+let selectedRole = 'Vendor';
 
-function toggleMenu() {
-  const menu = document.getElementById('mobileMenu');
-  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-}
-document.addEventListener('click', function(e){
-  const menu = document.getElementById('mobileMenu');
-  if(!e.target.closest('.app-header') && !e.target.closest('#mobileMenu')){
-    menu.style.display = 'none';
-  }
-});
-
-function selectRole(el) {
+function selectRole(role) {
+  selectedRole = role;
   document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  selectedRole = el.querySelector('.role-name').innerText;
+  event.target.closest('.role-btn').classList.add('active');
   
-  const desc = document.getElementById('roleDesc');
-  if(selectedRole.includes('Customer')) desc.innerText = 'Shop and order groceries';
-  if(selectedRole.includes('Vendor')) desc.innerText = 'Sell your products on the platform';
-  if(selectedRole.includes('Delivery')) desc.innerText = 'Deliver orders and earn money';
+  if(role === 'Vendor') {
+    document.getElementById('vendorFields').classList.remove('hidden');
+    document.getElementById('simpleFields').classList.add('hidden');
+    document.getElementById('roleDesc').innerText = 'Sell your products on the platform';
+  } else if(role === 'Customer') {
+    document.getElementById('vendorFields').classList.add('hidden');
+    document.getElementById('simpleFields').classList.remove('hidden');
+    document.getElementById('roleDesc').innerText = 'Shop for groceries and essentials';
+  } else {
+    document.getElementById('vendorFields').classList.add('hidden');
+    document.getElementById('simpleFields').classList.remove('hidden');
+    document.getElementById('roleDesc').innerText = 'Deliver orders to customers';
+  }
 }
 
-document.getElementById('signupForm').addEventListener('submit', function(e) {
-  e.preventDefault(); // THIS STOPS THE WIPING
+document.getElementById("signupForm").addEventListener("submit", function(e) {
+  e.preventDefault();
   
-  const name = document.getElementById('name').value;
-  const phone = document.getElementById('phone').value;
-  const email = document.getElementById('email').value;
+  const newUser = {
+    id: Date.now(),
+    name: document.getElementById("fullName").value,
+    email: document.getElementById("email").value,
+    password: document.getElementById("password").value,
+    role: selectedRole,
+    status: 'pending'
+  };
   
-  if(name === "" || phone === "" || email === ""){
-    alert("Please fill all fields");
-    return;
+  if(selectedRole === 'Vendor') {
+    newUser.location = document.getElementById("location").value;
+    newUser.shop_address = document.getElementById("shopAddress").value;
+    newUser.phone = document.getElementById("whatsapp").value;
+  } else {
+    newUser.phone = document.getElementById("phone").value;
   }
   
-  // Save to browser for now
-  const userData = { role: selectedRole, name, phone, email };
-  localStorage.setItem("newUser", JSON.stringify(userData));
+  let allUsers = JSON.parse(localStorage.getItem('allUsers')) || [];
+  allUsers.push(newUser);
+  localStorage.setItem('allUsers', JSON.stringify(allUsers));
   
-  alert("Account created as " + selectedRole + "!");
-  
-  // Redirect based on role
-  if(selectedRole.includes("Customer")) window.location.href = "index.html";
-  if(selectedRole.includes("Vendor")) window.location.href = "vendor.html";
-  if(selectedRole.includes("Delivery")) window.location.href = "delivery-agent.html";
+  alert("Application submitted! Wait for admin approval.");
+  window.location.href = "login.html";
 });
 </script>
-
 </body>
 </html>
