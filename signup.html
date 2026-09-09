@@ -18,6 +18,7 @@
   .sub-text { color:#6b7280; font-size:12px; margin-top:-10px; margin-bottom:15px; }
   .login-link { text-align:center; margin-top:15px; font-size:14px; }
   .login-link a { color:#16a34a; font-weight:700; text-decoration:none; }
+  .error { color:#ef4444; font-size:13px; margin-bottom:10px; }
 </style>
 </head>
 <body>
@@ -34,26 +35,22 @@
   <p class="sub-text" id="roleDesc">Sell your products on the platform</p>
   
   <form id="signupForm">
+    <p id="errorMsg" class="error hidden"></p>
     <label>Full Name</label>
-    <input type="text" id="fullName">
+    <input type="text" id="fullName" required>
     
     <div id="vendorFields">
       <label>Location in Lokoja</label>
-      <select id="location">
+      <select id="location" required>
         <option value="">Select Area</option>
-        <option>Ganaja</option>
-        <option>Felele</option>
-        <option>Adankolo</option>
-        <option>Nataco</option>
-        <option>Zango</option>
-        <option>Other</option>
+        <option>Ganaja</option><option>Felele</option><option>Adankolo</option><option>Nataco</option><option>Zango</option><option>Other</option>
       </select>
       
       <label>Shop Address</label>
-      <input type="text" id="shopAddress" placeholder="e.g No 5, Ganaja Junction">
+      <input type="text" id="shopAddress" placeholder="e.g No 5, Ganaja Junction" required>
       
       <label>WhatsApp Number</label>
-      <input type="tel" id="whatsapp" placeholder="08031234567">
+      <input type="tel" id="whatsapp" placeholder="08031234567" required>
     </div>
     
     <div id="simpleFields" class="hidden">
@@ -62,14 +59,13 @@
     </div>
     
     <label>Email</label>
-    <input type="email" id="email">
+    <input type="email" id="email" required>
     
     <label>Password</label>
-    <input type="password" id="password" placeholder="Create password">
+    <input type="password" id="password" placeholder="Create password" required>
     
     <button type="button" class="btn" onclick="submitForm()">Continue</button>
     
-    <!-- THIS IS THE NEW LOGIN LINK -->
     <p class="login-link">Already have an account? <a href="login.html">Login here</a></p>
   </form>
 </div>
@@ -94,10 +90,24 @@ function selectRole(element, role) {
 }
 
 function submitForm() {
+  const email = document.getElementById("email").value.toLowerCase();
+  const errorMsg = document.getElementById("errorMsg");
+  
+  let allUsers = JSON.parse(localStorage.getItem('allUsers')) || [];
+  
+  // CHECK IF EMAIL ALREADY EXISTS
+  const existingUser = allUsers.find(u => u.email.toLowerCase() === email);
+  if(existingUser) {
+    errorMsg.innerText = 'This email is already registered. Please login instead.';
+    errorMsg.classList.remove('hidden');
+    return;
+  }
+  errorMsg.classList.add('hidden');
+  
   const newUser = {
     id: Date.now(),
     name: document.getElementById("fullName").value,
-    email: document.getElementById("email").value,
+    email: email,
     password: document.getElementById("password").value,
     role: selectedRole,
     status: 'pending'
@@ -111,12 +121,11 @@ function submitForm() {
     newUser.phone = document.getElementById("phone").value;
   }
   
-  let allUsers = JSON.parse(localStorage.getItem('allUsers')) || [];
   allUsers.push(newUser);
   localStorage.setItem('allUsers', JSON.stringify(allUsers));
   
-  alert("Application submitted! Total users: " + allUsers.length);
-  window.location.href = "admin.html";
+  alert("Application submitted successfully! Awaiting admin approval.");
+  window.location.href = "login.html";
 }
 </script>
 </body>
