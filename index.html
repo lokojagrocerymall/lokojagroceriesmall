@@ -46,18 +46,43 @@ body {
 </head>
 <body>
 
-<header class="app-header" style="background:#16a34a; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:999; height:70px;">
+<header class="app-header" style="background:#fff; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:999; box-shadow:0 2px 8px rgba(0,0,0,0.08); height:65px;">
   <div class="brand" style="display:flex; align-items:center; gap:10px;">
-    <!-- BIGGER LOGO, NO WHITE CIRCLE -->
-    <img src="./logo.png" alt="LGM" style="height:65px; width:65px; object-fit:contain;">
-    <span style="color:#fff; font-size:16px; font-weight:900; line-height:1.2;">LOKOJA<br>GROCERY MALL</span>
+    <!-- YOUR LOGO IN GREEN SQUARE -->
+    <div style="background:#16a34a; width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+      <img src="./logo.png" alt="LGM" style="width:36px; height:36px; object-fit:contain;">
+    </div>
+    
+    <!-- BLACK TEXT -->
+    <span style="color:#111; font-size:18px; font-weight:900;">Lokoja Grocery Mall</span>
   </div>
   
   <div class="header-icons" style="display:flex; align-items:center; gap:18px;">
-    <a href="cart.html" style="font-size:24px; text-decoration:none;">🛒</a>
-    <span onclick="toggleMenu()" style="font-size:26px; color:#fff; cursor:pointer;">☰</span>
+    <a href="cart.html" style="font-size:24px; text-decoration:none; color:#333;">🛒</a>
+    <span onclick="toggleMenu()" style="font-size:26px; color:#333; cursor:pointer;">☰</span>
   </div>
 </header>
+
+<!-- MENU DROPDOWN -->
+<div id="mobileMenu" style="display:none; position:fixed; top:65px; left:0; width:100%; background:#fff; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:998; padding:15px 20px;">
+  <a href="index.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Home</a>
+  <a href="browse.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Browse</a>
+  <a href="vendors.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Vendors</a>
+  <a href="signup.html" style="display:block; margin-top:12px; padding:14px; background:#16a34a; color:#fff; text-align:center; border-radius:10px; font-weight:900; font-size:16px; text-decoration:none;">Join Us</a>
+</div>
+
+<script>
+function toggleMenu() {
+  const menu = document.getElementById('mobileMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+document.addEventListener('click', function(e){
+  const menu = document.getElementById('mobileMenu');
+  if(!e.target.closest('.app-header') && !e.target.closest('#mobileMenu')){
+    menu.style.display = 'none';
+  }
+});
+</script>
 
 <!-- FIXED MENU - OVERLAY INSTEAD OF PUSHING PAGE -->
 <div id="mobileMenu" style="display:none; position:fixed; top:70px; left:0; width:100%; background:#fff; box-shadow:0 4px 10px rgba(0,0,0,0.2); z-index:998; padding:15px;">
