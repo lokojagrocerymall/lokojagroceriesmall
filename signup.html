@@ -12,7 +12,7 @@
   .role-btn { padding:12px 5px; border:2px solid #e5e7eb; border-radius:10px; background:#fff; cursor:pointer; text-align:center; font-size:13px; font-weight:600; }
   .role-btn.active { border-color:#16a34a; background:#f0fdf4; }
   label { font-weight:600; font-size:14px; margin-bottom:5px; display:block; }
-  input, select { width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px; }
+  input, select { width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px; background:#fff; }
   .btn { background:#16a34a; color:#fff; border:none; padding:14px; border-radius:8px; font-weight:700; width:100%; cursor:pointer; font-size:16px; }
   .hidden { display:none; }
   .sub-text { color:#6b7280; font-size:12px; margin-top:-10px; margin-bottom:15px; }
@@ -25,28 +25,19 @@
   
   <p style="margin-bottom:10px; font-weight:600;">I want to join as</p>
   <div class="role-select">
-    <div class="role-btn" onclick="selectRole(this, 'Customer')">
-      <div>🛒</div>
-      <div>Customer</div>
-    </div>
-    <div class="role-btn active" onclick="selectRole(this, 'Vendor')">
-      <div>🏪</div>
-      <div>Vendor</div>
-    </div>
-    <div class="role-btn" onclick="selectRole(this, 'Delivery Agent')">
-      <div>🚚</div>
-      <div>Delivery<br>Agent</div>
-    </div>
+    <div class="role-btn" onclick="selectRole(this, 'Customer')"><div>🛒</div><div>Customer</div></div>
+    <div class="role-btn active" onclick="selectRole(this, 'Vendor')"><div>🏪</div><div>Vendor</div></div>
+    <div class="role-btn" onclick="selectRole(this, 'Delivery Agent')"><div>🚚</div><div>Delivery<br>Agent</div></div>
   </div>
   <p class="sub-text" id="roleDesc">Sell your products on the platform</p>
   
   <form id="signupForm">
     <label>Full Name</label>
-    <input type="text" id="fullName" required>
+    <input type="text" id="fullName">
     
     <div id="vendorFields">
       <label>Location in Lokoja</label>
-      <select id="location" required>
+      <select id="location">
         <option value="">Select Area</option>
         <option>Ganaja</option>
         <option>Felele</option>
@@ -57,24 +48,24 @@
       </select>
       
       <label>Shop Address</label>
-      <input type="text" id="shopAddress" placeholder="e.g No 5, Ganaja Junction" required>
+      <input type="text" id="shopAddress" placeholder="e.g No 5, Ganaja Junction">
       
       <label>WhatsApp Number</label>
-      <input type="tel" id="whatsapp" placeholder="08031234567" required>
+      <input type="tel" id="whatsapp" placeholder="08031234567">
     </div>
     
     <div id="simpleFields" class="hidden">
       <label>Phone Number</label>
-      <input type="tel" id="phone" required>
+      <input type="tel" id="phone">
     </div>
     
     <label>Email</label>
-    <input type="email" id="email" required>
+    <input type="email" id="email">
     
     <label>Password</label>
-    <input type="password" id="password" placeholder="Create password" required>
+    <input type="password" id="password" placeholder="Create password">
     
-    <button type="submit" class="btn">Continue</button>
+    <button type="button" class="btn" onclick="submitForm()">Continue</button>
   </form>
 </div>
 
@@ -90,20 +81,14 @@ function selectRole(element, role) {
     document.getElementById('vendorFields').classList.remove('hidden');
     document.getElementById('simpleFields').classList.add('hidden');
     document.getElementById('roleDesc').innerText = 'Sell your products on the platform';
-  } else if(role === 'Customer') {
-    document.getElementById('vendorFields').classList.add('hidden');
-    document.getElementById('simpleFields').classList.remove('hidden');
-    document.getElementById('roleDesc').innerText = 'Shop for groceries and essentials';
   } else {
     document.getElementById('vendorFields').classList.add('hidden');
     document.getElementById('simpleFields').classList.remove('hidden');
-    document.getElementById('roleDesc').innerText = 'Deliver orders to customers';
+    document.getElementById('roleDesc').innerText = role === 'Customer' ? 'Shop for groceries' : 'Deliver orders';
   }
 }
 
-document.getElementById("signupForm").addEventListener("submit", function(e) {
-  e.preventDefault();
-  
+function submitForm() {
   const newUser = {
     id: Date.now(),
     name: document.getElementById("fullName").value,
@@ -125,9 +110,9 @@ document.getElementById("signupForm").addEventListener("submit", function(e) {
   allUsers.push(newUser);
   localStorage.setItem('allUsers', JSON.stringify(allUsers));
   
-  alert("Application submitted! Wait for admin approval.");
-  window.location.href = "admin.html"; // Changed to admin for now so we can test
-});
+  alert("Application submitted! Total users: " + allUsers.length);
+  window.location.href = "admin.html";
+}
 </script>
 </body>
 </html>
