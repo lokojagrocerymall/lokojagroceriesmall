@@ -30,6 +30,7 @@
  .btn-edit { background:#2563eb; }
  .btn-delete { background:#ef4444; }
  .btn-outline { background:#fff; color:#16a34a; border:2px solid #16a34a; }
+ .btn-warning { background:#f59e0b; }
  .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; overflow-y:auto; }
  .modal-content { background:#fff; padding:25px; border-radius:12px; width:90%; max-width:400px; margin:20px 0; }
  .hidden { display:none; }
@@ -37,8 +38,9 @@
  .product-item img { width:60px; height:60px; object-fit:cover; border-radius:8px; }
  .page { display:none; }
  .page.active { display:block; }
- .otp-box { display:flex; gap:10px; }
- .otp-box input { text-align:center; font-size:20px; font-weight:700; }
+ .otp-box { display:flex; gap:8px; justify-content:center; }
+ .otp-box input { text-align:center; font-size:20px; font-weight:700; width:45px; padding:12px 5px; }
+ .alert { background:#fef3c7; border-left:4px solid #f59e0b; padding:12px; border-radius:6px; margin-bottom:15px; font-size:14px; }
 </style>
 </head>
 <body>
@@ -62,7 +64,7 @@
 
 <div class="container">
 
-  <!-- PAGE 1: DASHBOARD -->
+  <!-- DASHBOARD -->
   <div id="dashboard" class="page active">
     <div class="welcome">
       <h2 id="welcomeName">Welcome, Vendor!</h2>
@@ -80,7 +82,7 @@
     </div>
   </div>
 
-  <!-- PAGE 2: WALLET -->
+  <!-- WALLET -->
   <div id="wallet" class="page">
     <div class="wallet-card">
       <p>Available Balance</p>
@@ -89,8 +91,9 @@
     </div>
     <div class="card">
       <h3>Withdraw to Bank</h3>
+      <div class="alert">⚠️ For your security, withdrawals can only go to your verified bank account</div>
       <p style="font-size:12px; color:#6b7280; margin-bottom:10px;">
-        Funds will be sent to: <b id="withdrawAccount"></b>
+        Account: <b id="withdrawAccount"></b>
       </p>
       <label>Amount ₦</label>
       <input type="number" id="withdrawAmount" placeholder="Min ₦1000">
@@ -102,7 +105,7 @@
     </div>
   </div>
 
-  <!-- PAGE 3: PRODUCTS -->
+  <!-- PRODUCTS -->
   <div id="products" class="page">
     <div class="card">
       <h3>My Products</h3>
@@ -111,7 +114,7 @@
     </div>
   </div>
 
-  <!-- PAGE 4: ORDERS -->
+  <!-- ORDERS -->
   <div id="orders" class="page">
     <div class="card">
       <h3>Customer Enquiries & Orders</h3>
@@ -119,7 +122,7 @@
     </div>
   </div>
 
-  <!-- PAGE 5: PROFILE -->
+  <!-- PROFILE -->
   <div id="profile" class="page">
     <div class="card">
       <h3>Store Profile</h3>
@@ -133,23 +136,32 @@
       <p><b>Account Name:</b> <span id="profileAccName"></span></p>
       <p><b>Account No:</b> <span id="profileAccNo"></span></p>
       <p><b>Bank:</b> <span id="profileBank"></span></p>
-      <button class="btn btn-outline" style="margin-top:15px;" onclick="startChangeBank()">Change Bank Account</button>
+      <button class="btn btn-warning" style="margin-top:15px;" onclick="startChangeBank()">🔒 Change Bank Account</button>
+      <p style="font-size:12px; color:#6b7280; margin-top:8px;">Requires OTP verification for security</p>
     </div>
   </div>
 
 </div>
 
-<!-- OTP MODAL FOR BANK CHANGE -->
+<!-- OTP VERIFICATION MODAL -->
 <div id="otpModal" class="modal hidden">
   <div class="modal-content">
-    <h3>Verify Change</h3>
-    <p style="color:#6b7280; font-size:14px;">Enter 6-digit code sent to <b id="otpSendTo"></b></p>
+    <h3>🔒 Security Verification</h3>
+    <p style="color:#6b7280; font-size:14px; margin-bottom:15px;">
+      Enter 6-digit code sent to <br>
+      <b id="otpSendTo"></b>
+    </p>
     <div class="otp-box">
-      <input type="text" maxlength="1"><input type="text" maxlength="1"><input type="text" maxlength="1">
-      <input type="text" maxlength="1"><input type="text" maxlength="1"><input type="text" maxlength="1">
+      <input type="text" maxlength="1" oninput="moveNext(this,0)">
+      <input type="text" maxlength="1" oninput="moveNext(this,1)">
+      <input type="text" maxlength="1" oninput="moveNext(this,2)">
+      <input type="text" maxlength="1" oninput="moveNext(this,3)">
+      <input type="text" maxlength="1" oninput="moveNext(this,4)">
+      <input type="text" maxlength="1" oninput="moveNext(this,5)">
     </div>
-    <button class="btn" onclick="verifyOTP()">Verify</button>
+    <button class="btn" style="margin-top:20px;" onclick="verifyOTP()">Verify & Continue</button>
     <button style="background:#6b7280; margin-top:10px;" class="btn" onclick="closeOTP()">Cancel</button>
+    <p style="text-align:center; margin-top:10px; font-size:12px;"><a href="#" onclick="resendOTP()">Resend Code</a></p>
   </div>
 </div>
 
@@ -157,6 +169,7 @@
 <div id="bankModal" class="modal hidden">
   <div class="modal-content">
     <h3>Change Bank Details</h3>
+    <div class="alert">⚠️ This account will be used for all future withdrawals</div>
     <label>Account Name</label>
     <input type="text" id="accountName">
     <label>Account Number</label>
@@ -169,12 +182,12 @@
       <option>Wema Bank</option><option>Unity Bank</option><option>FCMB</option><option>Heritage Bank</option>
       <option>Opay</option><option>Palmpay</option><option>Kuda Bank</option><option>Moniepoint</option>
     </select>
-    <button class="btn" onclick="saveBankDetails()">Save & Verify</button>
+    <button class="btn" onclick="saveBankDetails()">Save New Bank Details</button>
     <button style="background:#6b7280; margin-top:10px;" class="btn" onclick="closeBank()">Cancel</button>
   </div>
 </div>
 
-<!-- ADD/EDIT PRODUCT MODAL -->
+<!-- PRODUCT MODAL -->
 <div id="productModal" class="modal hidden">
   <div class="modal-content">
     <h3 id="modalTitle">Add New Product</h3>
@@ -199,10 +212,11 @@
 let currentUser = JSON.parse(localStorage.getItem('currentUser'));
 let editingProductId = null;
 let generatedOTP = '';
+let otpVerified = false;
 
 document.getElementById('welcomeName').innerText = `Welcome, ${currentUser.name}!`;
 
-// MENU NAVIGATION
+// MENU
 function toggleMenu() {
   document.getElementById('sidebar').classList.toggle('active');
   document.getElementById('overlay').classList.toggle('active');
@@ -215,13 +229,70 @@ function showPage(pageId) {
   if(pageId === 'dashboard') loadDashboard();
   if(pageId === 'wallet') loadWallet();
 }
+function logout() { localStorage.removeItem('currentUser'); window.location.href = 'login.html'; }
 
-function logout() {
-  localStorage.removeItem('currentUser');
-  window.location.href = 'login.html';
+// OTP FUNCTIONS
+function moveNext(input, index) {
+  if(input.value.length === 1 && index < 5) {
+    document.querySelectorAll('.otp-box input')[index+1].focus();
+  }
 }
 
-// WALLET FUNCTIONS
+function startChangeBank() {
+  generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+  document.getElementById('otpSendTo').innerText = currentUser.phone + ' and ' + currentUser.email;
+  document.getElementById('otpModal').classList.remove('hidden');
+  alert(`DEMO MODE: Your OTP is ${generatedOTP}\n\nIn production this will be sent via SMS + Email`);
+}
+
+function closeOTP() { 
+  document.getElementById('otpModal').classList.add('hidden'); 
+  document.querySelectorAll('.otp-box input').forEach(i => i.value = '');
+}
+
+function resendOTP() {
+  generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+  alert(`New OTP: ${generatedOTP}`);
+}
+
+function verifyOTP() {
+  const inputs = document.querySelectorAll('.otp-box input');
+  let enteredOTP = Array.from(inputs).map(i => i.value).join('');
+  
+  if(enteredOTP === generatedOTP) {
+    otpVerified = true;
+    closeOTP();
+    document.getElementById('bankModal').classList.remove('hidden');
+    document.getElementById('accountName').value = currentUser.name;
+  } else {
+    alert('Invalid OTP. Please try again.');
+  }
+}
+
+// BANK SAVE
+function closeBank() { document.getElementById('bankModal').classList.add('hidden'); }
+
+function saveBankDetails() {
+  if(!otpVerified) { alert('Please verify OTP first'); return; }
+  
+  currentUser.accountName = document.getElementById('accountName').value;
+  currentUser.accountNumber = document.getElementById('accountNumber').value;
+  currentUser.bankName = document.getElementById('bankName').value;
+  
+  let allUsers = JSON.parse(localStorage.getItem('allUsers'));
+  let userIndex = allUsers.findIndex(u => u.id === currentUser.id);
+  allUsers[userIndex] = currentUser;
+  localStorage.setItem('allUsers', JSON.stringify(allUsers));
+  localStorage.setItem('currentUser', JSON.stringify(currentUser));
+  
+  alert('✅ Bank details updated successfully!\nAll future withdrawals will go to this new account.');
+  otpVerified = false;
+  closeBank();
+  loadProfile();
+  loadWallet();
+}
+
+// WALLET
 function loadWallet() {
   let wallet = JSON.parse(localStorage.getItem(`wallet_${currentUser.id}`)) || {balance: 0, totalEarned: 0};
   document.getElementById('walletBalance').innerText = `₦${wallet.balance.toLocaleString()}`;
@@ -243,59 +314,12 @@ function requestWithdrawal() {
   history.unshift({amount, date: new Date().toLocaleString(), status: 'Processing', account: currentUser.accountNumber});
   localStorage.setItem(`withdrawals_${currentUser.id}`, JSON.stringify(history));
   
-  alert(`Withdrawal request of ₦${amount.toLocaleString()} submitted!\nMoney will be sent to ${currentUser.bankName}`);
+  alert(`Withdrawal request of ₦${amount.toLocaleString()} submitted!\nMoney will be sent to ${currentUser.bankName} in 24 hours`);
   document.getElementById('withdrawAmount').value = '';
   loadWallet();
 }
 
-// CHANGE BANK WITH OTP
-function startChangeBank() {
-  generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
-  document.getElementById('otpSendTo').innerText = currentUser.phone + ' / ' + currentUser.email;
-  document.getElementById('otpModal').classList.remove('hidden');
-  alert(`DEMO OTP: ${generatedOTP}\nIn real app this will be sent via SMS/Email`);
-}
-function closeOTP() { document.getElementById('otpModal').classList.add('hidden'); }
-
-function verifyOTP() {
-  const inputs = document.querySelectorAll('.otp-box input');
-  let enteredOTP = Array.from(inputs).map(i => i.value).join('');
-  
-  if(enteredOTP === generatedOTP) {
-    closeOTP();
-    document.getElementById('bankModal').classList.remove('hidden');
-    document.getElementById('accountName').value = currentUser.name;
-  } else {
-    alert('Invalid OTP');
-  }
-}
-
-function closeBank() { document.getElementById('bankModal').classList.add('hidden'); }
-
-function saveBankDetails() {
-  currentUser.accountName = document.getElementById('accountName').value;
-  currentUser.accountNumber = document.getElementById('accountNumber').value;
-  currentUser.bankName = document.getElementById('bankName').value;
-  
-  let allUsers = JSON.parse(localStorage.getItem('allUsers'));
-  let userIndex = allUsers.findIndex(u => u.id === currentUser.id);
-  allUsers[userIndex] = currentUser;
-  localStorage.setItem('allUsers', JSON.stringify(allUsers));
-  localStorage.setItem('currentUser', JSON.stringify(currentUser));
-  
-  alert('Bank details updated successfully!');
-  closeBank();
-  loadProfile();
-  loadWallet();
-}
-
-// DASHBOARD + PRODUCTS + PROFILE - Same as before
-function loadDashboard() {
-  let products = JSON.parse(localStorage.getItem('products')) || [];
-  let vendorProducts = products.filter(p => p.vendorId === currentUser.id);
-  document.getElementById('totalProducts').innerText = vendorProducts.length;
-}
-
+// PROFILE + DASHBOARD + PRODUCTS
 function loadProfile() {
   document.getElementById('profileName').innerText = currentUser.name;
   document.getElementById('profileEmail').innerText = currentUser.email;
@@ -307,13 +331,19 @@ function loadProfile() {
   document.getElementById('profileBank').innerText = currentUser.bankName || 'Not set';
 }
 
-// PRODUCTS FUNCTIONS - same as previous version
+function loadDashboard() {
+  let products = JSON.parse(localStorage.getItem('products')) || [];
+  let vendorProducts = products.filter(p => p.vendorId === currentUser.id);
+  document.getElementById('totalProducts').innerText = vendorProducts.length;
+}
+
+// PRODUCTS - Same functions
 function showAddProduct() { editingProductId = null; document.getElementById('modalTitle').innerText = 'Add New Product'; document.getElementById('productName').value = ''; document.getElementById('productPrice').value = ''; document.getElementById('productStock').value = ''; document.getElementById('productModal').classList.remove('hidden'); }
 function closeProduct() { document.getElementById('productModal').classList.add('hidden'); }
-function saveProduct() { /* same code */ }
-function editProduct(id) { /* same code */ }
-function deleteProduct(id) { /* same code */ }
-function loadProducts() { /* same code */ }
+function saveProduct() { const reader = new FileReader(); const imageFile = document.getElementById('productImage').files[0]; const saveData = (imageData) => { const product = { id: editingProductId || Date.now(), vendorId: currentUser.id, name: document.getElementById('productName').value, price: document.getElementById('productPrice').value, category: document.getElementById('productCategory').value, stock: document.getElementById('productStock').value, image: imageData || '' }; let products = JSON.parse(localStorage.getItem('products')) || []; if(editingProductId) { let index = products.findIndex(p => p.id === editingProductId); products[index] = product; } else { products.push(product); } localStorage.setItem('products', JSON.stringify(products)); alert(editingProductId? 'Product Updated!' : 'Product Added!'); closeProduct(); loadProducts(); } if(imageFile) { reader.onload = (e) => saveData(e.target.result); reader.readAsDataURL(imageFile); } else { saveData(''); }
+function editProduct(id) { editingProductId = id; let products = JSON.parse(localStorage.getItem('products')) || []; let product = products.find(p => p.id === id); document.getElementById('modalTitle').innerText = 'Edit Product'; document.getElementById('productName').value = product.name; document.getElementById('productPrice').value = product.price; document.getElementById('productStock').value = product.stock; document.getElementById('productCategory').value = product.category; document.getElementById('productModal').classList.remove('hidden'); }
+function deleteProduct(id) { if(confirm('Delete this product?')) { let products = JSON.parse(localStorage.getItem('products')) || []; products = products.filter(p => p.id!== id); localStorage.setItem('products', JSON.stringify(products)); loadProducts(); }
+function loadProducts() { let products = JSON.parse(localStorage.getItem('products')) || []; let vendorProducts = products.filter(p => p.vendorId === currentUser.id); let html = ''; vendorProducts.forEach(p => { html += `<div class="product-item"><img src="${p.image || 'https://via.placeholder.com/60'}" alt="${p.name}"><div style="flex:1;"><b>${p.name}</b> - ₦${p.price}<br><small>Stock: ${p.stock} | ${p.category}</small><br><button class="btn btn-small btn-edit" onclick="editProduct(${p.id})">Edit</button><button class="btn btn-small btn-delete" onclick="deleteProduct(${p.id})">Delete</button></div></div>`; }); document.getElementById('productList').innerHTML = html || '<p>No products yet</p>'; }
 
 loadProducts();
 loadDashboard();
