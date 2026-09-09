@@ -5,9 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vendor Dashboard - Lokoja Grocery Mall</title>
 <style>
-  body { background:#f5f5f5; padding:20px; font-family:sans-serif; }
-  .container { max-width:600px; margin:0 auto; }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  body { background:#f5f5f5; }
+  .header { background:#16a34a; color:#fff; padding:15px 20px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:10; }
+  .menu-btn { font-size:24px; cursor:pointer; }
+  .sidebar { position:fixed; left:-250px; top:0; width:250px; height:100%; background:#fff; box-shadow:2px 0 5px rgba(0,0,0,0.1); transition:0.3s; z-index:20; padding-top:60px; }
+  .sidebar.active { left:0; }
+  .sidebar a { display:block; padding:15px 20px; color:#333; text-decoration:none; border-bottom:1px solid #f0f0f0; font-weight:600; }
+  .sidebar a:hover { background:#f0fdf4; color:#16a34a; }
+  .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:none; z-index:15; }
+  .overlay.active { display:block; }
+  .container { padding:20px; max-width:600px; margin:0 auto; }
   .welcome { background:#16a34a; color:#fff; padding:20px; border-radius:12px; margin-bottom:20px; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+  .stat-card { background:#fff; padding:15px; border-radius:10px; text-align:center; }
+  .stat-card h4 { font-size:12px; color:#6b7280; }
+  .stat-card p { font-size:18px; font-weight:700; color:#16a34a; margin-top:5px; }
   .card { background:#fff; padding:20px; border-radius:12px; margin-bottom:15px; }
   input, select { width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px; }
   .btn { background:#16a34a; color:#fff; border:none; padding:14px; border-radius:8px; font-weight:700; width:100%; cursor:pointer; }
@@ -19,47 +32,112 @@
   .hidden { display:none; }
   .product-item { border:1px solid #ddd; padding:12px; border-radius:8px; margin-top:10px; display:flex; gap:10px; }
   .product-item img { width:60px; height:60px; object-fit:cover; border-radius:8px; }
+  .page { display:none; }
+  .page.active { display:block; }
 </style>
 </head>
 <body>
 
+<div class="header">
+  <span class="menu-btn" onclick="toggleMenu()">☰</span>
+  <h3>Vendor Dashboard</h3>
+  <span></span>
+</div>
+
+<div class="sidebar" id="sidebar">
+  <a href="#" onclick="showPage('dashboard')">🏠 Dashboard</a>
+  <a href="#" onclick="showPage('products')">📦 My Products</a>
+  <a href="#" onclick="showPage('orders')">📋 Enquiries/Orders</a>
+  <a href="#" onclick="showPage('profile')">👤 Profile</a>
+  <a href="index.html">🛒 Customer Home</a>
+  <a href="#" onclick="logout()">🚪 Logout</a>
+</div>
+<div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+
 <div class="container">
-  <div class="welcome">
-    <h2 id="welcomeName">Welcome, Vendor!</h2>
-    <p>Manage your store and products</p>
+
+  <!-- PAGE 1: DASHBOARD -->
+  <div id="dashboard" class="page active">
+    <div class="welcome">
+      <h2 id="welcomeName">Welcome, Vendor!</h2>
+      <p>Here's your store performance</p>
+    </div>
+    <h3>Sales Overview</h3>
+    <div class="stats">
+      <div class="stat-card">
+        <h4>Today</h4>
+        <p id="salesToday">₦0</p>
+      </div>
+      <div class="stat-card">
+        <h4>This Week</h4>
+        <p id="salesWeek">₦0</p>
+      </div>
+      <div class="stat-card">
+        <h4>This Month</h4>
+        <p id="salesMonth">₦0</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Total Products</h3>
+      <p id="totalProducts" style="font-size:24px; font-weight:700;">0</p>
+    </div>
   </div>
-  
-  <div class="card">
-    <h3>My Products</h3>
-    <button class="btn" onclick="showAddProduct()">+ Add New Product</button>
-    <div id="productList"><p>No products yet</p></div>
+
+  <!-- PAGE 2: PRODUCTS -->
+  <div id="products" class="page">
+    <div class="card">
+      <h3>My Products</h3>
+      <button class="btn" onclick="showAddProduct()">+ Add New Product</button>
+      <div id="productList"><p>No products yet</p></div>
+    </div>
   </div>
-  
-  <div class="card">
-    <h3>Orders</h3>
-    <p>0 orders</p>
+
+  <!-- PAGE 3: ORDERS/ENQUIRY -->
+  <div id="orders" class="page">
+    <div class="card">
+      <h3>Customer Enquiries & Orders</h3>
+      <div id="ordersList"><p>No orders yet</p></div>
+    </div>
   </div>
+
+  <!-- PAGE 4: PROFILE -->
+  <div id="profile" class="page">
+    <div class="card">
+      <h3>Store Profile</h3>
+      <p><b>Name:</b> <span id="profileName"></span></p>
+      <p><b>Email:</b> <span id="profileEmail"></span></p>
+      <p><b>Phone:</b> <span id="profilePhone"></span></p>
+      <p><b>Shop Address:</b> <span id="profileShop"></span></p>
+      <p><b>Location:</b> <span id="profileLocation"></span></p>
+      <hr style="margin:15px 0;">
+      <h4>Bank Details</h4>
+      <p><b>Account Name:</b> <span id="profileAccName"></span></p>
+      <p><b>Account No:</b> <span id="profileAccNo"></span></p>
+      <p><b>Bank:</b> <span id="profileBank"></span></p>
+      <button class="btn" style="margin-top:15px;" onclick="editBank()">Update Bank Details</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- BANK DETAILS MODAL -->
 <div id="bankModal" class="modal hidden">
   <div class="modal-content">
-    <h3>Complete Bank Details</h3>
-    <p style="color:#6b7280; font-size:14px;">Required to receive payments via Flutterwave</p>
+    <h3>Update Bank Details</h3>
     <label>Account Name</label>
     <input type="text" id="accountName">
     <label>Account Number</label>
     <input type="number" id="accountNumber">
     <label>Bank</label>
     <select id="bankName">
-      <option value="">Select Bank</option>
       <option>Access Bank</option><option>First Bank</option><option>GTBank</option><option>Zenith Bank</option>
       <option>UBA</option><option>Polaris Bank</option><option>Fidelity Bank</option><option>Union Bank</option>
       <option>Stanbic IBTC</option><option>Keystone Bank</option><option>Ecobank</option><option>Jaiz Bank</option>
       <option>Wema Bank</option><option>Unity Bank</option><option>FCMB</option><option>Heritage Bank</option>
       <option>Opay</option><option>Palmpay</option><option>Kuda Bank</option><option>Moniepoint</option>
     </select>
-    <button class="btn" onclick="saveBankDetails()">Save & Activate Store</button>
+    <button class="btn" onclick="saveBankDetails()">Save Details</button>
+    <button style="background:#6b7280; margin-top:10px;" class="btn" onclick="closeBank()">Cancel</button>
   </div>
 </div>
 
@@ -68,17 +146,17 @@
   <div class="modal-content">
     <h3 id="modalTitle">Add New Product</h3>
     <label>Product Name</label>
-    <input type="text" id="productName" placeholder="e.g Rice 50kg">
+    <input type="text" id="productName">
     <label>Product Image</label>
     <input type="file" id="productImage" accept="image/*">
     <label>Price ₦</label>
-    <input type="number" id="productPrice" placeholder="e.g 45000">
+    <input type="number" id="productPrice">
     <label>Category</label>
     <select id="productCategory">
       <option>Foodstuffs</option><option>Drinks</option><option>Household</option><option>Personal Care</option>
     </select>
     <label>Stock Quantity</label>
-    <input type="number" id="productStock" placeholder="e.g 20">
+    <input type="number" id="productStock">
     <button class="btn" onclick="saveProduct()">Save Product</button>
     <button style="background:#6b7280; margin-top:10px;" class="btn" onclick="closeProduct()">Cancel</button>
   </div>
@@ -90,11 +168,53 @@ let editingProductId = null;
 
 document.getElementById('welcomeName').innerText = `Welcome, ${currentUser.name}!`;
 
-if(!currentUser.accountNumber) {
-  document.getElementById('bankModal').classList.remove('hidden');
-  document.getElementById('accountName').value = currentUser.name;
+// MENU NAVIGATION
+function toggleMenu() {
+  document.getElementById('sidebar').classList.toggle('active');
+  document.getElementById('overlay').classList.toggle('active');
+}
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  toggleMenu();
+  if(pageId === 'profile') loadProfile();
+  if(pageId === 'dashboard') loadDashboard();
 }
 
+function logout() {
+  localStorage.removeItem('currentUser');
+  window.location.href = 'login.html';
+}
+
+// DASHBOARD STATS
+function loadDashboard() {
+  let products = JSON.parse(localStorage.getItem('products')) || [];
+  let vendorProducts = products.filter(p => p.vendorId === currentUser.id);
+  document.getElementById('totalProducts').innerText = vendorProducts.length;
+  // Sales will be calculated when we add order system
+}
+
+// PROFILE
+function loadProfile() {
+  document.getElementById('profileName').innerText = currentUser.name;
+  document.getElementById('profileEmail').innerText = currentUser.email;
+  document.getElementById('profilePhone').innerText = currentUser.phone;
+  document.getElementById('profileShop').innerText = currentUser.shop_address;
+  document.getElementById('profileLocation').innerText = currentUser.location;
+  document.getElementById('profileAccName').innerText = currentUser.accountName || 'Not set';
+  document.getElementById('profileAccNo').innerText = currentUser.accountNumber || 'Not set';
+  document.getElementById('profileBank').innerText = currentUser.bankName || 'Not set';
+}
+
+function editBank() {
+  document.getElementById('bankModal').classList.remove('hidden');
+  document.getElementById('accountName').value = currentUser.accountName || '';
+  document.getElementById('accountNumber').value = currentUser.accountNumber || '';
+  document.getElementById('bankName').value = currentUser.bankName || '';
+}
+function closeBank() {
+  document.getElementById('bankModal').classList.add('hidden');
+}
 function saveBankDetails() {
   currentUser.accountName = document.getElementById('accountName').value;
   currentUser.accountNumber = document.getElementById('accountNumber').value;
@@ -106,10 +226,12 @@ function saveBankDetails() {
   localStorage.setItem('allUsers', JSON.stringify(allUsers));
   localStorage.setItem('currentUser', JSON.stringify(currentUser));
   
-  alert('Bank details saved! Your store is now active.');
-  document.getElementById('bankModal').classList.add('hidden');
+  alert('Bank details updated!');
+  closeBank();
+  loadProfile();
 }
 
+// PRODUCTS - Same as before
 function showAddProduct() {
   editingProductId = null;
   document.getElementById('modalTitle').innerText = 'Add New Product';
@@ -118,15 +240,11 @@ function showAddProduct() {
   document.getElementById('productStock').value = '';
   document.getElementById('productModal').classList.remove('hidden');
 }
-
-function closeProduct() {
-  document.getElementById('productModal').classList.add('hidden');
-}
+function closeProduct() { document.getElementById('productModal').classList.add('hidden'); }
 
 function saveProduct() {
   const reader = new FileReader();
   const imageFile = document.getElementById('productImage').files[0];
-  
   const saveData = (imageData) => {
     const product = {
       id: editingProductId || Date.now(),
@@ -137,44 +255,31 @@ function saveProduct() {
       stock: document.getElementById('productStock').value,
       image: imageData || ''
     };
-    
     let products = JSON.parse(localStorage.getItem('products')) || [];
-    
     if(editingProductId) {
       let index = products.findIndex(p => p.id === editingProductId);
       products[index] = product;
-    } else {
-      products.push(product);
-    }
-    
+    } else { products.push(product); }
     localStorage.setItem('products', JSON.stringify(products));
-    alert(editingProductId ? 'Product Updated!' : 'Product Added Successfully!');
+    alert(editingProductId ? 'Product Updated!' : 'Product Added!');
     closeProduct();
     loadProducts();
   }
-  
-  if(imageFile) {
-    reader.onload = (e) => saveData(e.target.result);
-    reader.readAsDataURL(imageFile);
-  } else {
-    saveData('');
-  }
+  if(imageFile) { reader.onload = (e) => saveData(e.target.result); reader.readAsDataURL(imageFile); }
+  else { saveData(''); }
 }
 
 function editProduct(id) {
   editingProductId = id;
   let products = JSON.parse(localStorage.getItem('products')) || [];
   let product = products.find(p => p.id === id);
-  
   document.getElementById('modalTitle').innerText = 'Edit Product';
   document.getElementById('productName').value = product.name;
   document.getElementById('productPrice').value = product.price;
   document.getElementById('productStock').value = product.stock;
   document.getElementById('productCategory').value = product.category;
-  
   document.getElementById('productModal').classList.remove('hidden');
 }
-
 function deleteProduct(id) {
   if(confirm('Delete this product?')) {
     let products = JSON.parse(localStorage.getItem('products')) || [];
@@ -183,11 +288,9 @@ function deleteProduct(id) {
     loadProducts();
   }
 }
-
 function loadProducts() {
   let products = JSON.parse(localStorage.getItem('products')) || [];
   let vendorProducts = products.filter(p => p.vendorId === currentUser.id);
-  
   let html = '';
   vendorProducts.forEach(p => {
     html += `<div class="product-item">
@@ -200,11 +303,11 @@ function loadProducts() {
       </div>
     </div>`;
   });
-  
   document.getElementById('productList').innerHTML = html || '<p>No products yet</p>';
 }
 
 loadProducts();
+loadDashboard();
 </script>
 </body>
 </html>
