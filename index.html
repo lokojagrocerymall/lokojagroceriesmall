@@ -5,6 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lokoja Grocery Mall - Home</title>
 <link rel="stylesheet" href="style.css">
+  <style>
+/* FIX FOR OVERLAPPING */
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #16a34a;
+  z-index: 1000;
+  padding: 12px 16px;
+}
+
+body {
+  padding-top: 60px; /* this pushes everything down */
+  margin: 0;
+}
+
+.side-menu {
+  position: fixed;
+  top: 60px;
+  <a href="index.html" class="btn-pri">Sign Up</a>
+  width: 100%;
+  background: white;
+  z-index: 999;
+  padding: 16px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  display: none;
+}
+
+.hero {
+  background: #16a34a;
+  color: white;
+  padding: 24px 16px;
+  border-radius: 12px;
+  margin: 16px;
+  text-align: center;
+}
+</style>
 </head>
 <body>
 
@@ -25,7 +63,7 @@
   <a href="index.html">Home</a>
   <a href="browse.html">Browse</a>
 <a href="vendor.html">Vendors</a>
-  <a href="index.html" class="btn-primary" style="margin:15px">Sign In / Sign Up</a>
+  <a href="signup.html" class="btn-primary" style="margin:15px; display:block; text-align:center;">Sign In / Sign Up</a>
 </div>
 
 <main>
