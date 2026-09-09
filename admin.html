@@ -6,17 +6,19 @@
 <title>Admin Dashboard - Lokoja Grocery Mall</title>
 <style>
   body { background:#f5f5f5; padding:20px; font-family:sans-serif; }
- .container { max-width:800px; margin:0 auto; background:#fff; padding:25px; border-radius:12px; }
- .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:15px; margin-bottom:20px; }
- .stat-card { background:#f9fafb; padding:20px; border-radius:10px; }
- .stat-card h3 { color:#6b7280; font-size:14px; }
- .stat-card p { font-size:28px; font-weight:700; margin-top:5px; }
- .vendor-card { border:1px solid #e5e7eb; padding:15px; border-radius:10px; margin-bottom:10px; }
- .btn-approve { background:#16a34a; color:#fff; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; }
- .btn-reject { background:#ef4444; color:#fff; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; }
- .tabs { display:flex; gap:20px; border-bottom:2px solid #e5e7eb; margin-bottom:20px; }
- .tab { padding:10px; cursor:pointer; font-weight:600; }
- .tab.active { border-bottom:2px solid #16a34a; color:#16a34a; }
+.container { max-width:800px; margin:0 auto; background:#fff; padding:25px; border-radius:12px; }
+.stats { display:grid; grid-template-columns:repeat(3,1fr); gap:15px; margin-bottom:20px; }
+.stat-card { background:#f9fafb; padding:20px; border-radius:10px; }
+.stat-card h3 { color:#6b7280; font-size:14px; }
+.stat-card p { font-size:28px; font-weight:700; margin-top:5px; }
+.vendor-card { border:1px solid #e5e7eb; padding:15px; border-radius:10px; margin-bottom:10px; }
+.btn-approve { background:#16a34a; color:#fff; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; margin-right:5px; }
+.btn-reject { background:#ef4444; color:#fff; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; }
+.tabs { display:flex; gap:20px; border-bottom:2px solid #e5e7eb; margin-bottom:20px; }
+.tab { padding:10px; cursor:pointer; font-weight:600; }
+.tab.active { border-bottom:2px solid #16a34a; color:#16a34a; }
+.status-approved { color:#16a34a; font-weight:700; }
+.status-pending { color:#f59e0b; font-weight:700; }
 </style>
 </head>
 <body>
@@ -34,8 +36,8 @@
       <p id="approvedVendors">0</p>
     </div>
     <div class="stat-card">
-      <h3>Revenue</h3>
-      <p>₦0</p>
+      <h3>Pending</h3>
+      <p id="pendingVendors">0</p>
     </div>
   </div>
   
@@ -58,25 +60,33 @@
 <script>
 function loadData() {
   let allUsers = JSON.parse(localStorage.getItem('allUsers')) || [];
-  let vendors = allUsers.filter(u => u.role === 'Vendor');
+  
+  // FIX B: FILTER OUT REJECTED VENDORS COMPLETELY
+  let vendors = allUsers.filter(u => u.role === 'Vendor' && u.status!== 'rejected');
   
   document.getElementById('totalVendors').innerText = vendors.length;
   document.getElementById('approvedVendors').innerText = vendors.filter(v => v.status === 'approved').length;
+  document.getElementById('pendingVendors').innerText = vendors.filter(v => v.status === 'pending').length;
   
   let pendingHTML = '';
   let allHTML = '';
   
   vendors.forEach(vendor => {
+    let statusClass = vendor.status === 'approved'? 'status-approved' : 'status-pending';
+    
     let card = `
       <div class="vendor-card">
         <h4>${vendor.name}</h4>
         <p style="color:#6b7280; font-size:14px;">${vendor.email} | ${vendor.phone}</p>
-        <p style="color:#6b7280; font-size:12px;">Applied: ${new Date(vendor.id).toLocaleDateString()}</p>
+        <p style="color:#6b7280; font-size:12px;">Shop: ${vendor.shop_address || 'N/A'} | ${vendor.location || ''}</p>
+        <p style="font-size:12px;">Applied: ${new Date(vendor.id).toLocaleDateString()}</p>
         ${vendor.status === 'pending'? `
+          <span class="${statusClass}">Status: PENDING</span><br><br>
           <button class="btn-approve" onclick="approveVendor(${vendor.id})">Approve</button>
           <button class="btn-reject" onclick="rejectVendor(${vendor.id})">Reject</button>
         ` : `
-          <span style="color:#16a34a; font-weight:700;">Status: ${vendor.status.toUpperCase()}</span>
+          <span class="${statusClass}">Status: APPROVED</span>
+          <p style="font-size:12px; color:#6b7280;">Subaccount: ${vendor.flutterwaveSubaccount || 'N/A'}</p>
         `}
       </div>
     `;
@@ -98,19 +108,19 @@ function approveVendor(id) {
     allUsers[userIndex].flutterwaveSubaccount = 'RS_' + Math.random().toString(36).substr(2, 9).toUpperCase();
     localStorage.setItem('allUsers', JSON.stringify(allUsers));
     alert(`✅ ${allUsers[userIndex].name} Approved!\nFlutterwave Subaccount: ${allUsers[userIndex].flutterwaveSubaccount}`);
-    loadData(); // Refresh the page
+    loadData();
   }
 }
 
+// FIX A: REJECT = DELETE COMPLETELY
 function rejectVendor(id) {
-  let allUsers = JSON.parse(localStorage.getItem('allUsers')) || [];
-  let userIndex = allUsers.findIndex(u => u.id === id);
-  
-  if(userIndex!== -1) {
-    allUsers[userIndex].status = 'rejected';
+  if(confirm('Are you sure you want to reject and delete this vendor application?')) {
+    let allUsers = JSON.parse(localStorage.getItem('allUsers')) || [];
+    // Delete the user completely
+    allUsers = allUsers.filter(u => u.id!== id);
     localStorage.setItem('allUsers', JSON.stringify(allUsers));
-    alert('Vendor Rejected');
-    loadData(); // Refresh the page
+    alert('Vendor Application Rejected & Deleted');
+    loadData();
   }
 }
 
