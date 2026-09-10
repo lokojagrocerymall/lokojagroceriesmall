@@ -1,102 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login - Lokoja Grocery Mall</title>
-<style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-body { background:#f5f5f5; display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
-.login-box { background:#fff; padding:30px; border-radius:16px; width:100%; max-width:400px; box-shadow:0 4px 20px rgba(0,0,0,0.08); }
-h2 { text-align:center; margin-bottom:20px; color:#16a34a; font-size:22px; }
-label { font-weight:600; margin-bottom:6px; display:block; font-size:14px; }
-input { width:100%; padding:13px; border:1px solid #ddd; border-radius:10px; margin-bottom:15px; outline:none; }
-.btn { background:#16a34a; color:#fff; border:none; padding:14px; border-radius:10px; font-weight:700; width:100%; cursor:pointer; }
-.pass-wrap { position:relative; }
-.eye { position:absolute; right:12px; top:12px; cursor:pointer; font-size:18px; }
-.forgot { text-align:right; margin:-10px 0 15px 0; }
-.forgot a { color:#6b7280; font-size:13px; text-decoration:none; }
-.link { text-align:center; margin-top:15px; font-size:14px; }
-.link a { color:#16a34a; font-weight:700; text-decoration:none; }
-.modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:99; }
-.modal-content { background:#fff; padding:25px; border-radius:12px; width:90%; max-width:380px; }
-.hidden { display:none; }
-</style>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>body{background:#f5f5f5;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}</style>
 </head>
 <body>
-<div class="login-box">
-<h2>Login to Lokoja Grocery Mall</h2>
-<label>Email</label><input type="email" id="email" placeholder="Enter email">
-<label>Password</label>
-<div class="pass-wrap">
-<input type="password" id="password" placeholder="Enter password">
-<span class="eye" onclick="togglePass('password', this)">👁️</span>
-</div>
-<div class="forgot"><a href="#" onclick="openForgot(event)">Forgot password?</a></div>
-<button class="btn" onclick="login()">Login</button>
-<p class="link">Don't have account? <a href="signup.html">Sign Up</a></p>
-</div>
-
-<div id="forgotModal" class="modal hidden">
-<div class="modal-content">
-<h3>Reset Password</h3>
-<p style="font-size:13px; color:#6b7280; margin:10px 0;">Enter your registered email.</p>
-<label>Email</label><input type="email" id="resetEmail">
-<button class="btn" onclick="sendResetOTP()">Send OTP</button>
-<button class="btn" style="background:#6b7280; margin-top:10px;" onclick="closeForgot()">Cancel</button>
-<div id="resetSection" class="hidden">
-<hr style="margin:15px 0;">
-<p style="font-size:13px;">OTP: <b id="showOTP"></b> (Demo)</p>
-<label>Enter OTP</label><input type="text" id="resetOTP">
-<label>New Password</label><div class="pass-wrap"><input type="password" id="newPass"><span class="eye" onclick="togglePass('newPass', this)">👁️</span></div>
-<button class="btn" onclick="resetPassword()">Update Password</button>
-</div>
-</div>
+<div class="bg-white p-6 rounded-2xl shadow w-full max-w-sm">
+<h2 class="text-green-600 font-black text-xl text-center mb-4">Login to Lokoja Grocery Mall</h2>
+<label class="font-bold text-sm">Email</label>
+<input id="email" type="email" placeholder="Enter email" class="w-full p-3 border rounded-xl mt-1 mb-3 text-sm">
+<label class="font-bold text-sm">Password</label>
+<div class="relative"><input id="password" type="password" placeholder="Enter password" class="w-full p-3 border rounded-xl mt-1 mb-1 text-sm"><span onclick="document.getElementById('password').type = document.getElementById('password').type==='password'?'text':'password'" class="absolute right-3 top-3.5 cursor-pointer">👁️</span></div>
+<p class="text-right text-xs text-gray-400 mb-4">Forgot password?</p>
+<button id="loginBtn" onclick="login()" class="w-full bg-green-600 text-white py-3 rounded-xl font-black">Login</button>
+<p class="text-center text-sm mt-3">Don't have account? <a href="signup.html" class="text-green-600 font-bold">Sign Up</a></p>
+<p id="msg" class="text-center text-xs mt-2"></p>
 </div>
 
 <script>
-function togglePass(id, el){
-  let input = document.getElementById(id);
-  if(input.type==='password'){ input.type='text'; if(el) el.innerText='🙈'; }
-  else { input.type='password'; if(el) el.innerText='👁️'; }
-}
-function login(){
-  const email = document.getElementById('email').value.trim().toLowerCase();
-  const pass = document.getElementById('password').value;
-  let users = JSON.parse(localStorage.getItem('allUsers')) || [];
-  let u = users.find(x => x.email.toLowerCase()===email && x.password===pass);
-  if(u){
-    localStorage.setItem('currentUser', JSON.stringify(u));
-    if(u.role==='vendor'){ window.location.href='vendor.html'; }
-    else if(u.role==='delivery'){ window.location.href='delivery.html'; }
-    else { window.location.href='index.html'; }
-  } else {
-    alert('Invalid email or password');
+const SUPABASE_URL="https://fkpzglifmsykztndlcyh.supabase.co";
+const SUPABASE_KEY="sb_publishable_WcXsHfmHAx8TgzyDUtlynw_Ri-OTJDk";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function login(){
+  const btn=document.getElementById('loginBtn');
+  const email=document.getElementById('email').value.trim().toLowerCase();
+  const password=document.getElementById('password').value.trim();
+  const msg=document.getElementById('msg');
+  if(!email||!password){msg.innerText="❌ Fill email and password";return;}
+  btn.disabled=true; btn.innerText="Checking..."; msg.innerText="";
+
+  const { data, error } = await supabaseClient.from('users').select('*').eq('email', email).eq('password', password).limit(1);
+
+  if(error){ btn.disabled=false; btn.innerText="Login"; msg.innerText="❌ "+error.message; return; }
+  if(!data || data.length===0){
+    btn.disabled=false; btn.innerText="Login";
+    msg.innerText="❌ Wrong email or password. If you signed up before today, please Sign Up again (old data was wiped).";
+    return;
   }
-}
-let generatedResetOTP=''; let resetUserIndex=-1;
-function openForgot(e){ if(e) e.preventDefault(); document.getElementById('forgotModal').classList.remove('hidden'); }
-function closeForgot(){ document.getElementById('forgotModal').classList.add('hidden'); document.getElementById('resetSection').classList.add('hidden'); }
-function sendResetOTP(){
-  const email=document.getElementById('resetEmail').value.trim().toLowerCase();
-  let users=JSON.parse(localStorage.getItem('allUsers'))||[];
-  let idx=users.findIndex(x=>x.email.toLowerCase()===email);
-  if(idx===-1){ alert('Email not found'); return; }
-  resetUserIndex=idx;
-  generatedResetOTP=Math.floor(100000+Math.random()*900000).toString();
-  document.getElementById('showOTP').innerText=generatedResetOTP;
-  document.getElementById('resetSection').classList.remove('hidden');
-  alert('DEMO OTP: '+generatedResetOTP);
-}
-function resetPassword(){
-  let entered=document.getElementById('resetOTP').value.trim();
-  let newPass=document.getElementById('newPass').value.trim();
-  if(entered!==generatedResetOTP){ alert('Invalid OTP'); return; }
-  let users=JSON.parse(localStorage.getItem('allUsers'))||[];
-  users[resetUserIndex].password=newPass;
-  localStorage.setItem('allUsers', JSON.stringify(users));
-  alert('Password updated! Login now.');
-  closeForgot();
+  const user=data[0];
+  if(user.is_approved===false){
+    btn.disabled=false; btn.innerText="Login";
+    msg.innerText="⏳ Your account is PENDING approval. Admin will approve soon. Contact Admin on WhatsApp.";
+    return;
+  }
+  // Save session
+  localStorage.setItem('lgm_user', JSON.stringify(user));
+  msg.innerText="✅ Login successful!";
+  setTimeout(()=>{ window.location.href='vendor.html'; }, 800);
 }
 </script>
 </body>
