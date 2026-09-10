@@ -1,115 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vendor Dashboard - Lokoja Grocery Mall</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up - Lokoja Grocery Mall</title>
 <style>
-    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-  body { background:#f5f5f5; }
-.header { background:#16a34a; color:#fff; padding:15px 20px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:10; }
-.menu-btn { font-size:24px; cursor:pointer; user-select:none; }
-.sidebar { position:fixed; left:-250px; top:0; width:250px; height:100%; background:#fff; box-shadow:2px 0 5px rgba(0,0,0,0.1); transition:0.3s; z-index:20; padding-top:60px; }
-.sidebar.active { left:0; }
-.sidebar a { display:block; padding:15px 20px; color:#333; text-decoration:none; border-bottom:1px solid #f0f0f0; font-weight:600; }
-.sidebar a:hover { background:#f0fdf4; color:#16a34a; }
-.overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:none; z-index:15; }
-.overlay.active { display:block; }
-.container { padding:20px; max-width:600px; margin:0 auto; }
-.welcome { background:#16a34a; color:#fff; padding:20px; border-radius:12px; margin-bottom:20px; }
-.wallet-card { background:linear-gradient(135deg, #16a34a, #22c55e); color:#fff; padding:25px; border-radius:12px; margin-bottom:20px; }
-.wallet-card h2 { font-size:32px; margin:10px 0; }
-.stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
-.stat-card { background:#fff; padding:15px; border-radius:10px; text-align:center; }
-.stat-card h4 { font-size:12px; color:#6b7280; }
-.stat-card p { font-size:18px; font-weight:700; color:#16a34a; margin-top:5px; }
-.card { background:#fff; padding:20px; border-radius:12px; margin-bottom:15px; }
-input, select { width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px; }
-.btn { background:#16a34a; color:#fff; border:none; padding:14px; border-radius:8px; font-weight:700; width:100%; cursor:pointer; }
-.btn-small { padding:8px 12px; font-size:13px; margin-right:5px; width:auto; }
-.btn-edit { background:#2563eb; }
-.btn-delete { background:#ef4444; }
-.btn-warning { background:#f59e0b; }
-.modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; overflow-y:auto; }
-.modal-content { background:#fff; padding:25px; border-radius:12px; width:90%; max-width:400px; margin:20px 0; }
-.hidden { display:none; }
-.product-item { border:1px solid #ddd; padding:12px; border-radius:8px; margin-top:10px; display:flex; gap:10px; }
-.product-item img { width:60px; height:60px; object-fit:cover; border-radius:8px; }
-.page { display:none; }
-.page.active { display:block; }
-.otp-box { display:flex; gap:8px; justify-content:center; }
-.otp-box input { text-align:center; font-size:20px; font-weight:700; width:45px; padding:12px 5px; }
-.alert { background:#fef3c7; border-left:4px solid #f59e0b; padding:12px; border-radius:6px; margin-bottom:15px; font-size:14px; }
+* { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+body { background:#f5f5f5; padding:20px; }
+.box { background:#fff; max-width:450px; margin:0 auto; padding:25px; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.08); }
+h2 { color:#16a34a; text-align:center; margin-bottom:15px; }
+.role { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:15px; }
+.role button { padding:12px; border:2px solid #ddd; border-radius:10px; background:#fff; font-weight:600; cursor:pointer; }
+.role button.active { border-color:#16a34a; background:#f0fdf4; color:#16a34a; }
+label { font-weight:600; font-size:14px; margin-bottom:5px; display:block; margin-top:12px; }
+input, select { width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; outline:none; }
+input:focus, select:focus { border-color:#16a34a; }
+.btn { background:#16a34a; color:#fff; border:none; padding:14px; border-radius:10px; font-weight:700; width:100%; cursor:pointer; margin-top:20px; }
+.pass-wrap { position:relative; }
+.eye { position:absolute; right:12px; top:11px; cursor:pointer; }
 </style>
 </head>
 <body>
+<div class="box">
+<h2>Join Lokoja Grocery Mall</h2>
+<p style="text-align:center; font-size:13px; color:#6b7280; margin-bottom:15px;">I want to join as</p>
 
-<div class="header">
-  <span class="menu-btn" onclick="toggleMenu()">☰</span>
-  <h3>Vendor Dashboard</h3>
-  <span></span>
+<div class="role">
+<button id="btnCustomer" onclick="setRole('customer')">🛒 Customer</button>
+<button id="btnVendor" class="active" onclick="setRole('vendor')">🏪 Vendor</button>
+<button id="btnDelivery" onclick="setRole('delivery')">🚚 Delivery Agent</button>
+</div>
+<p id="roleInfo" style="font-size:12px; color:#6b7280; margin-bottom:10px;">Sell your products on the platform</p>
+
+<label>Full Name</label><input type="text" id="name" placeholder="James Agbem" value="James Agbem">
+<label>Location in Lokoja</label><select id="location"><option>Ganaja</option><option>Adankolo</option><option>Lokongoma</option><option>Felele</option><option>Zango</option><option>Natako</option><option>Kabawa</option><option>Phase 1-3</option></select>
+<label>Shop Address</label><input type="text" id="shop" placeholder="B243 Ganaja Roundabout Lokoja" value="B243 Ganaja Roundabout Lokoja">
+<label>WhatsApp Number</label><input type="text" id="phone" placeholder="08104282311" value="08104282311">
+<label>Email</label><input type="email" id="email" placeholder="agbemjames@gmail.com" value="agbemjames@gmail.com">
+<label>Password</label>
+<div class="pass-wrap">
+<input type="password" id="password" placeholder="At least 6 characters" value="Ganaja1">
+<span class="eye" onclick="togglePass()">👁️</span>
 </div>
 
-<div class="sidebar" id="sidebar">
-  <a href="#" onclick="showPage('dashboard', event)">🏠 Dashboard</a>
-  <a href="#" onclick="showPage('wallet', event)">💰 Wallet & Withdrawals</a>
-  <a href="#" onclick="showPage('products', event)">📦 My Products</a>
-  <a href="#" onclick="showPage('orders', event)">📋 Enquiries/Orders</a>
-  <a href="#" onclick="showPage('profile', event)">👤 Profile</a>
-  <a href="index.html">🛒 Customer Home</a>
-  <a href="#" onclick="logout()">🚪 Logout</a>
-</div>
-<div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+<label id="bankLabel">Bank Name</label><select id="bank"><option>Access Bank</option><option>First Bank</option><option>GTBank</option><option>Zenith Bank</option><option>UBA</option><option>Opay</option><option>Palmpay</option><option>Kuda Bank</option><option>Moniepoint</option></select>
+<label>Account Number</label><input type="text" id="accNo" placeholder="0123456789">
+<label>Account Name</label><input type="text" id="accName" placeholder="James Agbem">
 
-<div class="container">
-  <div id="dashboard" class="page active">
-    <div class="welcome"><h2 id="welcomeName">Welcome, Vendor!</h2><p>Here's your store performance</p></div>
-    <div class="stats"><div class="stat-card"><h4>Today</h4><p>₦0</p></div><div class="stat-card"><h4>This Week</h4><p>₦0</p></div><div class="stat-card"><h4>This Month</h4><p>₦0</p></div></div>
-    <div class="card"><h3>Total Products</h3><p id="totalProducts" style="font-size:24px; font-weight:700;">0</p></div>
-  </div>
-  <div id="wallet" class="page">
-    <div class="wallet-card"><p>Available Balance</p><h2 id="walletBalance">₦0.00</h2><p>Total Earned: <b id="totalEarned">₦0.00</b></p></div>
-    <div class="card"><h3>Withdraw to Bank</h3><p style="font-size:12px; color:#6b7280; margin-bottom:10px;">Account: <b id="withdrawAccount"></b></p><label>Amount ₦</label><input type="number" id="withdrawAmount" placeholder="Min ₦1000"><button class="btn" onclick="requestWithdrawal()">Withdraw Now</button></div>
-    <div class="card"><h3>Withdrawal History</h3><div id="withdrawHistory"><p>No withdrawals yet</p></div></div>
-  </div>
-  <div id="products" class="page"><div class="card"><h3>My Products</h3><button class="btn" onclick="showAddProduct()">+ Add New Product</button><div id="productList"><p>No products yet</p></div></div></div>
-  <div id="orders" class="page"><div class="card"><h3>Customer Enquiries & Orders</h3><div id="ordersList"><p>No orders yet</p></div></div></div>
-  <div id="profile" class="page"><div class="card"><h3>Store Profile</h3><p><b>Name:</b> <span id="profileName"></span></p><p><b>Email:</b> <span id="profileEmail"></span></p><p><b>Phone:</b> <span id="profilePhone"></span></p><p><b>Shop Address:</b> <span id="profileShop"></span></p><p><b>Location:</b> <span id="profileLocation"></span></p><hr style="margin:15px 0;"><h4>Bank Details</h4><p><b>Account Name:</b> <span id="profileAccName"></span></p><p><b>Account No:</b> <span id="profileAccNo"></span></p><p><b>Bank:</b> <span id="profileBank"></span></p><button class="btn btn-warning" style="margin-top:15px;" onclick="startChangeBank()">🔒 Change Bank Account</button></div></div>
+<button class="btn" onclick="signup()">Continue</button>
+<p style="text-align:center; margin-top:15px; font-size:14px;">Already have account? <a href="login.html" style="color:#16a34a; font-weight:700; text-decoration:none;">Login</a></p>
 </div>
-
-<!-- OTP MODAL -->
-<div id="otpModal" class="modal hidden"><div class="modal-content"><h3>🔒 Security Verification</h3><p style="color:#6b7280; font-size:14px; margin-bottom:15px;">Enter code sent to <b id="otpSendTo"></b></p><div class="otp-box"><input type="text" maxlength="1" oninput="moveNext(this,0)"><input type="text" maxlength="1" oninput="moveNext(this,1)"><input type="text" maxlength="1" oninput="moveNext(this,2)"><input type="text" maxlength="1" oninput="moveNext(this,3)"><input type="text" maxlength="1" oninput="moveNext(this,4)"><input type="text" maxlength="1" oninput="moveNext(this,5)"></div><button class="btn" style="margin-top:20px;" onclick="verifyOTP()">Verify</button><button style="background:#6b7280; margin-top:10px;" class="btn" onclick="closeOTP()">Cancel</button></div></div>
-<!-- BANK MODAL -->
-<div id="bankModal" class="modal hidden"><div class="modal-content"><h3>Change Bank Details</h3><label>Account Name</label><input type="text" id="accountName"><label>Account Number</label><input type="number" id="accountNumber"><label>Bank</label><select id="bankName"><option>Access Bank</option><option>First Bank</option><option>GTBank</option><option>Zenith Bank</option><option>UBA</option><option>Polaris Bank</option><option>Fidelity Bank</option><option>Union Bank</option><option>Stanbic IBTC</option><option>Keystone Bank</option><option>Ecobank</option><option>Opay</option><option>Palmpay</option><option>Kuda Bank</option><option>Moniepoint</option></select><button class="btn" onclick="saveBankDetails()">Save</button><button style="background:#6b7280; margin-top:10px;" class="btn" onclick="closeBank()">Cancel</button></div></div>
-<!-- PRODUCT MODAL -->
-<div id="productModal" class="modal hidden"><div class="modal-content"><h3 id="modalTitle">Add New Product</h3><label>Product Name</label><input type="text" id="productName"><label>Product Image</label><input type="file" id="productImage" accept="image/*"><label>Price ₦</label><input type="number" id="productPrice"><label>Category</label><select id="productCategory"><option>Foodstuffs</option><option>Drinks</option><option>Household</option><option>Personal Care</option></select><label>Stock Quantity</label><input type="number" id="productStock"><button class="btn" onclick="saveProduct()">Save Product</button><button style="background:#6b7280; margin-top:10px;" class="btn" onclick="closeProduct()">Cancel</button></div></div>
 
 <script>
-let currentUser = JSON.parse(localStorage.getItem('currentUser'));
-let editingProductId = null;
-let generatedOTP = '';
-let otpVerified = false;
-if(currentUser){ document.getElementById('welcomeName').innerText = `Welcome, ${currentUser.name}!`; }
-function toggleMenu(){ document.getElementById('sidebar').classList.toggle('active'); document.getElementById('overlay').classList.toggle('active'); }
-function showPage(pageId, e){ if(e) e.preventDefault(); document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById(pageId).classList.add('active'); toggleMenu(); if(pageId==='profile') loadProfile(); if(pageId==='dashboard') loadDashboard(); if(pageId==='wallet') loadWallet(); }
-function logout(){ localStorage.removeItem('currentUser'); window.location.href='login.html'; }
-function moveNext(input, index){ if(input.value.length===1 && index<5){ document.querySelectorAll('.otp-box input')[index+1].focus(); } }
-function startChangeBank(){ generatedOTP=Math.floor(100000+Math.random()*900000).toString(); document.getElementById('otpSendTo').innerText=currentUser.phone; document.getElementById('otpModal').classList.remove('hidden'); alert(`DEMO OTP: ${generatedOTP}`); }
-function closeOTP(){ document.getElementById('otpModal').classList.add('hidden'); document.querySelectorAll('.otp-box input').forEach(i=>i.value=''); }
-function verifyOTP(){ const inputs=document.querySelectorAll('.otp-box input'); let entered=Array.from(inputs).map(i=>i.value).join(''); if(entered===generatedOTP){ otpVerified=true; closeOTP(); document.getElementById('bankModal').classList.remove('hidden'); document.getElementById('accountName').value=currentUser.name; } else { alert('Invalid OTP'); } }
-function closeBank(){ document.getElementById('bankModal').classList.add('hidden'); }
-function saveBankDetails(){ if(!otpVerified){ alert('Verify OTP first'); return; } currentUser.accountName=document.getElementById('accountName').value; currentUser.accountNumber=document.getElementById('accountNumber').value; currentUser.bankName=document.getElementById('bankName').value; let allUsers=JSON.parse(localStorage.getItem('allUsers'))||[]; let idx=allUsers.findIndex(u=>u.id===currentUser.id); allUsers[idx]=currentUser; localStorage.setItem('allUsers', JSON.stringify(allUsers)); localStorage.setItem('currentUser', JSON.stringify(currentUser)); alert('✅ Bank updated'); otpVerified=false; closeBank(); loadProfile(); loadWallet(); }
-function loadWallet(){ let wallet=JSON.parse(localStorage.getItem(`wallet_${currentUser.id}`))||{balance:0,totalEarned:0}; document.getElementById('walletBalance').innerText=`₦${wallet.balance.toLocaleString()}`; document.getElementById('totalEarned').innerText=`₦${wallet.totalEarned.toLocaleString()}`; document.getElementById('withdrawAccount').innerText=`${currentUser.bankName} - ${currentUser.accountNumber}`; }
-function requestWithdrawal(){ const amount=parseFloat(document.getElementById('withdrawAmount').value); let wallet=JSON.parse(localStorage.getItem(`wallet_${currentUser.id}`))||{balance:0,totalEarned:0}; if(!amount||amount<1000){ alert('Min ₦1000'); return; } if(amount>wallet.balance){ alert('Insufficient'); return; } wallet.balance-=amount; localStorage.setItem(`wallet_${currentUser.id}`, JSON.stringify(wallet)); alert(`₦${amount} withdrawal requested to ${currentUser.bankName}`); document.getElementById('withdrawAmount').value=''; loadWallet(); }
-function loadProfile(){ document.getElementById('profileName').innerText=currentUser.name; document.getElementById('profileEmail').innerText=currentUser.email; document.getElementById('profilePhone').innerText=currentUser.phone; document.getElementById('profileShop').innerText=currentUser.shop_address; document.getElementById('profileLocation').innerText=currentUser.location; document.getElementById('profileAccName').innerText=currentUser.accountName||'Not set'; document.getElementById('profileAccNo').innerText=currentUser.accountNumber||'Not set'; document.getElementById('profileBank').innerText=currentUser.bankName||'Not set'; }
-function loadDashboard(){ let products=JSON.parse(localStorage.getItem('products'))||[]; let vendorProducts=products.filter(p=>p.vendorId===currentUser.id); document.getElementById('totalProducts').innerText=vendorProducts.length; }
-function showAddProduct(){ editingProductId=null; document.getElementById('modalTitle').innerText='Add New Product'; document.getElementById('productName').value=''; document.getElementById('productPrice').value=''; document.getElementById('productStock').value=''; document.getElementById('productModal').classList.remove('hidden'); }
-function closeProduct(){ document.getElementById('productModal').classList.add('hidden'); }
-function saveProduct(){ const reader=new FileReader(); const file=document.getElementById('productImage').files[0]; const saveData=(img)=>{ let product={ id:editingProductId||Date.now(), vendorId:currentUser.id, name:document.getElementById('productName').value, price:document.getElementById('productPrice').value, category:document.getElementById('productCategory').value, stock:document.getElementById('productStock').value, image:img||'' }; let products=JSON.parse(localStorage.getItem('products'))||[]; if(editingProductId){ let i=products.findIndex(p=>p.id===editingProductId); products[i]=product; } else { products.push(product); } localStorage.setItem('products', JSON.stringify(products)); alert('Saved!'); closeProduct(); loadProducts(); }; if(file){ reader.onload=e=>saveData(e.target.result); reader.readAsDataURL(file); } else { saveData(''); } }
-function editProduct(id){ editingProductId=id; let products=JSON.parse(localStorage.getItem('products'))||[]; let p=products.find(x=>x.id===id); document.getElementById('modalTitle').innerText='Edit Product'; document.getElementById('productName').value=p.name; document.getElementById('productPrice').value=p.price; document.getElementById('productStock').value=p.stock; document.getElementById('productCategory').value=p.category; document.getElementById('productModal').classList.remove('hidden'); }
-function deleteProduct(id){ if(confirm('Delete?')){ let products=JSON.parse(localStorage.getItem('products'))||[]; products=products.filter(p=>p.id!==id); localStorage.setItem('products', JSON.stringify(products)); loadProducts(); } }
-function loadProducts(){ let products=JSON.parse(localStorage.getItem('products'))||[]; let vendorProducts=products.filter(p=>p.vendorId===currentUser.id); let html=''; vendorProducts.forEach(p=>{ html+=`<div class="product-item"><img src="${p.image||'https://via.placeholder.com/60'}"><div style="flex:1;"><b>${p.name}</b> - ₦${p.price}<br><small>${p.stock} | ${p.category}</small><br><button class="btn btn-small btn-edit" onclick="editProduct(${p.id})">Edit</button><button class="btn btn-small btn-delete" onclick="deleteProduct(${p.id})">Delete</button></div></div>`; }); document.getElementById('productList').innerHTML=html||'<p>No products</p>'; }
-loadProducts(); loadDashboard();
+let selectedRole = 'vendor';
+function setRole(role){
+  selectedRole=role;
+  document.querySelectorAll('.role button').forEach(b=>b.classList.remove('active'));
+  if(role==='customer') document.getElementById('btnCustomer').classList.add('active');
+  if(role==='vendor') document.getElementById('btnVendor').classList.add('active');
+  if(role==='delivery') document.getElementById('btnDelivery').classList.add('active');
+  
+  if(role==='customer'){ document.getElementById('roleInfo').innerText='Shop groceries from vendors around you'; document.getElementById('bankLabel').innerText='Bank (for refunds)'; }
+  if(role==='vendor'){ document.getElementById('roleInfo').innerText='Sell your products on the platform'; document.getElementById('bankLabel').innerText='Bank Name'; }
+  if(role==='delivery'){ document.getElementById('roleInfo').innerText='Deliver orders and earn money'; document.getElementById('bankLabel').innerText='Bank Name (for earnings)'; }
+}
+function togglePass(){
+  let i=document.getElementById('password');
+  i.type = i.type==='password' ? 'text' : 'password';
+}
+function signup(){
+  const name=document.getElementById('name').value.trim();
+  const email=document.getElementById('email').value.trim().toLowerCase();
+  const password=document.getElementById('password').value.trim();
+  const phone=document.getElementById('phone').value.trim();
+  const shop=document.getElementById('shop').value.trim();
+  const location=document.getElementById('location').value;
+  const bank=document.getElementById('bank').value;
+  const accNo=document.getElementById('accNo').value.trim();
+  const accName=document.getElementById('accName').value.trim() || name;
+
+  if(!name || !email || !password || !phone){ alert('Fill all required fields'); return; }
+
+  let allUsers=JSON.parse(localStorage.getItem('allUsers'))||[];
+  if(allUsers.find(u=>u.email.toLowerCase()===email)){ alert('Email already exists, please Login'); window.location.href='login.html'; return; }
+
+  let newUser = {
+    id: Date.now(),
+    name: name,
+    email: email,
+    password: password,
+    phone: phone,
+    shop_address: shop,
+    location: location,
+    role: selectedRole,
+    accountName: accName,
+    accountNumber: accNo,
+    bankName: bank,
+    status: 'approved' // AUTO APPROVED FOR TESTING
+  };
+
+  allUsers.push(newUser);
+  localStorage.setItem('allUsers', JSON.stringify(allUsers));
+  localStorage.setItem(`wallet_${newUser.id}`, JSON.stringify({balance:5000, totalEarned:5000}));
+
+  alert('✅ Registration successful! Please login.');
+  window.location.href='login.html';
+}
+setRole('vendor');
 </script>
 </body>
 </html>
