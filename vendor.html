@@ -2,111 +2,107 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vendor Dashboard - LGM FIXED</title>
+<title>Vendor Dashboard - LGM FINAL</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-50 p-4">
 <div class="max-w-md mx-auto">
-<div id="status" class="bg-yellow-100 p-3 rounded-xl text-sm mb-4">Checking Supabase connection...</div>
-
+<div id="status" class="bg-yellow-100 p-3 rounded-xl text-sm mb-4 font-bold">Checking Supabase connection...</div>
 <div id="loginView" class="bg-white rounded-2xl shadow-xl p-6">
   <h1 class="text-2xl font-black text-center mb-1">Lokoja Grocery Mall</h1>
-  <p class="text-center text-gray-500 mb-4 text-sm">Vendor Login (FIXED - Cloud Safe)</p>
+  <p class="text-center text-gray-500 mb-4 text-sm">Vendor Login (FINAL - Cloud)</p>
   <input id="loginEmail" type="email" placeholder="Email e.g. ganaja@gmail.com" class="w-full border p-3 rounded-xl mb-3">
   <input id="loginPass" type="password" placeholder="Password" class="w-full border p-3 rounded-xl mb-3">
   <button id="loginBtn" class="w-full bg-green-600 text-white p-3 rounded-xl font-bold">Login</button>
   <button id="showReg" class="w-full mt-3 text-green-600 text-sm font-bold">New vendor? Register HERE →</button>
-  <p id="loginMsg" class="text-center text-sm mt-3"></p>
+  <p id="loginMsg" class="text-center text-sm mt-3 font-bold"></p>
 </div>
-
 <div id="registerView" class="hidden bg-white rounded-2xl shadow-xl p-6 mt-4">
   <h2 class="text-xl font-black text-center mb-4">Create Vendor Account</h2>
-  <input id="regName" placeholder="Full Name e.g. James Agbem" class="w-full border p-3 rounded-xl mb-2">
-  <input id="regEmail" placeholder="Email" class="w-full border p-3 rounded-xl mb-2">
+  <input id="regName" placeholder="Full Name" class="w-full border p-3 rounded-xl mb-2">
+  <input id="regEmail" type="email" placeholder="Email" class="w-full border p-3 rounded-xl mb-2">
   <input id="regPhone" placeholder="Phone 081..." class="w-full border p-3 rounded-xl mb-2">
   <input id="regShop" placeholder="Shop Address" class="w-full border p-3 rounded-xl mb-2">
   <input id="regLocation" placeholder="Location e.g. Ganaja" class="w-full border p-3 rounded-xl mb-2">
   <input id="regPass" type="password" placeholder="Password" class="w-full border p-3 rounded-xl mb-3">
   <button id="regBtn" class="w-full bg-green-600 text-white p-3 rounded-xl font-bold">Register & Auto Login</button>
   <button id="showLogin" class="w-full mt-3 text-gray-500 text-sm">Already have account? Login</button>
-  <p id="regMsg" class="text-center text-sm mt-3"></p>
+  <p id="regMsg" class="text-center text-sm mt-3 font-bold"></p>
 </div>
-
 <div id="dashboardView" class="hidden bg-white rounded-2xl shadow-xl p-6 mt-4">
   <h2 class="font-black text-lg">Welcome! 🎉</h2>
   <p id="welcomeEmail" class="text-sm text-gray-500 mb-4"></p>
   <div class="grid grid-cols-2 gap-2 mb-4">
     <div class="bg-gray-50 p-3 rounded-xl"><p class="text-xs text-gray-400">Products</p><p id="statProducts" class="font-black text-xl">0</p></div>
-    <div class="bg-green-50 p-3 rounded-xl"><p class="text-xs text-green-600">Wallet</p><p id="statWallet" class="font-black text-xl">₦5000</p></div>
+    <div class="bg-green-50 p-3 rounded-xl"><p class="text-xs text-green-600">Wallet</p><p id="statWallet" class="font-black text-xl">₦0</p></div>
   </div>
   <input id="pName" placeholder="Product e.g. Garri Ijebu 4L" class="w-full border p-3 rounded-xl mb-2">
   <div class="flex gap-2 mb-2"><input id="pPrice" type="number" placeholder="Price" class="flex-1 border p-3 rounded-xl"><input id="pStock" type="number" placeholder="Qty" class="flex-1 border p-3 rounded-xl"></div>
   <button id="saveProduct" class="w-full bg-green-600 text-white p-3 rounded-xl font-bold">Add Product to Cloud ☁️</button>
-  <p id="saveMsg" class="text-sm mt-2 text-center"></p>
+  <p id="saveMsg" class="text-sm mt-2 text-center font-bold"></p>
   <div id="productList" class="mt-4 space-y-2"></div>
   <button id="logoutBtn" class="w-full mt-6 bg-gray-200 p-2 rounded-xl text-sm">Logout</button>
 </div>
 </div>
-
 <script>
 const SUPABASE_URL = "https://fkpvzlifmsykztndlcyh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrcHZ6bGlmbXN5a3p0bmRsY3loIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMjc0MjcsImV4cCI6MjEwNDYwMzQyN30.guANuUKctqrI4PZC_mFzZ0wHhlOyVdgGCx6wo2ZnFrs";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser=null;
 const statusEl=document.getElementById('status');
-function setStatus(msg, isError=false){ statusEl.innerText=msg; statusEl.className=isError?'bg-red-100 text-red-700 p-3 rounded-xl text-sm mb-4':'bg-green-100 text-green-700 p-3 rounded-xl text-sm mb-4'; }
+function setStatus(msg, isError=false){ statusEl.innerText=msg; statusEl.className=isError?'bg-red-100 text-red-700 p-3 rounded-xl text-sm mb-4 font-bold':'bg-green-100 text-green-700 p-3 rounded-xl text-sm mb-4 font-bold'; }
 async function testConnection(){
   try{
-    const { data, error } = await supabase.from('users').select('count').limit(1);
-    if(error){
-      if(error.message.includes('RLS') || error.code==='42501') setStatus('⚠️ FIX NEEDED: Go to Supabase SQL Editor and run: ALTER TABLE users DISABLE ROW LEVEL SECURITY; Then reload.', true);
-      else setStatus('Error: '+error.message+' - Check tables exist', true);
-    } else {
-      setStatus('✅ Connected to Supabase Cloud! You can Register/Login now.');
-    }
-  } catch(e){ setStatus('Connection failed: '+e.message, true); }
+    setStatus("Connecting to Supabase...");
+    const res = await supabaseClient.from('users').select('*').limit(1);
+    if(res.error){ setStatus('❌ Error: '+res.error.message, true); } 
+    else { setStatus('✅ Connected! Supabase working! Register now.', false); }
+  } catch(e){ setStatus('❌ Connection failed: '+e.message, true); }
 }
-testConnection();
+setTimeout(testConnection, 500);
 function showView(v){ ['loginView','registerView','dashboardView'].forEach(id=>document.getElementById(id).classList.add('hidden')); document.getElementById(v).classList.remove('hidden'); }
 document.getElementById('showReg').onclick=()=>showView('registerView');
 document.getElementById('showLogin').onclick=()=>showView('loginView');
 document.getElementById('logoutBtn').onclick=()=>{ localStorage.removeItem('lgm_vendor_id'); location.reload(); };
 document.getElementById('regBtn').onclick=async()=>{
   const name=document.getElementById('regName').value.trim(), email=document.getElementById('regEmail').value.trim().toLowerCase(), phone=document.getElementById('regPhone').value.trim(), shop=document.getElementById('regShop').value.trim(), location=document.getElementById('regLocation').value.trim(), pass=document.getElementById('regPass').value.trim();
-  if(!name||!email||!pass){ document.getElementById('regMsg').innerText='Fill name,email,password'; document.getElementById('regMsg').style.color='red'; return; }
-  document.getElementById('regMsg').innerText='Creating account...'; document.getElementById('regMsg').style.color='black';
-  const { data, error } = await supabase.from('users').insert([{ email, password: pass, name, phone, shop_address: shop, location, bank_name:'', account_number:'', account_name:'' }]).select().single();
-  if(error){ document.getElementById('regMsg').innerText='❌ '+error.message; document.getElementById('regMsg').style.color='red'; if(error.message.includes('RLS')) setStatus('⚠️ RLS BLOCKING! Run SQL: ALTER TABLE users DISABLE ROW LEVEL SECURITY;', true); return; }
-  document.getElementById('regMsg').innerText='✅ Success! Logging in...'; document.getElementById('regMsg').style.color='green';
-  currentUser=data; localStorage.setItem('lgm_vendor_id', data.id); setTimeout(()=>{ showView('dashboardView'); document.getElementById('welcomeEmail').innerText=data.email; loadProducts(); }, 800);
+  const msgEl=document.getElementById('regMsg');
+  if(!name||!email||!pass){ msgEl.innerText='Fill name,email,password'; msgEl.style.color='red'; return; }
+  msgEl.innerText='Creating account...'; msgEl.style.color='black';
+  const { data, error } = await supabaseClient.from('users').insert([{ email, password: pass, name, phone, shop_address: shop, location, bank_name:'', account_number:'', account_name:'' }]).select().single();
+  if(error){ msgEl.innerText='❌ '+error.message; msgEl.style.color='red'; setStatus('❌ '+error.message, true); return; }
+  msgEl.innerText='✅ Success! Logging in...'; msgEl.style.color='green';
+  currentUser=data; localStorage.setItem('lgm_vendor_id', data.id); setTimeout(()=>{ showView('dashboardView'); document.getElementById('welcomeEmail').innerText=data.email; loadProducts(); }, 500);
 };
 document.getElementById('loginBtn').onclick=async()=>{
   const email=document.getElementById('loginEmail').value.trim().toLowerCase(), pass=document.getElementById('loginPass').value.trim();
-  if(!email||!pass){ document.getElementById('loginMsg').innerText='Enter email & password'; document.getElementById('loginMsg').style.color='red'; return; }
-  document.getElementById('loginMsg').innerText='Checking...'; document.getElementById('loginMsg').style.color='black';
-  const { data, error } = await supabase.from('users').select('*').eq('email', email).eq('password', pass).single();
-  if(error||!data){ document.getElementById('loginMsg').innerText='❌ Invalid login or account not found. Tap Register! Error: '+(error?error.message:''); document.getElementById('loginMsg').style.color='red'; return; }
+  const msgEl=document.getElementById('loginMsg');
+  if(!email||!pass){ msgEl.innerText='Enter email & password'; msgEl.style.color='red'; return; }
+  msgEl.innerText='Checking...'; msgEl.style.color='black';
+  const { data, error } = await supabaseClient.from('users').select('*').eq('email', email).eq('password', pass).single();
+  if(error||!data){ msgEl.innerText='❌ Invalid login. Tap Register! '+(error?error.message:''); msgEl.style.color='red'; return; }
   currentUser=data; localStorage.setItem('lgm_vendor_id', data.id); showView('dashboardView'); document.getElementById('welcomeEmail').innerText=data.email; loadProducts();
 };
 async function loadProducts(){
   if(!currentUser) return;
-  const { data } = await supabase.from('products').select('*').eq('vendor_id', currentUser.id).order('created_at',{ascending:false});
+  const { data } = await supabaseClient.from('products').select('*').eq('vendor_id', currentUser.id).order('created_at',{ascending:false});
   const list=document.getElementById('productList'); list.innerHTML=''; document.getElementById('statProducts').innerText=data?data.length:0;
-  (data||[]).forEach(p=>{ const d=document.createElement('div'); d.className='flex justify-between bg-gray-50 p-2 rounded-xl text-sm'; d.innerHTML=`<span>${p.name} - ₦${p.price}</span><button onclick="delProd(${p.id})" class="text-red-500">X</button>`; list.appendChild(d); });
+  (data||[]).forEach(p=>{ const d=document.createElement('div'); d.className='flex justify-between bg-gray-50 p-2 rounded-xl text-sm'; d.innerHTML=`<span>${p.name} - ₦${p.price}</span><button onclick="delProd(${p.id})" class="text-red-500 font-bold">X</button>`; list.appendChild(d); });
 }
-window.delProd=async(id)=>{ await supabase.from('products').delete().eq('id',id); loadProducts(); };
+window.delProd=async(id)=>{ await supabaseClient.from('products').delete().eq('id',id); loadProducts(); };
 document.getElementById('saveProduct').onclick=async()=>{
   const name=document.getElementById('pName').value.trim(), price=document.getElementById('pPrice').value, stock=document.getElementById('pStock').value;
-  if(!name||!price){ document.getElementById('saveMsg').innerText='Enter name & price'; return; }
-  document.getElementById('saveMsg').innerText='Saving...';
-  const { error } = await supabase.from('products').insert([{ vendor_id: currentUser.id, name, price: parseFloat(price), stock: parseFloat(stock||0), category:'Garri', image:'' }]);
-  if(error){ document.getElementById('saveMsg').innerText='❌ '+error.message; if(error.message.includes('RLS')) setStatus('⚠️ Run: ALTER TABLE products DISABLE ROW LEVEL SECURITY;', true); return; }
-  document.getElementById('saveMsg').innerText='✅ Saved to Cloud!'; document.getElementById('pName').value=''; document.getElementById('pPrice').value=''; document.getElementById('pStock').value=''; loadProducts();
+  const msgEl=document.getElementById('saveMsg');
+  if(!name||!price){ msgEl.innerText='Enter name & price'; return; }
+  msgEl.innerText='Saving...';
+  const { error } = await supabaseClient.from('products').insert([{ vendor_id: currentUser.id, name, price: parseFloat(price), stock: parseFloat(stock||0), category:'Garri', image:'' }]);
+  if(error){ msgEl.innerText='❌ '+error.message; return; }
+  msgEl.innerText='✅ Saved to Cloud!'; document.getElementById('pName').value=''; document.getElementById('pPrice').value=''; document.getElementById('pStock').value=''; loadProducts();
 };
 async function checkSession(){
   const id=localStorage.getItem('lgm_vendor_id'); if(!id) return;
-  const { data } = await supabase.from('users').select('*').eq('id', id).single();
+  const { data } = await supabaseClient.from('users').select('*').eq('id', id).single();
   if(data){ currentUser=data; showView('dashboardView'); document.getElementById('welcomeEmail').innerText=data.email; loadProducts(); setStatus('✅ Auto-logged in as '+data.email); }
 }
 checkSession();
