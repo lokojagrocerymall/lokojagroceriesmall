@@ -1,144 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vendor Dashboard - Lokoja Grocery Mall</title>
 <style>
-    * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-  body { background:#f5f5f5; }
-.header { background:#16a34a; color:#fff; padding:15px 20px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:10; }
-.menu-btn { font-size:24px; cursor:pointer; user-select:none; }
-.sidebar { position:fixed; left:-250px; top:0; width:250px; height:100%; background:#fff; box-shadow:2px 0 5px rgba(0,0,0,0.1); transition:0.3s; z-index:20; padding-top:60px; }
-.sidebar.active { left:0; }
-.sidebar a { display:block; padding:15px 20px; color:#333; text-decoration:none; border-bottom:1px solid #f0f0f0; font-weight:600; }
-.sidebar a:hover { background:#f0fdf4; color:#16a34a; }
-.overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:none; z-index:15; }
-.overlay.active { display:block; }
-.container { padding:20px; max-width:600px; margin:0 auto; }
-.welcome { background:#16a34a; color:#fff; padding:20px; border-radius:12px; margin-bottom:20px; }
-.wallet-card { background:linear-gradient(135deg, #16a34a, #22c55e); color:#fff; padding:25px; border-radius:12px; margin-bottom:20px; }
-.wallet-card h2 { font-size:32px; margin:10px 0; }
-.stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
-.stat-card { background:#fff; padding:15px; border-radius:10px; text-align:center; }
-.stat-card h4 { font-size:12px; color:#6b7280; }
-.stat-card p { font-size:18px; font-weight:700; color:#16a34a; margin-top:5px; }
-.card { background:#fff; padding:20px; border-radius:12px; margin-bottom:15px; }
-input, select { width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:15px; }
-.btn { background:#16a34a; color:#fff; border:none; padding:14px; border-radius:8px; font-weight:700; width:100%; cursor:pointer; }
-.btn-small { padding:8px 12px; font-size:13px; margin-right:5px; width:auto; }
-.btn-edit { background:#2563eb; }
-.btn-delete { background:#ef4444; }
-.btn-warning { background:#f59e0b; }
-.modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; overflow-y:auto; }
-.modal-content { background:#fff; padding:25px; border-radius:12px; width:90%; max-width:400px; margin:20px 0; }
-.hidden { display:none; }
-.product-item { border:1px solid #ddd; padding:12px; border-radius:8px; margin-top:10px; display:flex; gap:10px; }
-.product-item img { width:60px; height:60px; object-fit:cover; border-radius:8px; }
-.page { display:none; }
-.page.active { display:block; }
-.otp-box { display:flex; gap:8px; justify-content:center; }
-.otp-box input { text-align:center; font-size:20px; font-weight:700; width:45px; padding:12px 5px; }
-.alert { background:#fef3c7; border-left:4px solid #f59e0b; padding:12px; border-radius:6px; margin-bottom:15px; font-size:14px; }
+* { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, sans-serif; }
+body { background:#f5f5f5; }
+.header { background:#16a34a; color:#fff; padding:15px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:10; }
+.menu-btn { font-size:26px; background:none; border:none; color:#fff; }
+.card { background:#fff; margin:15px; padding:15px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.stat { background:#f0fdf4; padding:12px; border-radius:10px; text-align:center; border:1px solid #bbf7d0; }
+.stat b { display:block; font-size:20px; color:#16a34a; }
+.btn-green { background:#16a34a; color:#fff; border:none; padding:12px; width:100%; border-radius:10px; font-weight:700; cursor:pointer; }
+.btn-blue { background:#2563eb; color:#fff; border:none; padding:6px 10px; border-radius:6px; margin-right:5px; cursor:pointer; }
+.btn-red { background:#ef4444; color:#fff; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; }
+.prod { display:flex; gap:10px; align-items:center; border-bottom:1px solid #eee; padding:10px 0; }
+.prod img { width:60px; height:60px; object-fit:cover; border-radius:8px; background:#eee; }
+.hidden { display:none!important; }
+.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:99; padding:15px; }
+.modal-box { background:#fff; width:100%; max-width:450px; border-radius:16px; padding:20px; max-height:90vh; overflow-y:auto; }
+input, select { width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; margin-top:5px; }
+label { font-weight:600; font-size:14px; margin-top:12px; display:block; }
+.side-menu { position:fixed; top:0; left:0; width:260px; height:100%; background:#fff; z-index:200; transform:translateX(-100%); transition:0.3s; padding:20px; box-shadow:2px 0 10px rgba(0,0,0,0.2); }
+.side-menu.open { transform:translateX(0); }
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:150; }
 </style>
 </head>
 <body>
+<div class="header"><button class="menu-btn" onclick="toggleMenu()">☰</button><b>Vendor Dashboard</b><span onclick="logout()">Logout</span></div>
 
-<div class="header">
-  <span class="menu-btn" onclick="toggleMenu()">☰</span>
-  <h3>Vendor Dashboard</h3>
-  <span></span>
+<div id="sideMenu" class="side-menu">
+<h3 style="color:#16a34a;">Menu</h3><br>
+<p onclick="switchTab('dashboard'); toggleMenu()">📊 Dashboard</p><br>
+<p onclick="switchTab('products'); toggleMenu()">📦 My Products</p><br>
+<p onclick="switchTab('orders'); toggleMenu()">🛒 Orders</p><br>
+<p onclick="switchTab('wallet'); toggleMenu()">💰 Wallet</p><br>
+<p onclick="switchTab('profile'); toggleMenu()">👤 Profile</p><br>
+<p onclick="logout()">🚪 Logout</p>
+</div>
+<div id="overlay" class="hidden overlay" onclick="toggleMenu()"></div>
+
+<div id="dashboardTab" class="card"><h3>Dashboard</h3><div class="grid" style="margin-top:10px;"><div class="stat"><b id="totalProducts">0</b>Products</div><div class="stat"><b id="totalOrders">0</b>Orders</div><div class="stat"><b id="walletBal">₦0</b>Wallet</div><div class="stat"><b id="stockTotal">0</b>Stock</div></div></div>
+
+<div id="productsTab" class="card"><h3>My Products</h3><button class="btn-green" style="margin:10px 0;" onclick="openProduct()">+ Add New Product</button><div id="productList"></div></div>
+
+<div id="ordersTab" class="card hidden"><h3>Orders</h3><div id="orderList">No orders yet</div></div>
+<div id="walletTab" class="card hidden"><h3>My Wallet</h3><h1 id="walletBig" style="color:#16a34a; margin:10px 0;">₦0</h1><p>Total Earned: <span id="totalEarned">₦0</span></p></div>
+<div id="profileTab" class="card hidden"><h3>Profile</h3><p id="profileInfo"></p></div>
+
+<!-- PRODUCT MODAL FIXED -->
+<div id="productModal" class="modal-bg hidden">
+<div class="modal-box">
+<h3 id="modalTitle">Add New Product</h3>
+<label>Product Name / Qty</label><input type="text" id="productName" placeholder="e.g. Yam 10 Tubers, Garri 4L painter">
+<label>Product Image</label><input type="file" id="productImage" accept="image/*">
+<label>Price ₦</label><input type="number" id="productPrice" placeholder="e.g. 15000">
+<label>Category</label><select id="productCategory"><option>Foodstuffs</option><option>Vegetables</option><option>Fruits</option><option>Provisions</option><option>Meat & Fish</option><option>Drinks</option><option>Others</option></select>
+<label>Stock Quantity</label><input type="number" id="productStock" placeholder="e.g. 190">
+<button onclick="saveProduct()" class="btn-green" style="margin-top:20px;">Save Product</button>
+<button onclick="closeProduct()" style="width:100%; background:#6b7280; color:#fff; border:none; padding:12px; border-radius:10px; margin-top:10px;">Cancel</button>
+</div>
 </div>
 
-<div class="sidebar" id="sidebar">
-  <a href="#" onclick="showPage('dashboard', event)">🏠 Dashboard</a>
-  <a href="#" onclick="showPage('wallet', event)">💰 Wallet & Withdrawals</a>
-  <a href="#" onclick="showPage('products', event)">📦 My Products</a>
-  <a href="#" onclick="showPage('orders', event)">📋 Enquiries/Orders</a>
-  <a href="#" onclick="showPage('profile', event)">👤 Profile</a>
-  <a href="index.html">🛒 Customer Home</a>
-  <a href="#" onclick="logout()">🚪 Logout</a>
-</div>
-<div class="overlay" id="overlay" onclick="toggleMenu()"></div>
-
-<div class="container">
-  <div id="dashboard" class="page active">
-    <div class="welcome"><h2 id="welcomeName">Welcome, Vendor!</h2><p>Here's your store performance</p></div>
-    <div class="stats"><div class="stat-card"><h4>Today</h4><p>₦0</p></div><div class="stat-card"><h4>This Week</h4><p>₦0</p></div><div class="stat-card"><h4>This Month</h4><p>₦0</p></div></div>
-    <div class="card"><h3>Total Products</h3><p id="totalProducts" style="font-size:24px; font-weight:700;">0</p></div>
-  </div>
-  <div id="wallet" class="page">
-    <div class="wallet-card"><p>Available Balance</p><h2 id="walletBalance">₦0.00</h2><p>Total Earned: <b id="totalEarned">₦0.00</b></p></div>
-    <div class="card"><h3>Withdraw to Bank</h3><p style="font-size:12px; color:#6b7280; margin-bottom:10px;">Account: <b id="withdrawAccount"></b></p><label>Amount ₦</label><input type="number" id="withdrawAmount" placeholder="Min ₦1000"><button class="btn" onclick="requestWithdrawal()">Withdraw Now</button></div>
-    <div class="card"><h3>Withdrawal History</h3><div id="withdrawHistory"><p>No withdrawals yet</p></div></div>
-  </div>
-  <div id="products" class="page"><div class="card"><h3>My Products</h3><button class="btn" onclick="showAddProduct()">+ Add New Product</button><div id="productList"><p>No products yet</p></div></div></div>
-  <div id="orders" class="page"><div class="card"><h3>Customer Enquiries & Orders</h3><div id="ordersList"><p>No orders yet</p></div></div></div>
-  <div id="profile" class="page"><div class="card"><h3>Store Profile</h3><p><b>Name:</b> <span id="profileName"></span></p><p><b>Email:</b> <span id="profileEmail"></span></p><p><b>Phone:</b> <span id="profilePhone"></span></p><p><b>Shop Address:</b> <span id="profileShop"></span></p><p><b>Location:</b> <span id="profileLocation"></span></p><hr style="margin:15px 0;"><h4>Bank Details</h4><p><b>Account Name:</b> <span id="profileAccName"></span></p><p><b>Account No:</b> <span id="profileAccNo"></span></p><p><b>Bank:</b> <span id="profileBank"></span></p><button class="btn btn-warning" style="margin-top:15px;" onclick="startChangeBank()">🔒 Change Bank Account</button></div></div>
-</div>
-
-<!-- OTP MODAL -->
-<div id="otpModal" class="modal hidden"><div class="modal-content"><h3>🔒 Security Verification</h3><p style="color:#6b7280; font-size:14px; margin-bottom:15px;">Enter code sent to <b id="otpSendTo"></b></p><div class="otp-box"><input type="text" maxlength="1" oninput="moveNext(this,0)"><input type="text" maxlength="1" oninput="moveNext(this,1)"><input type="text" maxlength="1" oninput="moveNext(this,2)"><input type="text" maxlength="1" oninput="moveNext(this,3)"><input type="text" maxlength="1" oninput="moveNext(this,4)"><input type="text" maxlength="1" oninput="moveNext(this,5)"></div><button class="btn" style="margin-top:20px;" onclick="verifyOTP()">Verify</button><button style="background:#6b7280; margin-top:10px;" class="btn" onclick="closeOTP()">Cancel</button></div></div>
-<!-- BANK MODAL -->
-<div id="bankModal" class="modal hidden"><div class="modal-content"><h3>Change Bank Details</h3><label>Account Name</label><input type="text" id="accountName"><label>Account Number</label><input type="number" id="accountNumber"><label>Bank</label><select id="bankName"><option>Access Bank</option><option>First Bank</option><option>GTBank</option><option>Zenith Bank</option><option>UBA</option><option>Polaris Bank</option><option>Fidelity Bank</option><option>Union Bank</option><option>Stanbic IBTC</option><option>Keystone Bank</option><option>Ecobank</option><option>Opay</option><option>Palmpay</option><option>Kuda Bank</option><option>Moniepoint</option></select><button class="btn" onclick="saveBankDetails()">Save</button><button style="background:#6b7280; margin-top:10px;" class="btn" onclick="closeBank()">Cancel</button></div></div>
-<!-- Add New Product Modal -->
-<div id="productModal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:100; padding:15px;">
-  <div style="background:#fff; width:100%; max-width:450px; border-radius:16px; padding:20px; max-height:90vh; overflow-y:auto;">
-    <h3 style="margin-bottom:15px;">Add New Product</h3>
-    
-    <label style="font-weight:600; font-size:14px; display:block; margin-top:12px;">Product Name / Qty</label>
-    <input type="text" id="productName" placeholder="e.g. Yam 10 Tubers, Garri 4L painter" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; margin-top:5px;">
-
-    <label style="font-weight:600; font-size:14px; display:block; margin-top:12px;">Product Image</label>
-    <input type="file" id="productImage" accept="image/*" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:10px; margin-top:5px; background:#f9f9f9;">
-
-    <label style="font-weight:600; font-size:14px; display:block; margin-top:12px;">Price ₦</label>
-    <input type="number" id="productPrice" placeholder="e.g. 15000" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; margin-top:5px;">
-
-    <label style="font-weight:600; font-size:14px; display:block; margin-top:12px;">Category</label>
-    <select id="productCategory" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; margin-top:5px;">
-      <option>Foodstuffs</option>
-      <option>Vegetables</option>
-      <option>Fruits</option>
-      <option>Provisions</option>
-      <option>Meat & Fish</option>
-      <option>Drinks</option>
-      <option>Others</option>
-    </select>
-
-    <label style="font-weight:600; font-size:14px; display:block; margin-top:12px;">Stock Quantity</label>
-    <input type="number" id="productStock" placeholder="e.g. 190" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; margin-top:5px;">
-
-    <button onclick="saveProduct()" style="width:100%; background:#16a34a; color:#fff; border:none; padding:14px; border-radius:10px; font-weight:700; margin-top:20px; cursor:pointer;">Save Product</button>
-    <button onclick="closeProduct()" style="width:100%; background:#6b7280; color:#fff; border:none; padding:12px; border-radius:10px; font-weight:600; margin-top:10px; cursor:pointer;">Cancel</button>
-  </div>
-</div>
 <script>
 let currentUser = JSON.parse(localStorage.getItem('currentUser'));
-let editingProductId = null;
-let generatedOTP = '';
-let otpVerified = false;
-if(currentUser){ document.getElementById('welcomeName').innerText = `Welcome, ${currentUser.name}!`; }
-function toggleMenu(){ document.getElementById('sidebar').classList.toggle('active'); document.getElementById('overlay').classList.toggle('active'); }
-function showPage(pageId, e){ if(e) e.preventDefault(); document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById(pageId).classList.add('active'); toggleMenu(); if(pageId==='profile') loadProfile(); if(pageId==='dashboard') loadDashboard(); if(pageId==='wallet') loadWallet(); }
+if(!currentUser || currentUser.role!=='vendor'){ window.location.href='login.html'; }
+let editingProductId=null;
+
+function toggleMenu(){ document.getElementById('sideMenu').classList.toggle('open'); document.getElementById('overlay').classList.toggle('hidden'); }
+function switchTab(t){ ['dashboardTab','productsTab','ordersTab','walletTab','profileTab'].forEach(id=>document.getElementById(id).classList.add('hidden')); document.getElementById(t+'Tab').classList.remove('hidden'); if(t==='dashboard') loadDashboard(); if(t==='products') loadProducts(); }
 function logout(){ localStorage.removeItem('currentUser'); window.location.href='login.html'; }
-function moveNext(input, index){ if(input.value.length===1 && index<5){ document.querySelectorAll('.otp-box input')[index+1].focus(); } }
-function startChangeBank(){ generatedOTP=Math.floor(100000+Math.random()*900000).toString(); document.getElementById('otpSendTo').innerText=currentUser.phone; document.getElementById('otpModal').classList.remove('hidden'); alert(`DEMO OTP: ${generatedOTP}`); }
-function closeOTP(){ document.getElementById('otpModal').classList.add('hidden'); document.querySelectorAll('.otp-box input').forEach(i=>i.value=''); }
-function verifyOTP(){ const inputs=document.querySelectorAll('.otp-box input'); let entered=Array.from(inputs).map(i=>i.value).join(''); if(entered===generatedOTP){ otpVerified=true; closeOTP(); document.getElementById('bankModal').classList.remove('hidden'); document.getElementById('accountName').value=currentUser.name; } else { alert('Invalid OTP'); } }
-function closeBank(){ document.getElementById('bankModal').classList.add('hidden'); }
-function saveBankDetails(){ if(!otpVerified){ alert('Verify OTP first'); return; } currentUser.accountName=document.getElementById('accountName').value; currentUser.accountNumber=document.getElementById('accountNumber').value; currentUser.bankName=document.getElementById('bankName').value; let allUsers=JSON.parse(localStorage.getItem('allUsers'))||[]; let idx=allUsers.findIndex(u=>u.id===currentUser.id); allUsers[idx]=currentUser; localStorage.setItem('allUsers', JSON.stringify(allUsers)); localStorage.setItem('currentUser', JSON.stringify(currentUser)); alert('✅ Bank updated'); otpVerified=false; closeBank(); loadProfile(); loadWallet(); }
-function loadWallet(){ let wallet=JSON.parse(localStorage.getItem(`wallet_${currentUser.id}`))||{balance:0,totalEarned:0}; document.getElementById('walletBalance').innerText=`₦${wallet.balance.toLocaleString()}`; document.getElementById('totalEarned').innerText=`₦${wallet.totalEarned.toLocaleString()}`; document.getElementById('withdrawAccount').innerText=`${currentUser.bankName} - ${currentUser.accountNumber}`; }
-function requestWithdrawal(){ const amount=parseFloat(document.getElementById('withdrawAmount').value); let wallet=JSON.parse(localStorage.getItem(`wallet_${currentUser.id}`))||{balance:0,totalEarned:0}; if(!amount||amount<1000){ alert('Min ₦1000'); return; } if(amount>wallet.balance){ alert('Insufficient'); return; } wallet.balance-=amount; localStorage.setItem(`wallet_${currentUser.id}`, JSON.stringify(wallet)); alert(`₦${amount} withdrawal requested to ${currentUser.bankName}`); document.getElementById('withdrawAmount').value=''; loadWallet(); }
-function loadProfile(){ document.getElementById('profileName').innerText=currentUser.name; document.getElementById('profileEmail').innerText=currentUser.email; document.getElementById('profilePhone').innerText=currentUser.phone; document.getElementById('profileShop').innerText=currentUser.shop_address; document.getElementById('profileLocation').innerText=currentUser.location; document.getElementById('profileAccName').innerText=currentUser.accountName||'Not set'; document.getElementById('profileAccNo').innerText=currentUser.accountNumber||'Not set'; document.getElementById('profileBank').innerText=currentUser.bankName||'Not set'; }
-function loadDashboard(){ let products=JSON.parse(localStorage.getItem('products'))||[]; let vendorProducts=products.filter(p=>p.vendorId===currentUser.id); document.getElementById('totalProducts').innerText=vendorProducts.length; }
-function showAddProduct(){ editingProductId=null; document.getElementById('modalTitle').innerText='Add New Product'; document.getElementById('productName').value=''; document.getElementById('productPrice').value=''; document.getElementById('productStock').value=''; document.getElementById('productModal').classList.remove('hidden'); }
-function closeProduct(){ document.getElementById('productModal').classList.add('hidden'); }
-function saveProduct(){ const reader=new FileReader(); const file=document.getElementById('productImage').files[0]; const saveData=(img)=>{ let product={ id:editingProductId||Date.now(), vendorId:currentUser.id, name:document.getElementById('productName').value, price:document.getElementById('productPrice').value, category:document.getElementById('productCategory').value, stock:document.getElementById('productStock').value, image:img||'' }; let products=JSON.parse(localStorage.getItem('products'))||[]; if(editingProductId){ let i=products.findIndex(p=>p.id===editingProductId); products[i]=product; } else { products.push(product); } localStorage.setItem('products', JSON.stringify(products)); alert('Saved!'); closeProduct(); loadProducts(); }; if(file){ reader.onload=e=>saveData(e.target.result); reader.readAsDataURL(file); } else { saveData(''); } }
-function editProduct(id){ editingProductId=id; let products=JSON.parse(localStorage.getItem('products'))||[]; let p=products.find(x=>x.id===id); document.getElementById('modalTitle').innerText='Edit Product'; document.getElementById('productName').value=p.name; document.getElementById('productPrice').value=p.price; document.getElementById('productStock').value=p.stock; document.getElementById('productCategory').value=p.category; document.getElementById('productModal').classList.remove('hidden'); }
-function deleteProduct(id){ if(confirm('Delete?')){ let products=JSON.parse(localStorage.getItem('products'))||[]; products=products.filter(p=>p.id!==id); localStorage.setItem('products', JSON.stringify(products)); loadProducts(); } }
-function loadProducts(){ let products=JSON.parse(localStorage.getItem('products'))||[]; let vendorProducts=products.filter(p=>p.vendorId===currentUser.id); let html=''; vendorProducts.forEach(p=>{ html+=`<div class="product-item"><img src="${p.image||'https://via.placeholder.com/60'}"><div style="flex:1;"><b>${p.name}</b> - ₦${p.price}<br><small>${p.stock} | ${p.category}</small><br><button class="btn btn-small btn-edit" onclick="editProduct(${p.id})">Edit</button><button class="btn btn-small btn-delete" onclick="deleteProduct(${p.id})">Delete</button></div></div>`; }); document.getElementById('productList').innerHTML=html||'<p>No products</p>'; }
-loadProducts(); loadDashboard();
+
+function loadDashboard(){
+  let products=JSON.parse(localStorage.getItem('products'))||[];
+  let my=products.filter(p=>p.vendorId===currentUser.id);
+  document.getElementById('totalProducts').innerText=my.length;
+  document.getElementById('stockTotal').innerText=my.reduce((s,p)=>s+Number(p.stock||0),0);
+  let wallet=JSON.parse(localStorage.getItem('wallet_'+currentUser.id))||{balance:5000, totalEarned:5000};
+  document.getElementById('walletBal').innerText='₦'+wallet.balance; document.getElementById('walletBig').innerText='₦'+wallet.balance; document.getElementById('totalEarned').innerText='₦'+wallet.totalEarned;
+  document.getElementById('profileInfo').innerHTML=`<b>${currentUser.name}</b><br>${currentUser.email}<br>${currentUser.phone}<br>${currentUser.shop_address}<br>${currentUser.location}`;
+}
+function loadProducts(){
+  let products=JSON.parse(localStorage.getItem('products'))||[];
+  let my=products.filter(p=>p.vendorId===currentUser.id);
+  let html='';
+  my.forEach(p=>{ html+=`<div class="prod"><img src="${p.image}"><div style="flex:1"><b>${p.name} - ₦${p.price}</b><br><small>Stock: ${p.stock} | ${p.category}</small><br><button class="btn-blue" onclick="editProduct(${p.id})">Edit</button><button class="btn-red" onclick="deleteProduct(${p.id})">Delete</button></div></div>`; });
+  document.getElementById('productList').innerHTML=html||'No products yet';
+}
+
+function openProduct(){ editingProductId=null; document.getElementById('modalTitle').innerText='Add New Product'; document.getElementById('productName').value=''; document.getElementById('productPrice').value=''; document.getElementById('productStock').value=''; document.getElementById('productImage').value=''; document.getElementById('productModal').classList.remove('hidden'); }
+function closeProduct(){ document.getElementById('productModal').classList.add('hidden'); editingProductId=null; }
+function editProduct(id){ let products=JSON.parse(localStorage.getItem('products'))||[]; let p=products.find(x=>x.id===id); if(!p) return; editingProductId=id; document.getElementById('productName').value=p.name; document.getElementById('productPrice').value=p.price; document.getElementById('productStock').value=p.stock; document.getElementById('productCategory').value=p.category; document.getElementById('modalTitle').innerText='Edit Product'; document.getElementById('productModal').classList.remove('hidden'); }
+function deleteProduct(id){ if(!confirm('Delete?')) return; let products=JSON.parse(localStorage.getItem('products'))||[]; products=products.filter(p=>p.id!==id); localStorage.setItem('products', JSON.stringify(products)); loadProducts(); loadDashboard(); }
+
+function saveProduct(){
+  const name=document.getElementById('productName').value.trim();
+  const price=document.getElementById('productPrice').value.trim();
+  const stock=document.getElementById('productStock').value.trim();
+  const category=document.getElementById('productCategory').value;
+  const fileInput=document.getElementById('productImage');
+  if(!name||!price||!stock){ alert('Fill Product Name, Price, Stock'); return; }
+
+  const doSave=(imgData)=>{
+    let products=JSON.parse(localStorage.getItem('products'))||[];
+    let product={ id:editingProductId||Date.now(), vendorId:currentUser.id, name:name, price:price, category:category, stock:stock, image:imgData||'https://via.placeholder.com/300?text='+encodeURIComponent(name) };
+    if(editingProductId){ let i=products.findIndex(p=>p.id===editingProductId); if(i!==-1) products[i]=product; } else { products.push(product); }
+    try{ localStorage.setItem('products', JSON.stringify(products)); } catch(e){ alert('Storage full, try without image or smaller image'); return; }
+    closeProduct(); loadProducts(); loadDashboard(); alert('✅ Saved!');
+  };
+
+  if(fileInput.files && fileInput.files[0]){
+    const file=fileInput.files[0];
+    const reader=new FileReader();
+    reader.onload=function(e){
+      const img=new Image();
+      img.onload=function(){
+        const canvas=document.createElement('canvas'); const max=400; let w=img.width,h=img.height;
+        if(w>h){ if(w>max){ h*=max/w; w=max; } } else { if(h>max){ w*=max/h; h=max; } }
+        canvas.width=w; canvas.height=h; canvas.getContext('2d').drawImage(img,0,0,w,h);
+        doSave(canvas.toDataURL('image/jpeg',0.6));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  } else { doSave(''); }
+}
+loadDashboard(); loadProducts();
 </script>
 </body>
 </html>
