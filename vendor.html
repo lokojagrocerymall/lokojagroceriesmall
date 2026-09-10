@@ -46,7 +46,26 @@ label { font-weight:600; font-size:14px; margin-top:12px; display:block; }
 <div id="productsTab" class="card"><h3>My Products</h3><button class="btn-green" style="margin:10px 0;" onclick="openProduct()">+ Add New Product</button><div id="productList"></div></div>
 
 <div id="ordersTab" class="card hidden"><h3>Orders</h3><div id="orderList">No orders yet</div></div>
-<div id="walletTab" class="card hidden"><h3>My Wallet</h3><h1 id="walletBig" style="color:#16a34a; margin:10px 0;">₦0</h1><p>Total Earned: <span id="totalEarned">₦0</span></p></div>
+<div <div id="walletTab" class="card hidden">
+<h3>My Wallet</h3>
+<h1 id="walletBig" style="color:#16a34a; margin:10px 0;">₦0</h1>
+<p>Total Earned: <span id="totalEarned">₦0</span></p>
+<hr style="margin:15px 0;">
+<div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:10px;">
+<b>💳 Binded Account</b>
+<p style="margin-top:6px; font-size:14px;">Bank: <b id="bindBank">-</b><br>Account No: <b id="bindAccNo">-</b><br>Account Name: <b id="bindAccName">-</b></p>
+</div>
+<div style="margin-top:15px;">
+<label>Withdrawal Amount ₦</label>
+<input type="number" id="withdrawAmount" placeholder="Min ₦1000">
+<button onclick="withdraw()" class="btn-green" style="margin-top:10px;">Withdraw to Binded Account</button>
+<p style="font-size:12px; color:#6b7280; margin-top:8px;">Demo Mode: Admin will transfer manually within 24hrs.</p>
+</div>
+<div style="margin-top:20px;">
+<h4>Withdrawal History</h4>
+<div id="withdrawHistory" style="margin-top:10px; font-size:13px;">No withdrawals yet</div>
+</div>
+</div>
 <div id="profileTab" class="card hidden"><h3>Profile</h3><p id="profileInfo"></p></div>
 
 <!-- PRODUCT MODAL FIXED -->
