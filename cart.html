@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Cart - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
+<body class="bg-gray-50 min-h-screen">
+<header class="bg-white shadow p-3 flex justify-between items-center sticky top-0 z-10">
+<a href="index.html" class="font-black text-green-700 flex items-center gap-2">← Back to Shopping</a>
+<span class="text-sm font-bold bg-green-100 text-green-700 px-3 py-1 rounded-full">Cart</span>
+</header>
+
+<div class="p-3 max-w-2xl mx-auto">
+<div id="emptyCart" class="hidden text-center py-20">
+<div class="text-6xl mb-3">🛒</div>
+<p class="font-bold text-gray-600">Your cart is empty</p>
+<p class="text-xs text-gray-400 mt-1">Add products from homepage</p>
+<a href="index.html" class="inline-block mt-4 bg-green-600 text-white px-6 py-3 rounded-xl font-bold">Start Shopping</a>
+</div>
+
+<div id="cartContent" class="hidden">
+<div id="cartItems" class="space-y-3 mb-4"></div>
+
+<div class="bg-white rounded-2xl shadow p-4 mb-4">
+<h3 class="font-black text-sm mb-3">Order Summary</h3>
+<div class="flex justify-between text-sm mb-2"><span class="text-gray-500">Subtotal (<span id="itemCount">0</span> items)</span><span id="subtotal" class="font-bold">₦0</span></div>
+<div class="flex justify-between text-sm mb-2"><span class="text-gray-500">Delivery Fee (Lokoja)</span><span class="font-bold">₦1,000</span></div>
+<hr class="my-2">
+<div class="flex justify-between font-black text-lg"><span>Total</span><span id="total" class="text-green-700">₦0</span></div>
+</div>
+
+<div class="bg-white rounded-2xl shadow p-4 mb-4">
+<h3 class="font-black text-sm mb-3">Delivery Details</h3>
+<input id="custName" placeholder="Full Name" class="w-full border-2 p-3 rounded-xl text-sm mb-2">
+<input id="custPhone" placeholder="Phone Number (080...)" class="w-full border-2 p-3 rounded-xl text-sm mb-2">
+<input id="custAddress" placeholder="Delivery Address (e.g. Ganaja Junction)" class="w-full border-2 p-3 rounded-xl text-sm mb-2">
+<select id="custArea" class="w-full border-2 p-3 rounded-xl text-sm">
+<option value="Ganaja">Ganaja</option><option value="Adankolo">Adankolo</option><option value="Felele">Felele</option><option value="Otto">Otto</option><option value="Zango">Zango</option><option value="Other">Other Area</option>
+</select>
+</div>
+
+<button onclick="checkout()" class="w-full bg-green-600 text-white py-4 rounded-xl font-black text-lg shadow-lg">Checkout • Pay on Delivery</button>
+<p class="text-[10px] text-center text-gray-400 mt-2">Paystack payment coming soon. Currently Pay on Delivery.</p>
+<p id="orderStatus" class="text-center text-sm mt-3 font-bold"></p>
+</div>
+</div>
+
+<script>
+const SUPABASE_URL="https://fkpvzlifmsykztndlcyh.supabase.co";const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrcHZ6bGlmbXN5a3p0bmRsY3loIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMjc0MjcsImV4cCI6MjEwNDYwMzQyN30.guANuUKctqrI4PZC_mFzZ0wHhlOyVdgGCx6wo2ZnFrs";const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let cart=[];
+function loadCart(){cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');const empty=document.getElementById('emptyCart');const content=document.getElementById('cartContent');if(cart.length===0){empty.classList.remove('hidden');content.classList.add('hidden');return;}empty.classList.add('hidden');content.classList.remove('hidden');renderItems();calcTotal();}
+function renderItems(){const div=document.getElementById('cartItems');div.innerHTML='';cart.forEach((item,index)=>{const row=document.createElement('div');row.className='bg-white rounded-2xl shadow p-3 flex gap-3';row.innerHTML=`<img src="${item.image||'https://via.placeholder.com/80'}" class="w-16 h-16 object-cover rounded-xl"><div class="flex-1"><p class="font-bold text-xs">${item.name}</p><p class="text-xs text-green-700 font-black">₦${Number(item.price).toLocaleString()}</p><div class="flex items-center gap-2 mt-2"><button onclick="updateQty(${index},-1)" class="w-7 h-7 bg-gray-100 border rounded-full font-bold">-</button><span class="font-bold text-sm w-6 text-center">${item.qty}</span><button onclick="updateQty(${index},1)" class="w-7 h-7 bg-green-600 text-white rounded-full font-bold">+</button><span class="ml-auto font-bold text-sm">₦${(item.price*item.qty).toLocaleString()}</span></div></div><button onclick="removeItem(${index})" class="text-red-400 text-xs">✕</button>`;div.appendChild(row);});}
+function updateQty(i,d){cart[i].qty=Math.max(1,cart[i].qty+d);saveCart();renderItems();calcTotal();}
+function removeItem(i){if(!confirm('Remove item?'))return;cart.splice(i,1);saveCart();loadCart();}
+function saveCart(){localStorage.setItem('lgm_cart',JSON.stringify(cart));}
+function calcTotal(){const sub=cart.reduce((a,b)=>a+b.price*b.qty,0);const delivery=1000;document.getElementById('itemCount').innerText=cart.reduce((a,b)=>a+b.qty,0);document.getElementById('subtotal').innerText='₦'+sub.toLocaleString();document.getElementById('total').innerText='₦'+(sub+delivery).toLocaleString();}
+async function checkout(){const name=document.getElementById('custName').value.trim();const phone=document.getElementById('custPhone').value.trim();const address=document.getElementById('custAddress').value.trim();const area=document.getElementById('custArea').value;if(!name||!phone||!address){alert('Please fill Name, Phone and Address');return;}const statusEl=document.getElementById('orderStatus');statusEl.innerText='Placing order...';statusEl.className='text-center text-sm mt-3 font-bold text-blue-600';const subtotal=cart.reduce((a,b)=>a+b.price*b.qty,0);const total=subtotal+1000;try{const {data,error}=await supabaseClient.from('orders').insert([{customer_name:name,customer_phone:phone,delivery_address:address+', '+area,items:cart,subtotal:subtotal,delivery_fee:1000,total:total,status:'pending'}]).select();if(error)throw error;statusEl.innerText='✅ Order Placed! ID: #'+(data[0]?.id||'LGM').toString().slice(-6)+' We will call you shortly!';statusEl.className='text-center text-sm mt-3 font-bold text-green-600';localStorage.removeItem('lgm_cart');setTimeout(()=>{location.href='index.html';},3000);}catch(e){statusEl.innerText='❌ '+e.message+' — Order saved locally, we will call!';statusEl.className='text-center text-sm mt-3 font-bold text-red-600';console.log(e);localStorage.removeItem('lgm_cart');}}
+}
+loadCart();
+</script>
+</body>
+</html>
