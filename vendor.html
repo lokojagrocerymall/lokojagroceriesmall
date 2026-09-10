@@ -1,81 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vendor Dashboard - Lokoja Grocery Mall</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body class="bg-gray-100 min-h-screen">
-<div class="max-w-5xl mx-auto p-2 md:p-6">
-<div id="status" class="bg-yellow-100 border-l-4 border-yellow-500 p-3 rounded-xl text-sm mb-4 font-bold">Checking...</div>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Vendor Login - LGM</title><script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></head>
+<body class="bg-gray-50 min-h-screen">
+<header class="bg-white shadow p-3 flex justify-between items-center"><a href="index.html" class="font-black text-green-700 text-sm">← Lokoja Grocery Mall</a><span class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold">Vendor Portal</span></header>
 
-<div id="loginView" class="bg-white rounded-2xl shadow-2xl p-6 max-w-md mx-auto">
-  <h1 class="text-3xl font-black text-green-700 text-center">Lokoja Grocery Mall</h1><p class="text-center text-gray-500 text-sm mb-4">Vendor Dashboard - Cloud</p>
-  <input id="loginEmail" type="email" placeholder="Email" class="w-full border-2 p-3 rounded-xl mb-3"><input id="loginPass" type="password" placeholder="Password" class="w-full border-2 p-3 rounded-xl mb-3"><button id="loginBtn" class="w-full bg-green-600 text-white p-3 rounded-xl font-bold">Login</button><button id="showReg" class="w-full text-green-600 text-sm font-bold py-2 mt-3">New vendor? Register HERE →</button><p id="loginMsg" class="text-center text-sm font-bold"></p>
+<!-- LOGIN / SIGNUP SECTION -->
+<div id="authSection" class="p-4 max-w-md mx-auto mt-6">
+<div class="bg-white rounded-2xl shadow p-6">
+<h2 class="font-black text-xl mb-1">Vendor Login</h2><p class="text-xs text-gray-400 mb-4">Sell on Lokoja Grocery Mall</p>
+
+<input id="email" type="email" placeholder="Email" class="w-full border-2 p-3 rounded-xl mb-3 text-sm">
+<div class="relative mb-3">
+<input id="password" type="password" placeholder="Password" class="w-full border-2 p-3 rounded-xl text-sm pr-10">
+<span onclick="toggleEye('password','eye1')" class="absolute right-3 top-3.5 cursor-pointer text-gray-400"><i id="eye1" class="fa-solid fa-eye"></i></span>
 </div>
-<div id="registerView" class="hidden bg-white rounded-2xl shadow-2xl p-6 max-w-md mx-auto">
-  <h2 class="text-2xl font-black text-center mb-6">Create Vendor Account</h2>
-  <input id="regName" placeholder="Full Name" class="w-full border-2 p-3 rounded-xl mb-2"><input id="regEmail" type="email" placeholder="Email" class="w-full border-2 p-3 rounded-xl mb-2"><input id="regPhone" placeholder="Phone" class="w-full border-2 p-3 rounded-xl mb-2"><input id="regShop" placeholder="Shop Address" class="w-full border-2 p-3 rounded-xl mb-2"><input id="regLocation" placeholder="Location" class="w-full border-2 p-3 rounded-xl mb-2"><input id="regPass" type="password" placeholder="Password" class="w-full border-2 p-3 rounded-xl mb-3"><button id="regBtn" class="w-full bg-green-600 text-white p-3 rounded-xl font-bold">Register</button><button id="showLogin" class="w-full text-gray-500 text-sm py-2">Already have account? Login</button><p id="regMsg" class="text-center text-sm font-bold"></p>
+
+<div class="flex justify-between items-center mb-4">
+<label class="text-xs flex items-center gap-1"><input type="checkbox" id="remember"> Remember me</label>
+<button onclick="forgotPassword()" class="text-xs text-green-600 font-bold underline">Forgot Password?</button>
 </div>
-<div id="dashboardView" class="hidden">
-  <div class="bg-white rounded-2xl shadow-xl p-4 mb-4 flex justify-between items-center"><div><h2 class="font-black text-xl text-green-700"><span id="welcomeName">Welcome!</span> 🎉</h2><p id="welcomeEmail" class="text-sm text-gray-500"></p><p id="welcomeShop" class="text-xs text-gray-400"></p></div><button id="logoutBtn" class="bg-gray-100 px-4 py-2 rounded-xl text-sm font-bold">Logout</button></div>
-  <div class="grid grid-cols-3 gap-2 mb-4"><div class="bg-white p-3 rounded-2xl shadow"><p class="text-xs text-gray-400">Products</p><p id="statProducts" class="font-black text-xl">0</p></div><div class="bg-white p-3 rounded-2xl shadow"><p class="text-xs text-gray-400">Orders</p><p id="statOrders" class="font-black text-xl text-blue-600">0</p></div><div class="bg-green-600 text-white p-3 rounded-2xl shadow"><p class="text-xs text-green-200">Wallet</p><p id="statWallet" class="font-black text-xl">₦0</p></div></div>
-  <div class="bg-white rounded-2xl shadow-xl overflow-hidden"><div class="flex border-b bg-gray-50"><button onclick="switchTab('products')" id="tab-products" class="flex-1 py-3 font-bold text-green-600 border-b-2 border-green-600">Products</button><button onclick="switchTab('orders')" id="tab-orders" class="flex-1 py-3 font-bold text-gray-400">Orders</button><button onclick="switchTab('wallet')" id="tab-wallet" class="flex-1 py-3 font-bold text-gray-400">Wallet</button><button onclick="switchTab('settings')" id="tab-settings" class="flex-1 py-3 font-bold text-gray-400">Shop</button></div><div class="p-4">
-    <div id="content-products"><div class="bg-gray-50 p-4 rounded-2xl mb-4"><h3 class="font-black mb-3">Add New Product - With Image Upload</h3><input id="pName" placeholder="Product Name e.g. White Garri 4L" class="w-full border-2 p-3 rounded-xl mb-2"><div class="grid grid-cols-2 gap-2 mb-2"><input id="pPrice" type="number" placeholder="Price ₦" class="border-2 p-3 rounded-xl"><input id="pStock" type="number" placeholder="Stock Qty" class="border-2 p-3 rounded-xl"></div><select id="pCategory" class="w-full border-2 p-3 rounded-xl mb-2"><option>Garri</option><option>Rice</option><option>Beans</option><option>Oil</option><option>Spices</option><option>Provision</option><option>Vegetables</option><option>Others</option></select>
-    <div class="border-2 border-dashed border-green-300 p-3 rounded-xl mb-2 bg-white"><p class="text-xs font-bold text-gray-600 mb-1">📸 Product Image (Tap to choose from gallery)</p><input type="file" id="pImageFile" accept="image/*" class="w-full text-sm"><p id="imagePreview" class="text-xs text-green-600 mt-1 font-bold"></p><img id="previewImg" class="hidden w-full h-32 object-cover rounded-xl mt-2"></div>
-    <textarea id="pDesc" placeholder="Description e.g. White Garri from Benue" class="w-full border-2 p-3 rounded-xl mb-2 h-16"></textarea><button id="saveProduct" class="w-full bg-green-600 text-white p-3 rounded-xl font-bold">Add Product to Cloud ☁️</button><p id="saveMsg" class="text-sm mt-2 text-center font-bold"></p></div><div><h3 class="font-black mb-2">My Products (<span id="productCount">0</span>)</h3><div id="productList" class="space-y-2"></div></div></div>
-    <div id="content-orders" class="hidden"><h3 class="font-black mb-3">Recent Orders</h3><div id="orderList" class="text-sm text-gray-500">No orders yet</div></div>
-    <div id="content-wallet" class="hidden"><div class="bg-gradient-to-br from-green-600 to-green-800 text-white p-6 rounded-2xl mb-4"><p class="text-green-200 text-sm">Available Balance</p><p id="walletBalance" class="text-4xl font-black mt-1">₦0</p></div><div class="grid grid-cols-2 gap-2 mb-4"><input id="withdrawAmount" type="number" placeholder="Amount" class="border p-3 rounded-xl"><button id="withdrawBtn" class="bg-yellow-500 text-white p-3 rounded-xl font-bold">Withdraw</button></div><div id="withdrawHistory" class="text-sm text-gray-400">No withdrawals yet</div></div>
-    <div id="content-settings" class="hidden"><h3 class="font-black mb-3">Shop Settings</h3><div class="space-y-2"><input id="setName" placeholder="Full Name" class="w-full border p-3 rounded-xl"><input id="setShop" placeholder="Shop Address" class="w-full border p-3 rounded-xl"><input id="setLocation" placeholder="Location" class="w-full border p-3 rounded-xl"><input id="setPhone" placeholder="Phone" class="w-full border p-3 rounded-xl"><input id="setBank" placeholder="Bank Name" class="w-full border p-3 rounded-xl"><input id="setAcctNo" placeholder="Account Number" class="w-full border p-3 rounded-xl"><input id="setAcctName" placeholder="Account Name" class="w-full border p-3 rounded-xl"><button id="saveSettings" class="w-full bg-green-600 text-white p-3 rounded-xl font-bold">Save Settings</button><p id="settingsMsg" class="text-center text-sm font-bold"></p></div></div>
-  </div></div>
+
+<button onclick="login()" class="w-full bg-green-600 text-white py-3 rounded-xl font-black">Login</button>
+<button onclick="toggleSignup()" class="w-full mt-3 bg-gray-100 py-3 rounded-xl font-bold text-sm">New Vendor? Create Account</button>
+<p id="authMsg" class="text-center text-xs font-bold mt-3"></p>
+</div>
+
+<!-- SIGNUP FORM (Hidden) -->
+<div id="signupSection" class="hidden bg-white rounded-2xl shadow p-6 mt-4">
+<h2 class="font-black text-lg mb-3">Create Vendor Account</h2>
+<input id="s_name" placeholder="Full Name" class="w-full border-2 p-3 rounded-xl mb-2 text-sm">
+<input id="s_shop" placeholder="Shop Name e.g Ganaja Stores" class="w-full border-2 p-3 rounded-xl mb-2 text-sm">
+<input id="s_email" type="email" placeholder="Email" class="w-full border-2 p-3 rounded-xl mb-2 text-sm">
+<input id="s_phone" placeholder="Phone 080..." class="w-full border-2 p-3 rounded-xl mb-2 text-sm">
+<div class="relative mb-2">
+<input id="s_password" type="password" placeholder="Create Password" class="w-full border-2 p-3 rounded-xl text-sm pr-10">
+<span onclick="toggleEye('s_password','eye2')" class="absolute right-3 top-3.5 cursor-pointer text-gray-400"><i id="eye2" class="fa-solid fa-eye"></i></span>
+</div>
+<div class="relative mb-3">
+<input id="s_password2" type="password" placeholder="Confirm Password" class="w-full border-2 p-3 rounded-xl text-sm pr-10">
+<span onclick="toggleEye('s_password2','eye3')" class="absolute right-3 top-3.5 cursor-pointer text-gray-400"><i id="eye3" class="fa-solid fa-eye"></i></span>
+</div>
+<button onclick="signup()" class="w-full bg-green-600 text-white py-3 rounded-xl font-black">Create Account & Wait for Approval</button>
+<button onclick="toggleSignup()" class="w-full mt-2 text-xs text-gray-500 underline">Already have account? Login</button>
+<p id="signupMsg" class="text-center text-xs font-bold mt-2"></p>
 </div>
 </div>
+
+<!-- PENDING APPROVAL SCREEN -->
+<div id="pendingSection" class="hidden p-4 max-w-md mx-auto mt-10 text-center">
+<div class="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-8">
+<div class="text-5xl mb-3">⏳</div>
+<h2 class="font-black text-lg">Awaiting Approval</h2>
+<p class="text-sm text-gray-600 mt-2">Your vendor account <b id="pendingEmail"></b> has been created!</p>
+<p class="text-xs text-gray-500 mt-2">Admin will review your shop and approve within 24hrs. You will receive email when approved. You cannot add products until approved.</p>
+<button onclick="logout()" class="mt-4 bg-gray-800 text-white px-6 py-2 rounded-xl text-sm">Logout</button>
+</div>
+</div>
+
+<!-- APPROVED DASHBOARD -->
+<div id="dashboardSection" class="hidden p-3 max-w-3xl mx-auto">
+<div class="bg-white rounded-2xl shadow p-4 flex justify-between items-center mb-4"><div><p class="font-black text-sm">Welcome, <span id="vendorName"></span></p><p class="text-[11px] text-green-600">✅ Approved Vendor • <span id="vendorShop"></span></p></div><button onclick="logout()" class="text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-full font-bold">Logout</button></div>
+<div class="bg-white rounded-2xl shadow p-4 mb-4">
+<h3 class="font-black text-sm mb-3">Add New Product</h3>
+<input id="p_name" placeholder="Product Name e.g Palm oil 5L" class="w-full border-2 p-3 rounded-xl mb-2 text-sm">
+<div class="grid grid-cols-2 gap-2 mb-2"><input id="p_price" type="number" placeholder="Price ₦" class="border-2 p-3 rounded-xl text-sm"><input id="p_stock" type="number" placeholder="Stock qty" class="border-2 p-3 rounded-xl text-sm"></div>
+<select id="p_category" class="w-full border-2 p-3 rounded-xl mb-2 text-sm"><option>Foodstuff</option><option>Meat & Fish</option><option>Fruits & Vegetables</option><option>Oil</option><option>Others</option></select>
+<input id="p_image" placeholder="Image URL or upload later" class="w-full border-2 p-3 rounded-xl mb-3 text-sm">
+<button onclick="addProduct()" class="w-full bg-green-600 text-white py-3 rounded-xl font-black">Add Product</button><p id="productMsg" class="text-xs font-bold mt-2"></p>
+</div>
+<div class="bg-white rounded-2xl shadow p-4"><h3 class="font-black text-sm mb-2">My Products</h3><div id="myProducts" class="grid grid-cols-2 gap-3"></div></div>
+</div>
+
 <script>
-const SUPABASE_URL="https://fkpvzlifmsykztndlcyh.supabase.co";const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrcHZ6bGlmbXN5a3p0bmRsY3loIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMjc0MjcsImV4cCI6MjEwNDYwMzQyN30.guANuUKctqrI4PZC_mFzZ0wHhlOyVdgGCx6wo2ZnFrs";const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);let currentUser=null;let selectedImageFile=null;
-const statusEl=document.getElementById('status');function setStatus(m,e=false){statusEl.innerText=m;statusEl.className=e?'bg-red-100 border-l-4 border-red-500 p-3 rounded-xl text-sm mb-4 font-bold text-red-700':'bg-green-100 border-l-4 border-green-500 p-3 rounded-xl text-sm mb-4 font-bold text-green-700';}
-async function testConnection(){try{const r=await supabaseClient.from('users').select('*').limit(1);if(r.error)setStatus('❌ '+r.error.message,true);else setStatus('✅ Connected! All systems working! Upload image now!',false);}catch(e){setStatus('❌ '+e.message,true);}}testConnection();
-function showView(v){['loginView','registerView','dashboardView'].forEach(id=>document.getElementById(id).classList.add('hidden'));document.getElementById(v).classList.remove('hidden');}
-function switchTab(t){['products','orders','wallet','settings'].forEach(x=>{document.getElementById('content-'+x).classList.add('hidden');document.getElementById('tab-'+x).className='flex-1 py-3 font-bold text-gray-400';});document.getElementById('content-'+t).classList.remove('hidden');document.getElementById('tab-'+t).className='flex-1 py-3 font-bold text-green-600 border-b-2 border-green-600 bg-white';}
-document.getElementById('showReg').onclick=()=>showView('registerView');document.getElementById('showLogin').onclick=()=>showView('loginView');document.getElementById('logoutBtn').onclick=()=>{localStorage.removeItem('lgm_vendor_id');location.reload();};
-document.getElementById('pImageFile').onchange=(e)=>{selectedImageFile=e.target.files[0];if(selectedImageFile){document.getElementById('imagePreview').innerText='✅ Selected: '+selectedImageFile.name+' ('+(selectedImageFile.size/1024).toFixed(0)+'KB)';const reader=new FileReader();reader.onload=(ev)=>{const img=document.getElementById('previewImg');img.src=ev.target.result;img.classList.remove('hidden');};reader.readAsDataURL(selectedImageFile);}};
-document.getElementById('regBtn').onclick=async()=>{const n=document.getElementById('regName').value.trim(),e=document.getElementById('regEmail').value.trim().toLowerCase(),p=document.getElementById('regPhone').value.trim(),s=document.getElementById('regShop').value.trim(),l=document.getElementById('regLocation').value.trim(),pw=document.getElementById('regPass').value.trim(),m=document.getElementById('regMsg');if(!n||!e||!pw){m.innerText='Fill name,email,password';m.style.color='red';return;}m.innerText='Creating...';const{data,error}=await supabaseClient.from('users').insert([{email:e,password:pw,name:n,phone:p,shop_address:s,location:l}]).select().single();if(error){m.innerText='❌ '+error.message;m.style.color='red';return;}currentUser=data;localStorage.setItem('lgm_vendor_id',data.id);openDashboard(data);};
-document.getElementById('loginBtn').onclick=async()=>{const e=document.getElementById('loginEmail').value.trim().toLowerCase(),p=document.getElementById('loginPass').value.trim(),m=document.getElementById('loginMsg');if(!e||!p){m.innerText='Enter email & password';m.style.color='red';return;}m.innerText='Checking...';const{data,error}=await supabaseClient.from('users').select('*').eq('email',e).eq('password',p).single();if(error||!data){m.innerText='❌ Invalid login';m.style.color='red';return;}currentUser=data;localStorage.setItem('lgm_vendor_id',data.id);openDashboard(data);};
-function openDashboard(u){currentUser=u;showView('dashboardView');document.getElementById('welcomeName').innerText=u.name||'Welcome!';document.getElementById('welcomeEmail').innerText=u.email;document.getElementById('welcomeShop').innerText=(u.shop_address||'')+' - '+(u.location||'');['setName','setShop','setLocation','setPhone','setBank','setAcctNo','setAcctName'].forEach((id,i)=>{const keys=['name','shop_address','location','phone','bank_name','account_number','account_name'];document.getElementById(id).value=u[keys[i]]||'';});setStatus('✅ Logged in as '+u.email);loadProducts();}
-async function loadProducts(){if(!currentUser)return;const{data}=await supabaseClient.from('products').select('*').eq('vendor_id',currentUser.id).order('created_at',{ascending:false});const l=document.getElementById('productList');l.innerHTML='';document.getElementById('statProducts').innerText=data?data.length:0;document.getElementById('productCount').innerText=data?data.length:0;if(!data||data.length===0){l.innerHTML='<p class="text-center text-gray-400 py-6">No products yet</p>';return;}data.forEach(p=>{const d=document.createElement('div');d.className='bg-white border p-3 rounded-xl flex gap-3 items-center';d.innerHTML=`<img src="${p.image||'https://via.placeholder.com/60'}" class="w-12 h-12 rounded object-cover"><div class="flex-1"><p class="font-bold text-sm">${p.name}</p><p class="text-xs text-gray-500">₦${p.price} - ${p.stock} left</p></div><button onclick="delProd(${p.id})" class="text-red-500 text-xs font-bold px-2 py-1 bg-red-50 rounded">X</button>`;l.appendChild(d);});}
-window.delProd=async(id)=>{if(!confirm('Delete?'))return;await supabaseClient.from('products').delete().eq('id',id);loadProducts();};
-document.getElementById('saveProduct').onclick=async()=>{
-  const n=document.getElementById('pName').value.trim(),pr=document.getElementById('pPrice').value,st=document.getElementById('pStock').value,ca=document.getElementById('pCategory').value,de=document.getElementById('pDesc').value.trim(),m=document.getElementById('saveMsg');
-  if(!n||!pr){m.innerText='Enter name & price';m.style.color='red';return;}
-  m.innerText='Uploading image... Please wait...';m.style.color='black';
-  let imageUrl='';
-  try{
-    if(selectedImageFile){
-      const fileName=Date.now()+'_'+selectedImageFile.name.replace(/[^a-zA-Z0-9.]/g,'_');
-      const {error:upErr}=await supabaseClient.storage.from('product-images').upload(fileName, selectedImageFile);
-      if(upErr){m.innerText='❌ Image upload failed: '+upErr.message+' - Will save without image';m.style.color='orange';}
-      else{
-        const {data}=supabaseClient.storage.from('product-images').getPublicUrl(fileName);
-        imageUrl=data.publicUrl;
-        m.innerText='Image uploaded! Saving product...';
-      }
-    }
-    // Save WITHOUT description if column doesn't exist - try with description first, if fails try without
-    let error=null;
-    let result=await supabaseClient.from('products').insert([{vendor_id:currentUser.id,name:n,price:parseFloat(pr),stock:parseFloat(st||0),category:ca,image:imageUrl,description:de}]);
-    if(result.error && result.error.message.includes('description')){
-      result=await supabaseClient.from('products').insert([{vendor_id:currentUser.id,name:n,price:parseFloat(pr),stock:parseFloat(st||0),category:ca,image:imageUrl}]);
-    }
-    error=result.error;
-    if(error){m.innerText='❌ '+error.message;m.style.color='red';return;}
-    m.innerText='✅ Product saved with image!';m.style.color='green';
-    document.getElementById('pName').value='';document.getElementById('pPrice').value='';document.getElementById('pStock').value='';document.getElementById('pDesc').value='';document.getElementById('pImageFile').value='';document.getElementById('previewImg').classList.add('hidden');document.getElementById('imagePreview').innerText='';selectedImageFile=null;
-    loadProducts();
-  }catch(e){m.innerText='❌ '+e.message;m.style.color='red';}
-};
-document.getElementById('saveSettings').onclick=async()=>{const u={name:document.getElementById('setName').value.trim(),shop_address:document.getElementById('setShop').value.trim(),location:document.getElementById('setLocation').value.trim(),phone:document.getElementById('setPhone').value.trim(),bank_name:document.getElementById('setBank').value.trim(),account_number:document.getElementById('setAcctNo').value.trim(),account_name:document.getElementById('setAcctName').value.trim()};const{error}=await supabaseClient.from('users').update(u).eq('id',currentUser.id);const m=document.getElementById('settingsMsg');if(error){m.innerText='❌ '+error.message;m.style.color='red';}else{m.innerText='✅ Saved!';m.style.color='green';}};
-document.getElementById('withdrawBtn').onclick=()=>{alert('Withdrawal demo: ₦'+document.getElementById('withdrawAmount').value+' requested!');};
-async function checkSession(){const id=localStorage.getItem('lgm_vendor_id');if(!id)return;const{data}=await supabaseClient.from('users').select('*').eq('id',id).single();if(data)openDashboard(data);}checkSession();
+const SUPABASE_URL="https://fkpvzlifmsykztndlcyh.supabase.co";const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrcHZ6bGlmbXN5a3p0bmRsY3loIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMjc0MjcsImV4cCI6MjEwNDYwMzQyN30.guANuUKctqrI4PZC_mFzZ0wHhlOyVdgGCx6wo2ZnFrs";const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+function toggleEye(inputId, eyeId){
+let inp=document.getElementById(inputId);let eye=document.getElementById(eyeId);
+if(inp.type==='password'){inp.type='text';eye.className='fa-solid fa-eye-slash';}else{inp.type='password';eye.className='fa-solid fa-eye';}
+}
+function toggleSignup(){document.getElementById('signupSection').classList.toggle('hidden');}
+
+async function signup(){
+let name=document.getElementById('s_name').value.trim();let shop=document.getElementById('s_shop').value.trim();let email=document.getElementById('s_email').value.trim();let phone=document.getElementById('s_phone').value.trim();let pass=document.getElementById('s_password').value;let pass2=document.getElementById('s_password2').value;
+let msg=document.getElementById('signupMsg');
+if(!name||!shop||!email||!pass){msg.innerText='Fill all fields';msg.className='text-center text-xs font-bold mt-2 text-red-600';return;}
+if(pass!==pass2){msg.innerText='Passwords do not match';msg.className='text-center text-xs font-bold mt-2 text-red-600';return;}
+msg.innerText='Creating account...';msg.className='text-center text-xs font-bold mt-2 text-blue-600';
+try{
+let {data, error}=await supabaseClient.auth.signUp({email:email, password:pass});
+if(error) throw error;
+let userId=data.user?.id;
+if(userId){
+await supabaseClient.from('users').insert([{id:userId, name:name, shop_name:shop, email:email, phone:phone, role:'vendor', is_approved:false}]);
+}
+msg.innerText='✅ Account created! Awaiting admin approval. Check email to confirm.';msg.className='text-center text-xs font-bold mt-2 text-green-600';
+setTimeout(()=>{document.getElementById('signupSection').classList.add('hidden');},2000);
+}catch(e){msg.innerText='❌ '+e.message;msg.className='text-center text-xs font-bold mt-2 text-red-600';}
+}
+
+async function login(){
+let email=document.getElementById('email').value.trim();let pass=document.getElementById('password').value;
+let msg=document.getElementById('authMsg');
+if(!email||!pass){msg.innerText='Enter email & password';msg.className='text-center text-xs font-bold mt-3 text-red-600';return;}
+msg.innerText='Checking...';msg.className='text-center text-xs font-bold mt-3 text-blue-600';
+try{
+let {data, error}=await supabaseClient.auth.signInWithPassword({email:email, password:pass});
+if(error) throw error;
+await checkApproval();
+}catch(e){msg.innerText='❌ '+e.message;msg.className='text-center text-xs font-bold mt-3 text-red-600';}
+}
+
+async function checkApproval(){
+let {data:{user}}=await supabaseClient.auth.getUser();
+if(!user){return;}
+let {data:profile}=await supabaseClient.from('users').select('*').eq('id',user.id).single();
+if(!profile){document.getElementById('authMsg').innerText='Profile not found, contact admin';return;}
+if(!profile.is_approved){
+document.getElementById('authSection').classList.add('hidden');
+document.getElementById('dashboardSection').classList.add('hidden');
+document.getElementById('pendingSection').classList.remove('hidden');
+document.getElementById('pendingEmail').innerText=profile.email;
+return;
+}
+// Approved!
+document.getElementById('authSection').classList.add('hidden');
+document.getElementById('pendingSection').classList.add('hidden');
+document.getElementById('dashboardSection').classList.remove('hidden');
+document.getElementById('vendorName').innerText=profile.name;
+document.getElementById('vendorShop').innerText=profile.shop_name;
+loadMyProducts(user.id);
+}
+
+async function forgotPassword(){
+let email=document.getElementById('email').value.trim()||prompt('Enter your email for password reset:');
+if(!email){return;}
+let msg=document.getElementById('authMsg');
+msg.innerText='Sending reset email...';msg.className='text-center text-xs font-bold mt-3 text-blue-600';
+let {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo: window.location.origin+'/vendor.html'});
+if(error){msg.innerText='❌ '+error.message;msg.className='text-center text-xs font-bold mt-3 text-red-600';}
+else{msg.innerText='✅ Reset link sent to '+email+'! Check inbox/spam.';msg.className='text-center text-xs font-bold mt-3 text-green-600';}
+}
+
+async function loadMyProducts(vendorId){
+let {data}=await supabaseClient.from('products').select('*').eq('vendor_id',vendorId).order('created_at',{ascending:false});
+let div=document.getElementById('myProducts');div.innerHTML='';
+if(!data||data.length===0){div.innerHTML='<p class="text-xs text-gray-400 col-span-2">No products yet. Add above.</p>';return;}
+data.forEach(p=>{let d=document.createElement('div');d.className='border rounded-xl p-2';d.innerHTML=`<img src="${p.image||'https://via.placeholder.com/100'}" class="w-full h-20 object-cover rounded-lg mb-1"><p class="font-bold text-xs truncate">${p.name}</p><p class="text-[10px] text-gray-500">${p.stock} left</p><p class="font-black text-green-700 text-xs">₦${Number(p.price).toLocaleString()}</p>`;div.appendChild(d);});
+}
+async function addProduct(){
+let name=document.getElementById('p_name').value.trim();let price=Number(document.getElementById('p_price').value);let stock=Number(document.getElementById('p_stock').value);let cat=document.getElementById('p_category').value;let image=document.getElementById('p_image').value.trim();
+let msg=document.getElementById('productMsg');
+if(!name||!price){msg.innerText='Enter name & price';msg.className='text-xs font-bold mt-2 text-red-600';return;}
+let {data:{user}}=await supabaseClient.auth.getUser();
+if(!user){msg.innerText='Not logged in';return;}
+msg.innerText='Adding...';
+let {error}=await supabaseClient.from('products').insert([{name:name, price:price, stock:stock, category:cat, image:image, vendor_id:user.id}]);
+if(error){msg.innerText='❌ '+error.message;msg.className='text-xs font-bold mt-2 text-red-600';}
+else{msg.innerText='✅ Product added!';msg.className='text-xs font-bold mt-2 text-green-600';document.getElementById('p_name').value='';document.getElementById('p_price').value='';loadMyProducts(user.id);}
+}
+async function logout(){await supabaseClient.auth.signOut();location.reload();}
+(async ()=>{let {data:{user}}=await supabaseClient.auth.getUser();if(user){await checkApproval();}})();
 </script>
 </body>
 </html>
