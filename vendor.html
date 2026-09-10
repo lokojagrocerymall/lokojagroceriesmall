@@ -144,6 +144,27 @@ function saveProduct(){
     };
     reader.readAsDataURL(file);
   } else { doSave(''); }
+}function loadWallet(){
+let wallet=JSON.parse(localStorage.getItem('wallet_'+currentUser.id))||{balance:5000,totalEarned:5000};
+document.getElementById('walletBig').innerText='₦'+wallet.balance;
+if(document.getElementById('walletBal')) document.getElementById('walletBal').innerText='₦'+wallet.balance;
+document.getElementById('totalEarned').innerText='₦'+wallet.totalEarned;
+if(document.getElementById('bindBank')){document.getElementById('bindBank').innerText=currentUser.bank_name||currentUser.bankName||'Opay'; document.getElementById('bindAccNo').innerText=currentUser.account_number||currentUser.accountNumber||'8160603765'; document.getElementById('bindAccName').innerText=currentUser.account_name||currentUser.accountName||currentUser.name||'';}
+let withdrawals=JSON.parse(localStorage.getItem('withdrawals_'+currentUser.id))||[];
+let html='';withdrawals.slice().reverse().forEach(w=>{html+=`<div style="border-bottom:1px solid #eee;padding:8px 0;">₦${w.amount} to ${w.bank} ${w.accNo} - <span style="color:${w.status==='Pending'?'#d97706':'#16a34a'}">${w.status}</span> <small>(${w.date})</small></div>`;});
+if(document.getElementById('withdrawHistory')) document.getElementById('withdrawHistory').innerHTML=html||'No withdrawals yet';
+}
+function withdraw(){
+let amt=Number(document.getElementById('withdrawAmount').value);
+if(!amt||amt<1000){alert('Min ₦1000');return;}
+let wallet=JSON.parse(localStorage.getItem('wallet_'+currentUser.id))||{balance:5000,totalEarned:5000};
+if(amt>wallet.balance){alert('Insufficient: ₦'+wallet.balance);return;}
+wallet.balance-=amt;localStorage.setItem('wallet_'+currentUser.id,JSON.stringify(wallet));
+let withdrawals=JSON.parse(localStorage.getItem('withdrawals_'+currentUser.id))||[];
+withdrawals.push({amount:amt,bank:currentUser.bank_name||currentUser.bankName||'Opay',accNo:currentUser.account_number||currentUser.accountNumber||'',status:'Pending',date:new Date().toLocaleString()});
+localStorage.setItem('withdrawals_'+currentUser.id,JSON.stringify(withdrawals));
+document.getElementById('withdrawAmount').value='';loadWallet();
+alert('✅ Withdrawal ₦'+amt+' to '+withdrawals[withdrawals.length-1].accNo+' Pending - Admin will pay in 24hrs');
 }
 loadDashboard(); loadProducts();
 </script>
