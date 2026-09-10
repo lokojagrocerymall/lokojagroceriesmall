@@ -1,112 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Vendor Login - LGM</title><script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></head>
-<body class="bg-gray-50 min-h-screen">
-<div class="bg-yellow-400 text-black text-center py-1.5 text-[11px] font-black">
-⏰ Mon-Sat 8AM-6PM • ⛔ Sunday CLOSED • Vendor gets 90% • Admin 10%
-</div>
-<header class="bg-white shadow p-3 flex justify-between items-center"><a href="index.html" class="font-black text-green-700 text-sm">← Lokoja Grocery Mall</a><span class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold">Vendor Portal</span></header>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vendor Portal - Lokoja Grocery Mall</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:12px}
+.card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:12px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.stat{background:#fff;padding:12px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.wallet{background:#16a34a;color:#fff}
+.tabs{display:flex;gap:18px;border-bottom:1px solid #e5e7eb;margin:14px 0;font-weight:700;font-size:14px}
+.tab{padding-bottom:8px;color:#9ca3af}.active{color:#16a34a;border-bottom:3px solid #16a34a}
+input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
+.upload{border:2px dashed #86efac;background:#f0fdf4;padding:12px;border-radius:12px}
+.btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800}
+.small{font-size:12px;color:#6b7280}
+</style>
+</head>
+<body>
 
-<div id="authSection" class="p-4 max-w-md mx-auto mt-6">
-<div class="bg-white rounded-2xl shadow p-6">
-<h2 class="font-black text-xl mb-1">Vendor Login</h2><p class="text-xs text-gray-400 mb-4">Sell on Lokoja Grocery Mall • Mon-Sat Only</p>
-<input id="email" type="email" placeholder="Email" class="w-full border-2 p-3 rounded-xl mb-3 text-sm">
-<div class="relative mb-3"><input id="password" type="password" placeholder="Password" class="w-full border-2 p-3 rounded-xl text-sm pr-10"><span onclick="toggleEye('password','eye1')" class="absolute right-3 top-3.5 cursor-pointer text-gray-400"><i id="eye1" class="fa-solid fa-eye"></i></span></div>
-<div class="flex justify-between items-center mb-4"><label class="text-xs flex items-center gap-1"><input type="checkbox" id="remember"> Remember me</label><button onclick="forgotPassword()" class="text-xs text-green-600 font-bold underline">Forgot Password?</button></div>
-<button onclick="login()" class="w-full bg-green-600 text-white py-3 rounded-xl font-black">Login</button>
-<button onclick="toggleSignup()" class="w-full mt-3 bg-gray-100 py-3 rounded-xl font-bold text-sm">New Vendor? Create Account</button>
-<p id="authMsg" class="text-center text-xs font-bold mt-3"></p>
-<p class="text-[10px] text-gray-400 mt-3 text-center">Operation: Monday-Saturday • Sunday Closed<br>You earn 90% per sale • Admin takes 10% + 5% delivery</p>
-</div>
-<div id="signupSection" class="hidden bg-white rounded-2xl shadow p-6 mt-4">
-<h2 class="font-black text-lg mb-3">Create Vendor Account</h2>
-<input id="s_name" placeholder="Full Name" class="w-full border-2 p-3 rounded-xl mb-2 text-sm"><input id="s_shop" placeholder="Shop Name e.g Ganaja Stores" class="w-full border-2 p-3 rounded-xl mb-2 text-sm"><input id="s_email" type="email" placeholder="Email" class="w-full border-2 p-3 rounded-xl mb-2 text-sm"><input id="s_phone" placeholder="Phone 080..." class="w-full border-2 p-3 rounded-xl mb-2 text-sm">
-<div class="relative mb-2"><input id="s_password" type="password" placeholder="Create Password" class="w-full border-2 p-3 rounded-xl text-sm pr-10"><span onclick="toggleEye('s_password','eye2')" class="absolute right-3 top-3.5 cursor-pointer text-gray-400"><i id="eye2" class="fa-solid fa-eye"></i></span></div>
-<div class="relative mb-3"><input id="s_password2" type="password" placeholder="Confirm Password" class="w-full border-2 p-3 rounded-xl text-sm pr-10"><span onclick="toggleEye('s_password2','eye3')" class="absolute right-3 top-3.5 cursor-pointer text-gray-400"><i id="eye3" class="fa-solid fa-eye"></i></span></div>
-<button onclick="signup()" class="w-full bg-green-600 text-white py-3 rounded-xl font-black">Create Account & Wait for Approval</button>
-<button onclick="toggleSignup()" class="w-full mt-2 text-xs text-gray-500 underline">Already have account? Login</button>
-<p id="signupMsg" class="text-center text-xs font-bold mt-2"></p>
-</div>
-</div>
+<div class="card"><b id="vName">Welcome...</b><div id="vEmail" class="small"></div><div class="small" style="color:green">✅ Approved Vendor • You keep 90%</div></div>
 
-<div id="pendingSection" class="hidden p-4 max-w-md mx-auto mt-10 text-center">
-<div class="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-8"><div class="text-5xl mb-3">⏳</div><h2 class="font-black text-lg">Awaiting Approval</h2><p class="text-sm text-gray-600 mt-2">Your vendor account <b id="pendingEmail"></b> has been created!</p><p class="text-xs text-gray-500 mt-2">Admin will review within 24hrs. Mon-Sat operation. You earn 90%.</p><button onclick="logout()" class="mt-4 bg-gray-800 text-white px-6 py-2 rounded-xl text-sm">Logout</button></div>
+<div class="stats">
+<div class="stat"><div class="small">Products</div><h2 id="pCount" style="margin:0">0</h2></div>
+<div class="stat"><div class="small">Orders</div><h2 style="margin:0;color:#2563eb">0</h2></div>
+<div class="stat wallet"><div class="small">Wallet</div><h2 style="margin:0">₦0</h2></div>
 </div>
 
-<div id="dashboardSection" class="hidden p-3 max-w-3xl mx-auto">
-<div class="bg-white rounded-2xl shadow p-4 flex justify-between items-center mb-4"><div><p class="font-black text-sm">Welcome, <span id="vendorName"></span></p><p class="text-[11px] text-green-600">✅ Approved Vendor • <span id="vendorShop"></span> • 90% Earnings</p><p class="text-[9px] text-gray-400">Mon-Sat 8AM-6PM • Sun Closed</p></div><button onclick="logout()" class="text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-full font-bold">Logout</button></div>
-<div class="bg-gradient-to-r from-green-600 to-green-800 text-white rounded-2xl p-4 mb-4"><p class="text-xs opacity-80">Your Earnings Model</p><p class="font-black">You keep 90% of product price</p><p class="text-[11px] opacity-80 mt-1">Example: Sell ₦10,000 → You get ₦9,000, Admin ₦1,000 + Customer pays 5% delivery ₦500 = Admin total ₦1,500</p></div>
-<div class="bg-white rounded-2xl shadow p-4 mb-4"><h3 class="font-black text-sm mb-3">Add New Product</h3><input id="p_name" placeholder="Product Name e.g Palm oil 5L" class="w-full border-2 p-3 rounded-xl mb-2 text-sm"><div class="grid grid-cols-2 gap-2 mb-2"><input id="p_price" type="number" placeholder="Price ₦" class="border-2 p-3 rounded-xl text-sm"><input id="p_stock" type="number" placeholder="Stock qty" class="border-2 p-3 rounded-xl text-sm"></div><select id="p_category" class="w-full border-2 p-3 rounded-xl mb-2 text-sm"><option>Foodstuff</option><option>Meat & Fish</option><option>Fruits & Vegetables</option><option>Oil</option><option>Others</option></select><input id="p_image" placeholder="Image URL or upload later" class="w-full border-2 p-3 rounded-xl mb-3 text-sm"><button onclick="addProduct()" class="w-full bg-green-600 text-white py-3 rounded-xl font-black">Add Product</button><p id="productMsg" class="text-xs font-bold mt-2"></p></div>
-<div class="bg-white rounded-2xl shadow p-4"><h3 class="font-black text-sm mb-2">My Products</h3><div id="myProducts" class="grid grid-cols-2 gap-3"></div></div>
+<div class="tabs"><span class="tab active">Products</span><span class="tab">Orders</span><span class="tab">Wallet</span><span class="tab">Shop</span></div>
+
+<div class="card">
+<h3 style="margin:0 0 10px">Add New Product - With Image Upload</h3>
+<input id="pName" placeholder="Product Name e.g. White Garri 4L">
+<div style="display:flex;gap:8px"><input id="pPrice" placeholder="Price ₦"><input id="pStock" placeholder="Stock Qty"></div>
+<select id="pCat"><option>Others</option><option>Foodstuff</option><option>Provisions</option><option>Vegetables</option></select>
+<div class="upload">
+<b>🖼️ Product Image (Tap to choose from gallery)</b>
+<input type="file" id="pFile" accept="image/*" style="margin-top:8px">
+<div id="status" class="small" style="color:green;margin-top:6px"></div>
 </div>
+<button class="btn" onclick="addProduct()" style="margin-top:12px">Add Product</button>
+</div>
+
+<div id="list"></div>
 
 <script>
-const SUPABASE_URL="https://fkpvzlifmsykztndlcyh.supabase.co";const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrcHZ6bGlmbXN5a3p0bmRsY3loIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMjc0MjcsImV4cCI6MjEwNDYwMzQyN30.guANuUKctqrI4PZC_mFzZ0wHhlOyVdgGCx6wo2ZnFrs";const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-function toggleEye(i,e){let a=document.getElementById(i),b=document.getElementById(e);if(a.type==='password'){a.type='text';b.className='fa-solid fa-eye-slash';}else{a.type='password';b.className='fa-solid fa-eye';}}
-function toggleSignup(){document.getElementById('signupSection').classList.toggle('hidden');}
-async function signup(){
-let name=document.getElementById('s_name').value.trim(),shop=document.getElementById('s_shop').value.trim(),email=document.getElementById('s_email').value.trim(),phone=document.getElementById('s_phone').value.trim(),pass=document.getElementById('s_password').value,pass2=document.getElementById('s_password2').value;
-let msg=document.getElementById('signupMsg');
-if(!name||!shop||!email||!pass){msg.innerText='Fill all fields';msg.className='text-center text-xs font-bold mt-2 text-red-600';return;}
-if(pass!==pass2){msg.innerText='Passwords do not match';msg.className='text-center text-xs font-bold mt-2 text-red-600';return;}
-msg.innerText='Creating account...';msg.className='text-center text-xs font-bold mt-2 text-blue-600';
-try{
-let {data,error}=await supabaseClient.auth.signUp({email:email,password:pass});
-if(error) throw error;
-let userId=data.user?.id;
-if(userId){let {error: e2}=await supabaseClient.from('users').insert([{id:userId,name:name,shop_name:shop,email:email,phone:phone,role:'vendor',is_approved:false}]); if(e2 &&!e2.message.includes('duplicate')) throw e2;}
-msg.innerText='✅ Account created! Awaiting admin approval.';msg.className='text-center text-xs font-bold mt-2 text-green-600';
-setTimeout(()=>{document.getElementById('signupSection').classList.add('hidden');},2000);
-}catch(e){msg.innerText='❌ '+e.message;msg.className='text-center text-xs font-bold mt-2 text-red-600';}
+const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
+const SUPABASE_KEY = "YOUR_ANON_KEY";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let curUser=null; let imgUrl="";
+
+async function init(){
+ const {data:{user}} = await supabaseClient.auth.getUser();
+ if(!user) { location.href="login.html"; return; }
+ curUser=user;
+ document.getElementById('vName').innerText="Welcome, "+user.email.split('@')[0];
+ document.getElementById('vEmail').innerText=user.email;
+ load();
 }
-async function login(){
-let email=document.getElementById('email').value.trim(),pass=document.getElementById('password').value;
-let msg=document.getElementById('authMsg');
-if(!email||!pass){msg.innerText='Enter email & password';msg.className='text-center text-xs font-bold mt-3 text-red-600';return;}
-msg.innerText='Checking...';msg.className='text-center text-xs font-bold mt-3 text-blue-600';
-try{
-let {data,error}=await supabaseClient.auth.signInWithPassword({email:email,password:pass});
-if(error) throw error;
-await checkApproval();
-}catch(e){
-// FIX FOR MANUALLY ADDED VENDORS LIKE FARARI PAGO
-msg.innerText='Auth failed, trying legacy fix...';
-try{
-let {data:legacy}=await supabaseClient.from('users').select('*').eq('email',email).single();
-if(legacy && legacy.is_approved){
-// Try to create auth account for this legacy vendor
-let {data:signUpData,error:signUpError}=await supabaseClient.auth.signUp({email:email,password:pass});
-if(signUpError && signUpError.message.includes('already')){
-// Already exists but password wrong
-msg.innerText='❌ Wrong password. Use Forgot Password.';msg.className='text-center text-xs font-bold mt-3 text-red-600';return;
+document.getElementById('pFile').addEventListener('change', async(e)=>{
+ const f=e.target.files[0]; if(!f) return;
+ document.getElementById('status').innerText="Uploading to product-images...";
+ const name=Date.now()+"-"+f.name.replace(/\s/g,'_');
+ const {data, error}=await supabaseClient.storage.from('product-images').upload(name,f);
+ if(error){ alert(error.message); document.getElementById('status').innerText=""; return; }
+ const {data:u}=supabaseClient.storage.from('product-images').getPublicUrl(data.path);
+ imgUrl=u.publicUrl;
+ document.getElementById('status').innerText="✅ Uploaded! Ready to save.";
+});
+async function addProduct(){
+ const name=document.getElementById('pName').value;
+ const price=document.getElementById('pPrice').value;
+ const stock=document.getElementById('pStock').value;
+ const cat=document.getElementById('pCat').value;
+ if(!name||!price) return alert("Enter name & price");
+ if(!imgUrl) return alert("Please choose image first!");
+ const {error}=await supabaseClient.from('products').insert({name, price:Number(price), stock:Number(stock)||0, category:cat, image_url:imgUrl, vendor_id:curUser.id, vendor_email:curUser.email});
+ if(error) alert(error.message); else { alert("✅ Product added!"); imgUrl=""; document.getElementById('pName').value=""; document.getElementById('status').innerText=""; load(); }
 }
-if(signUpData.user){
-// Update legacy users row id to new auth id
-await supabaseClient.from('users').update({id: signUpData.user.id}).eq('email',email);
-let {data:login2}=await supabaseClient.auth.signInWithPassword({email:email,password:pass});
-await checkApproval(); return;
+async function load(){
+ const {data}=await supabaseClient.from('products').select('*').eq('vendor_id',curUser.id).order('id',{ascending:false});
+ document.getElementById('pCount').innerText=data?data.length:0;
+ let h="<div class='small' style='margin:8px'>My Products (inside Products tab)</div>";
+ if(!data||data.length==0) h+="<p class='small'>No products yet.</p>";
+ else data.forEach(p=>{ h+=`<div class='card' style='display:flex;gap:10px;align-items:center'><img src='${p.image_url}' style='width:56px;height:56px;border-radius:10px;object-fit:cover'><div><b style='font-size:14px'>${p.name}</b><br><span class='small'>₦${p.price} • ${p.stock} left</span></div></div>` });
+ document.getElementById('list').innerHTML=h;
 }
-}
-msg.innerText='❌ '+e.message+' | If you were manually added by admin, contact admin to create Auth user or use Forgot Password';msg.className='text-center text-xs font-bold mt-3 text-red-600';
-}catch(e2){msg.innerText='❌ '+e.message;msg.className='text-center text-xs font-bold mt-3 text-red-600';}
-}
-}
-async function checkApproval(){
-let {data:{user}}=await supabaseClient.auth.getUser(); if(!user)return;
-let {data:profile}=await supabaseClient.from('users').select('*').eq('id',user.id).single();
-if(!profile){ // fallback by email for legacy
-let {data:byEmail}=await supabaseClient.from('users').select('*').eq('email',user.email).single(); profile=byEmail;
-if(profile && profile.id!==user.id){await supabaseClient.from('users').update({id:user.id}).eq('email',user.email);}
-}
-if(!profile){document.getElementById('authMsg').innerText='Profile not found';return;}
-if(!profile.is_approved){document.getElementById('authSection').classList.add('hidden');document.getElementById('dashboardSection').classList.add('hidden');document.getElementById('pendingSection').classList.remove('hidden');document.getElementById('pendingEmail').innerText=profile.email;return;}
-document.getElementById('authSection').classList.add('hidden');document.getElementById('pendingSection').classList.add('hidden');document.getElementById('dashboardSection').classList.remove('hidden');document.getElementById('vendorName').innerText=profile.name;document.getElementById('vendorShop').innerText=profile.shop_name;loadMyProducts(user.id);
-}
-async function forgotPassword(){let email=document.getElementById('email').value.trim()||prompt('Enter email:');if(!email)return;let msg=document.getElementById('authMsg');msg.innerText='Sending...';let {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/vendor.html'});if(error){msg.innerText='❌ '+error.message;}else{msg.innerText='✅ Reset sent to '+email;} }
-async function loadMyProducts(id){let {data}=await supabaseClient.from('products').select('*').eq('vendor_id',id).order('created_at',{ascending:false});let div=document.getElementById('myProducts');div.innerHTML='';if(!data||!data.length){div.innerHTML='<p class="text-xs text-gray-400 col-span-2">No products yet.</p>';return;}data.forEach(p=>{let d=document.createElement('div');d.className='border rounded-xl p-2';d.innerHTML=`<img src="${p.image||'https://via.placeholder.com/100'}" class="w-full h-20 object-cover rounded-lg mb-1"><p class="font-bold text-xs truncate">${p.name}</p><p class="text-[10px] text-gray-500">${p.stock} left</p><p class="font-black text-green-700 text-xs">₦${Number(p.price).toLocaleString()}</p><p class="text-[8px] text-gray-400">You get 90%</p>`;div.appendChild(d);});}
-async function addProduct(){let name=document.getElementById('p_name').value.trim(),price=Number(document.getElementById('p_price').value),stock=Number(document.getElementById('p_stock').value),cat=document.getElementById('p_category').value,image=document.getElementById('p_image').value.trim(),msg=document.getElementById('productMsg');if(!name||!price){msg.innerText='Enter name & price';return;}let {data:{user}}=await supabaseClient.auth.getUser();if(!user){msg.innerText='Not logged in';return;}msg.innerText='Adding...';let {error}=await supabaseClient.from('products').insert([{name:name,price:price,stock:stock,category:cat,image:image,vendor_id:user.id}]);if(error){msg.innerText='❌ '+error.message;}else{msg.innerText='✅ Added!';document.getElementById('p_name').value='';document.getElementById('p_price').value='';loadMyProducts(user.id);}}
-async function logout(){await supabaseClient.auth.signOut();location.reload();}
-(async()=>{let {data:{user}}=await supabaseClient.auth.getUser();if(user)await checkApproval();})();
+init();
 </script>
 </body>
 </html>
