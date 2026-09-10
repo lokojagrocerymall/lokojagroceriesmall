@@ -1,223 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lokoja Grocery Mall - Home</title>
-<link rel="stylesheet" href="style.css">
-  <style>
-/* FIX FOR OVERLAPPING */
-.app-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  background: #16a34a;
-  z-index: 1000;
-  padding: 12px 16px;
-}
-
-body {
-  padding-top: 60px; /* this pushes everything down */
-  margin: 0;
-}
-
-.side-menu {
-  position: fixed;
-  top: 60px;
-  <a href="index.html" class="btn-pri">Sign Up</a>
-  width: 100%;
-  background: white;
-  z-index: 999;
-  padding: 16px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  display: none;
-}
-
-.hero {
-  background: #16a34a;
-  color: white;
-  padding: 24px 16px;
-  border-radius: 12px;
-  margin: 16px;
-  text-align: center;
-}
-</style>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
-
-<header class="app-header" style="background:#fff; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:999; box-shadow:0 2px 8px rgba(0,0,0,0.08); height:65px;">
-  <div class="brand" style="display:flex; align-items:center; gap:10px;">
-    <!-- YOUR LOGO IN GREEN SQUARE -->
-    <div style="background:#16a34a; width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-      <img src="./logo.png" alt="LGM" style="width:36px; height:36px; object-fit:contain;">
-    </div>
-    
-    <!-- BLACK TEXT -->
-    <span style="color:#111; font-size:18px; font-weight:900;">Lokoja Grocery Mall</span>
-  </div>
-  
-  <div class="header-icons" style="display:flex; align-items:center; gap:18px;">
-    <a href="cart.html" style="font-size:24px; text-decoration:none; color:#333;">🛒</a>
-    <span onclick="toggleMenu()" style="font-size:26px; color:#333; cursor:pointer;">☰</span>
-  </div>
+<body class="bg-gray-50 min-h-screen">
+<header class="bg-white shadow-sm sticky top-0 z-10 p-3 flex justify-between items-center">
+  <div class="flex items-center gap-2"><img src="https://via.placeholder.com/40x40?text=LGM" class="w-8 h-8 rounded"><h1 class="font-black text-green-700">Lokoja Grocery Mall</h1></div>
+  <div class="flex gap-3"><a href="cart.html" class="text-xl">🛒<span id="cartCount" class="bg-green-600 text-white text-xs rounded-full px-1">0</span></a><button onclick="document.getElementById('menu').classList.toggle('hidden')" class="text-xl">☰</button></div>
 </header>
+<div id="menu" class="hidden bg-white p-4 shadow">
+  <a href="index.html" class="block py-2 font-bold">🏠 Home</a>
+  <a href="products.html" class="block py-2">🛍️ Browse Products</a>
+  <a href="vendor.html" class="block py-2 text-green-700 font-bold">🏪 Vendor Dashboard</a>
+  <a href="admin.html" class="block py-2">👑 Admin</a>
+  <a href="login.html" class="block py-2">🔐 Login</a>
+</div>
 
-<!-- MENU DROPDOWN -->
-<div id="mobileMenu" style="display:none; position:fixed; top:65px; left:0; width:100%; background:#fff; box-shadow:0 4px 15px rgba(0,0,0,0.15); z-index:998; padding:15px 20px;">
-  <a href="index.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Home</a>
-  <a href="browse.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Browse</a>
-  <a href="vendors.html" style="display:block; padding:12px 0; font-weight:700; font-size:16px; color:#000; text-decoration:none; border-bottom:1px solid #eee;">Vendors</a>
-  <a href="signup.html" style="display:block; margin-top:12px; padding:14px; background:#16a34a; color:#fff; text-align:center; border-radius:10px; font-weight:900; font-size:16px; text-decoration:none;">Join Us</a>
+<div class="bg-gradient-to-br from-green-600 to-green-800 text-white p-6 rounded-2xl m-3 text-center">
+  <p class="bg-white/20 inline-block px-3 py-1 rounded-full text-xs mb-2">📍 Lokoja, Kogi State</p>
+  <h2 class="text-2xl font-black mb-2">Fresh groceries from local vendors, delivered across Lokoja</h2>
+  <p class="text-sm opacity-90 mb-4">Shop from multiple vendors in one cart. Fruits, meat, foodstuff, drinks and more — pay once, delivered fast.</p>
+  <div class="flex gap-2"><input id="searchInput" placeholder="Search for rice, tomato..." class="flex-1 p-3 rounded-xl text-black"><button onclick="searchProducts()" class="bg-white text-green-700 px-5 rounded-xl font-bold">Search</button></div>
+  <p id="supabaseStatus" class="text-xs mt-2 bg-yellow-200 text-yellow-800 px-2 py-1 rounded">Checking Supabase...</p>
+</div>
+
+<div class="grid grid-cols-3 gap-2 px-3 mb-4">
+  <div class="bg-white p-3 rounded-xl text-center shadow"><div class="text-xl">🚚</div><p class="font-bold text-xs">Fast Delivery</p><p class="text-[10px] text-gray-400">Across Lokoja</p></div>
+  <div class="bg-white p-3 rounded-xl text-center shadow"><div class="text-xl">🛡️</div><p class="font-bold text-xs">Secure Payment</p><p class="text-[10px] text-gray-400">Paystack protected</p></div>
+  <div class="bg-white p-3 rounded-xl text-center shadow"><div class="text-xl">🏪</div><p class="font-bold text-xs">Local Vendors</p><p class="text-[10px] text-gray-400">Support local shops</p></div>
+</div>
+
+<div class="px-3 mb-3"><h3 class="font-black text-lg mb-2">Shop by Category</h3><div class="grid grid-cols-3 gap-2">
+  <button onclick="filterCat('Fruits & Vegetables')" class="bg-white p-3 rounded-xl shadow text-xs font-bold">🥬<br>Fruits & Vegetables</button>
+  <button onclick="filterCat('Meat & Fish')" class="bg-white p-3 rounded-xl shadow text-xs font-bold">🐟<br>Meat & Fish</button>
+  <button onclick="filterCat('Foodstuff')" class="bg-white p-3 rounded-xl shadow text-xs font-bold">🌾<br>Foodstuff</button>
+  <button onclick="filterCat('Drinks')" class="bg-white p-3 rounded-xl shadow text-xs font-bold">🥤<br>Drinks</button>
+  <button onclick="filterCat('Household')" class="bg-white p-3 rounded-xl shadow text-xs font-bold">🏠<br>Household</button>
+  <button onclick="filterCat('Baby')" class="bg-white p-3 rounded-xl shadow text-xs font-bold">🍼<br>Baby</button>
+</div></div>
+
+<div class="px-3">
+  <div class="flex justify-between items-center mb-2"><h3 class="font-black">📈 Fresh Arrivals</h3><a href="products.html" class="text-green-600 text-xs font-bold underline">View all ></a></div>
+  <div id="productGrid" class="grid grid-cols-2 gap-3"></div>
+  <p id="noProducts" class="hidden text-center text-gray-400 py-10">Products will appear here<br><small>Your Yam will show here once connected!</small></p>
 </div>
 
 <script>
-function toggleMenu() {
-  const menu = document.getElementById('mobileMenu');
-  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+const SUPABASE_URL="https://fkpvzlifmsykztndlcyh.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrcHZ6bGlmbXN5a3p0bmRsY3loIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMjc0MjcsImV4cCI6MjEwNDYwMzQyN30.guANuUKctqrI4PZC_mFzZ0wHhlOyVdgGCx6wo2ZnFrs";
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let allProducts=[];
+async function loadProducts(){
+  const statusEl=document.getElementById('supabaseStatus');
+  try{
+    const {data,error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false}).limit(20);
+    if(error){statusEl.innerText='❌ '+error.message;statusEl.className='text-xs mt-2 bg-red-200 text-red-800 px-2 py-1 rounded';document.getElementById('noProducts').classList.remove('hidden');return;}
+    statusEl.innerText='✅ Connected! '+data.length+' products from cloud!';statusEl.className='text-xs mt-2 bg-green-200 text-green-800 px-2 py-1 rounded';
+    allProducts=data||[];
+    renderProducts(allProducts);
+  }catch(e){statusEl.innerText='❌ '+e.message;statusEl.className='text-xs mt-2 bg-red-200 text-red-800 px-2 py-1 rounded';}
 }
-document.addEventListener('click', function(e){
-  const menu = document.getElementById('mobileMenu');
-  if(!e.target.closest('.app-header') && !e.target.closest('#mobileMenu')){
-    menu.style.display = 'none';
-  }
-});
-</script>
-
-<!-- FIXED MENU - OVERLAY INSTEAD OF PUSHING PAGE -->
-<div id="mobileMenu" style="display:none; position:fixed; top:70px; left:0; width:100%; background:#fff; box-shadow:0 4px 10px rgba(0,0,0,0.2); z-index:998; padding:15px;">
-  <a href="index.html" style="display:block; padding:12px 0; font-weight:700; color:#000; text-decoration:none;">Home</a>
-  <a href="browse.html" style="display:block; padding:12px 0; font-weight:700; color:#000; text-decoration:none;">Browse</a>
-  <a href="vendor.html" style="display:block; padding:12px 0; font-weight:700; color:#000; text-decoration:none;">Vendors</a>
-  <a href="signup.html" style="display:block; margin-top:10px; padding:12px; background:#16a34a; color:#fff; text-align:center; border-radius:8px; font-weight:700; text-decoration:none;">Join Us</a>
-</div>
-
-<script>
-function toggleMenu() {
-  const menu = document.getElementById('mobileMenu');
-  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+function renderProducts(products){
+  const grid=document.getElementById('productGrid');const no=document.getElementById('noProducts');grid.innerHTML='';
+  if(!products||products.length===0){no.classList.remove('hidden');grid.classList.add('hidden');return;}
+  no.classList.add('hidden');grid.classList.remove('hidden');
+  products.forEach(p=>{
+    const card=document.createElement('div');card.className='bg-white rounded-2xl shadow p-2';
+    card.innerHTML=`<img src="${p.image||'https://via.placeholder.com/200?text=No+Image'}" class="w-full h-24 object-cover rounded-xl mb-2"><p class="font-bold text-xs truncate">${p.name}</p><p class="text-[10px] text-gray-500">${p.category||'Others'} - ${p.stock||0} left</p><p class="font-black text-green-700 text-sm">₦${p.price}</p><button onclick="addToCart(${p.id})" class="w-full bg-green-600 text-white text-xs py-2 rounded-xl mt-1 font-bold">Add to Cart 🛒</button>`;
+    grid.appendChild(card);
+  });
 }
-</script>
-
-<!-- MOBILE MENU -->
-<div id="sideMenu" class="side-menu">
-  <a href="index.html">Home</a>
-  <a href="browse.html">Browse</a>
-<a href="vendor.html">Vendors</a>
-<a href="signup.html" class="btn-primary" style="margin:15px; display:block; text-align:center;">Join Us</a>
-</div>
-
-<main>
-<!-- HERO SECTION -->
-<section class="hero">
-  <div class="location-tag">📍 Lokoja, Kogi State</div>
-  <h1>Fresh groceries from local vendors, delivered across Lokoja</h1>
-  <p>Shop from multiple vendors in one cart. Fruits, meat, foodstuff, drinks and more — pay once, delivered fast.</p>
-  <div class="search-bar">
-    <input type="text" placeholder="Search for rice, tomato...">
-    <button>Search</button>
-  </div>
-</section>
-
-<!-- FEATURE CARDS -->
-<section class="feature-grid">
-  <div class="feature-card">
-    <div>🚚</div>
-    <b>Fast Delivery</b>
-    <span>Across Lokoja</span>
-  </div>
-  <div class="feature-card">
-    <div>🛡️</div>
-    <b>Secure Payment</b>
-    <span>Paystack protected</span>
-  </div>
-  <div class="feature-card">
-    <div>🏪</div>
-    <b>Local Vendors</b>
-    <span>Support local shops</span>
-  </div>
-</section>
-
-<!-- BANNER SLIDER -->
-<section class="banner-slider">
-  <div class="banner">
-    <h2>Free Delivery in Ganaja</h2>
-    <p>On orders above ₦5,000 this week</p>
-  </div>
-  <div class="banner" style="background:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)), url('https://images.unsplash.com/photo-1543339308-43e59d6b73a6?q=80&w=1200') center/cover;">
-    <h2>Sallah Sales</h2>
-    <p>Up to 25% off meat & foodstuff</p>
-  </div>
-</section>
-
-<!-- CATEGORIES -->
-<section class="container">
-  <h3>Shop by Category</h3>
-  <div class="category-grid">
-    <a href="browse.html?cat=fruits"><div>🥬<br>Fruits & Vegetables</div></a>
-    <a href="browse.html?cat=meat"><div>🐟<br>Meat & Fish</div></a>
-    <a href="browse.html?cat=foodstuff"><div>🌾<br>Foodstuff</div></a>
-    <a href="browse.html?cat=drinks"><div>🥤<br>Drinks</div></a>
-    <a href="browse.html?cat=household"><div>🏠<br>Household</div></a>
-    <a href="browse.html?cat=baby"><div>🍼<br>Baby</div></a>
-  </div>
-</section>
-
-<!-- FRESH ARRIVALS -->
-<section class="container">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
-    <h3>📈 Fresh Arrivals</h3>
-    <a href="browse.html" style="color:#16a34a;font-size:13px">View all ></a>
-  </div>
-  <p style="text-align:center;color:#888">Products will appear here</p>
-</section>
-
-</main>
-
-<!-- FOOTER -->
-<footer class="app-footer-dark" style="background:#111827; color:#fff; padding:40px 20px 20px;">
-  <div class="container">
-    <div class="footer-brand">
-      <div class="logo" style="background:#16a34a; width:48px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center;"><img src="logo.png" alt="LGM" style="width:38px; height:38px; object-fit:contain;"></div>
-      <span style="color:#fff; font-weight:900; font-size:18px;">Lokoja Grocery Mall</span>
-    </div>
-    <p>Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State. Fresh produce, meat, foodstuff and more — delivered to your door.</p>
-    
-    <div class="footer-links">
-      <div>
-        <h4>Shop</h4>
-        <a href="browse.html">All Products</a>
-        <a href="vendor.html">Vendors</a>
-        <a href="browse.html?cat=fruits">Fruits & Vegetables</a>
-        <a href="browse.html?cat=meat">Meat & Fish</a>
-      </div>
-      <div>
-        <h4>Account</h4>
-        <a href="#">My Orders</a>
-        <a href="#">Cart</a>
-        <a href="index.html">Become a Vendor</a>
-        <a href="login.html">Sign In</a>
-      </div>
-    </div>
-
-    <div class="footer-contact">
-      <h4>Contact</h4>
-      <p>📍 Lokoja, Kogi State</p>
-      <p>📞 08052941223</p>
-      <p>✉️ lokojagrocerymall@gmail.com</p>
-    </div>
-
-    <div class="footer-bottom">
-      <p>© 2026 Lokoja Grocery Mall. All rights reserved.</p>
-      <p>Payments secured by Paystack</p>
-    </div>
-  </div>
-</footer>
-
-<script>
-function toggleMenu(){
-  document.getElementById('sideMenu').classList.toggle('active')
-}
+function searchProducts(){const q=document.getElementById('searchInput').value.toLowerCase().trim();if(!q){renderProducts(allProducts);return;}const f=allProducts.filter(p=>p.name.toLowerCase().includes(q)||(p.category||'').toLowerCase().includes(q));renderProducts(f);}
+function filterCat(cat){const f=allProducts.filter(p=>(p.category||'').toLowerCase().includes(cat.toLowerCase().split(' ')[0])||p.category===cat);if(f.length===0){alert('No '+cat+' yet. Showing all.');renderProducts(allProducts);}else{renderProducts(f);} window.scrollTo(0,400);}
+function addToCart(id){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');const prod=allProducts.find(p=>p.id===id);if(!prod)return;const existing=cart.find(c=>c.id===id);if(existing)existing.qty++;else cart.push({id:prod.id,name:prod.name,price:prod.price,image:prod.image,qty:1});localStorage.setItem('lgm_cart',JSON.stringify(cart));document.getElementById('cartCount').innerText=cart.reduce((a,b)=>a+b.qty,0);alert(prod.name+' added to cart!');}
+function loadCartCount(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');document.getElementById('cartCount').innerText=cart.reduce((a,b)=>a+b.qty,0);}
+loadCartCount();loadProducts();
+document.getElementById('searchInput').addEventListener('keyup',searchProducts);
 </script>
 </body>
 </html>
