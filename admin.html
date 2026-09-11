@@ -18,10 +18,10 @@
 
 <div class="p-4 max-w-5xl mx-auto">
   <!-- STATS -->
-  <div class="grid grid-cols-2 gap-3 mb-4">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
     <div class="bg-white p-4 rounded-2xl shadow"><div class="text-xs text-gray-400">Total Vendors</div><div class="text-2xl font-black" id="totalV">0</div><div class="text-xs text-green-600" id="statV">0 Approved • 0 Pending</div></div>
-    <div class="bg-white p-4 rounded-2xl shadow"><div class="text-xs text-gray-400">Total Sales (Products)</div><div class="text-2xl font-black" id="totalSales">₦0</div><div class="text-xs text-gray-400">0 orders</div></div>
-    <div class="bg-white p-4 rounded-2xl shadow border-2 border-green-100"><div class="text-xs text-gray-400">Total Income (Your Cut)</div><div class="text-2xl font-black text-green-600" id="totalIncome">₦0</div><div class="text-[11px] text-green-700">Your Earnings</div></div>
+    <div class="bg-white p-4 rounded-2xl shadow"><div class="text-xs text-gray-400">Gross Sales</div><div class="text-2xl font-black" id="totalSales">₦0</div><div class="text-xs text-gray-400" id="orderCount">0 orders</div></div>
+    <div class="bg-white p-4 rounded-2xl shadow border-2 border-green-100"><div class="text-xs text-gray-400">Platform Income</div><div class="text-2xl font-black text-green-600" id="totalIncome">₦0</div><div class="text-[11px] text-green-700" id="incomeBreak">₦0 commission + ₦0 delivery</div></div>
     <div class="bg-white p-4 rounded-2xl shadow"><div class="text-xs text-gray-400">Customers</div><div class="text-2xl font-black" id="totalCust">0</div><div class="text-xs text-gray-400">Unique buyers</div></div>
   </div>
 
@@ -34,6 +34,7 @@
     <div class="flex gap-4 p-4 border-b text-sm font-bold overflow-x-auto">
       <button onclick="showTab('vendors')" id="tabV" class="text-green-600 border-b-2 border-green-600 pb-1">Vendors (<span id="cV">0</span>)</button>
       <button onclick="showTab('pending')" id="tabP" class="text-gray-400">Pending (<span id="cP">0</span>)</button>
+      <button onclick="showTab('orders')" id="tabO" class="text-gray-400">Orders (<span id="cO">0</span>)</button>
       <button onclick="showTab('customers')" id="tabC" class="text-gray-400">Customers</button>
       <button onclick="showTab('delivery')" id="tabD" class="text-gray-400">Delivery Agents</button>
     </div>
@@ -42,21 +43,25 @@
 </div>
 
 <script>
-// NEW LGM-PRODUCTION KEYS - FIXED
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let allUsers=[];
+let allOrders=[];
 let curTab='vendors';
 
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ location.href='login.html'; }
 
 async function loadAll(){
-  const { data, error } = await supabaseClient.from('users').select('*').order('created_at',{ascending:false});
-  if(error){ document.getElementById('list').innerText='Error: '+error.message; return; }
-  allUsers=data||[];
+  // 1. Load Users
+  const { data:users } = await supabaseClient.from('users').select('*').order('created_at',{ascending:false});
+  allUsers=users||[];
+
+  // 2. Load Orders
+  const { data:orders } = await supabaseClient.from('orders').select('*').order('created_at',{ascending:false});
+  allOrders=orders||[];
 
   let vendors = allUsers.filter(u=>u.role==='vendor');
   let pending = vendors.filter(v=>v.is_approved===false);
@@ -66,11 +71,25 @@ async function loadAll(){
 
   document.getElementById('totalV').innerText=vendors.length;
   document.getElementById('statV').innerText=approved.length+' Approved • '+pending.length+' Pending';
-  document.getElementById('totalCust').innerText=customers.length;
+  document.getElementById('totalCust').innerText=[...new Set(allOrders.map(o=>o.customer_phone).filter(Boolean))].length;
   document.getElementById('cV').innerText=vendors.length;
   document.getElementById('cP').innerText=pending.length;
+  document.getElementById('cO').innerText=allOrders.length;
+  document.getElementById('orderCount').innerText=allOrders.length+' orders';
+
+  // 3. Calculate Earnings: 10% commission + 100% of 5% delivery
+  let grossSales = allOrders.reduce((s,o)=> s + Number(o.total||o.total_amount||0), 0);
+  let totalDelivery = allOrders.reduce((s,o)=> s + Number(o.delivery_fee||0), 0);
+  let productTotal = grossSales - totalDelivery;
+  let commission = productTotal * 0.1;
+  let platformIncome = commission + totalDelivery;
+
+  document.getElementById('totalSales').innerText='₦'+Math.round(grossSales).toLocaleString();
+  document.getElementById('totalIncome').innerText='₦'+Math.round(platformIncome).toLocaleString();
+  document.getElementById('incomeBreak').innerText=`₦${Math.round(commission).toLocaleString()} commission + ₦${Math.round(totalDelivery).toLocaleString()} delivery`;
 
   render();
+  renderChart();
 }
 
 function render(){
@@ -79,29 +98,70 @@ function render(){
   if(curTab==='pending') list = allUsers.filter(u=>u.role==='vendor' && u.is_approved===false);
   if(curTab==='customers') list = allUsers.filter(u=>u.role==='customer');
   if(curTab==='delivery') list = allUsers.filter(u=>u.role==='delivery');
+  if(curTab==='orders') list = allOrders;
 
   if(list.length===0){ document.getElementById('list').innerHTML='<div class="text-center text-gray-400 py-8">No '+curTab+' yet</div>'; return; }
 
   let html='';
-  list.forEach(u=>{
-    html+=`<div class="border rounded-xl p-3 mb-3 flex justify-between items-center">
-      <div>
-        <div class="font-bold">${u.full_name||u.name||'No name'} <span class="text-xs ${u.is_approved===false?'text-orange-500':'text-green-600'}">${u.is_approved===false?'(Pending)':'(Approved)'}</span></div>
-        <div class="text-xs text-gray-500">${u.email} • ${u.phone||''} • ${u.location||''}<br>Shop: ${u.shop_address||'N/A'}</div>
-      </div>
-      <div class="flex gap-2">
-        ${u.is_approved===false?`<button onclick="approve('${u.id}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
-        <button onclick="removeUser('${u.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs">Delete</button>
-      </div>
-    </div>`;
-  });
+  if(curTab==='orders'){
+    list.forEach(o=>{
+      let productTotal = Number(o.total||0) - Number(o.delivery_fee||0);
+      let vendorEarn = productTotal * 0.9;
+      let platform = productTotal * 0.1 + Number(o.delivery_fee||0);
+      let status = o.status||'paid';
+      let statusColor = status==='delivered'? 'text-green-600' : status==='on the way'? 'text-orange-500' : 'text-blue-600';
+
+      let adminBtn = '';
+      if(status === 'paid'){
+        adminBtn = `<button onclick="updateOrderStatus(${o.id},'on the way')" class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">Mark On The Way</button>`;
+      }
+
+      html+=`<div class="border rounded-xl p-3 mb-3">
+        <div class="flex justify-between items-center">
+          <div class="font-bold">Order #${o.id}</div>
+          <div class="font-bold ${statusColor} capitalize">${status}</div>
+        </div>
+        <div class="text-xs text-gray-500">₦${Number(o.total||0).toLocaleString()} • ${o.vendor_email} • ${o.customer_name} - ${o.customer_phone}</div>
+        <div class="text-xs">Product: ₦${Math.round(productTotal).toLocaleString()} | Delivery 5%: ₦${Math.round(o.delivery_fee||0).toLocaleString()}</div>
+        <div class="text-xs">Vendor 90%: ₦${Math.round(vendorEarn).toLocaleString()} | You: ₦${Math.round(platform).toLocaleString()}</div>
+        <div class="text-[10px] text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</div>
+        <div class="mt-2">${adminBtn}</div>
+      </div>`;
+    });
+  } else {
+    list.forEach(u=>{
+      html+=`<div class="border rounded-xl p-3 mb-3 flex justify-between items-center">
+        <div>
+          <div class="font-bold">${u.full_name||u.name||'No name'} <span class="text-xs ${u.is_approved===false?'text-orange-500':'text-green-600'}">${u.role==='vendor'? (u.is_approved===false?'(Pending)':'(Approved)') : ''}</span></div>
+          <div class="text-xs text-gray-500">${u.email} • ${u.phone||''} • ${u.location||''}<br>Shop: ${u.shop_address||'N/A'}</div>
+        </div>
+        <div class="flex gap-2">
+          ${u.role==='vendor' && u.is_approved===false?`<button onclick="approve('${u.id}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
+          <button onclick="removeUser('${u.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs">Delete</button>
+        </div>
+      </div>`;
+    });
+  }
   document.getElementById('list').innerHTML=html;
+}
+
+function renderChart(){
+  const now=new Date();
+  let days=[];
+  for(let i=6;i>=0;i--){
+    let d=new Date(now); d.setDate(d.getDate()-i);
+    let dayOrders = allOrders.filter(o=> new Date(o.created_at).toDateString()===d.toDateString());
+    let dayGross = dayOrders.reduce((s,o)=> s + Number(o.total||0), 0);
+    let dayPlatform = dayOrders.reduce((s,o)=> s + (Number(o.total||0)-Number(o.delivery_fee||0))*0.1 + Number(o.delivery_fee||0), 0);
+    days.push(`<div class="flex justify-between py-1 border-b border-gray-100"><span>${d.toLocaleDateString('en-NG',{weekday:'short'})}</span><b>Gross: ₦${Math.round(dayGross).toLocaleString()} | You: ₦${Math.round(dayPlatform).toLocaleString()}</b></div>`);
+  }
+  document.getElementById('chart').innerHTML = days.join('') || 'No sales yet';
 }
 
 function showTab(t){
   curTab=t;
   document.querySelectorAll('[id^=tab]').forEach(b=>{b.classList.remove('text-green-600','border-b-2','border-green-600'); b.classList.add('text-gray-400')});
-  let map={vendors:'tabV',pending:'tabP',customers:'tabC',delivery:'tabD'};
+  let map={vendors:'tabV',pending:'tabP',orders:'tabO',customers:'tabC',delivery:'tabD'};
   let el=document.getElementById(map[t]); if(el){el.classList.add('text-green-600','border-b-2','border-green-600'); el.classList.remove('text-gray-400')}
   render();
 }
@@ -115,9 +175,14 @@ async function removeUser(id){
   await supabaseClient.from('users').delete().eq('id',id);
   loadAll();
 }
+async function updateOrderStatus(id, status){
+  const { error } = await supabaseClient.from('orders').update({status}).eq('id',id);
+  if(error) alert(error.message); else { alert('Order updated to: '+status); loadAll(); }
+}
 function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
 
 loadAll();
+setInterval(loadAll, 10000);
 </script>
 </body>
 </html>
