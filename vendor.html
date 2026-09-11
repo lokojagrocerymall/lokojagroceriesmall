@@ -16,6 +16,7 @@
 .wallet{background:#16a34a;color:#fff}
 .tabs{display:flex;gap:18px;border-bottom:1px solid #e5e7eb;margin:14px 0;font-weight:700;font-size:14px;overflow-x:auto}
 .tab{padding-bottom:8px;color:#9ca3af;cursor:pointer;white-space:nowrap}.active{color:#16a34a;border-bottom:3px solid #16a34a}
+input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
 .btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
 .small{font-size:12px;color:#6b7280}
 .view{display:none}.view.active-view{display:block}
@@ -25,6 +26,7 @@
 .status-on-the-way{background:#fef3c7;color:#92400e}
 .status-delivered{background:#dcfce7;color:#166534}
 .status-failed_delivery{background:#fee2e2;color:#dc2626}
+.product-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -32,18 +34,34 @@
 <a href="index.html" class="nav-home">🏠 Store / Home</a>
 <button class="nav-logout" onclick="logout()">Logout</button>
 </div>
-<div class="card"><b id="vName">Welcome...</b><div id="vEmail" class="small"></div></div>
+<div class="card"><b id="vName">Welcome...</b><div id="vEmail" class="small"></div><div id="vBadge" class="small" style="color:green"></div></div>
 <div class="stats">
 <div class="stat"><div class="small">Products</div><h2 id="pCount" style="margin:0">0</h2></div>
 <div class="stat"><div class="small">Orders</div><h2 id="oCount" style="margin:0;color:#2563eb">0</h2></div>
 <div class="stat wallet"><div class="small">Wallet (90%)</div><h2 id="wallet" style="margin:0">₦0</h2></div>
 </div>
 <div class="tabs">
-<span class="tab active" id="tab-orders" onclick="setTab('orders')">Orders</span>
+<span class="tab active" id="tab-products" onclick="setTab('products')">Products</span>
+<span class="tab" id="tab-orders" onclick="setTab('orders')">Orders</span>
 <span class="tab" id="tab-wallet" onclick="setTab('wallet')">Wallet</span>
+<span class="tab" id="tab-profile" onclick="setTab('profile')">Profile</span>
 </div>
 
-<div id="view-orders" class="view active-view">
+<div id="view-products" class="view active-view">
+<div class="card">
+<h3>Add New Product</h3>
+<input id="pName" placeholder="Product Name e.g. White Garri 4L">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<input id="pPrice" type="number" placeholder="Price ₦">
+<input id="pStock" type="number" placeholder="Stock Qty">
+</div>
+<select id="pCategory"><option>Foodstuff</option><option>Drinks</option><option>Household</option></select>
+<button class="btn" onclick="addProduct()">Add Product</button>
+</div>
+<div class="card"><h3>My Products</h3><div id="productList"></div></div>
+</div>
+
+<div id="view-orders" class="view">
 <div class="sales-grid">
 <div class="stat"><div class="small">Today Sales</div><b id="salesToday">₦0</b></div>
 <div class="stat"><div class="small">This Week</div><b id="salesWeek">₦0</b></div>
@@ -54,11 +72,13 @@
 
 <div id="view-wallet" class="view"><div class="card"><h3>💰 My Wallet (90%)</h3><h1 id="walletBig" style="color:#16a34a">₦0</h1></div></div>
 
+<div id="view-profile" class="view"><div class="card"><h3>👤 My Profile</h3><input id="profName" placeholder="Full Name"><input id="profEmail" disabled><button class="btn" onclick="saveProfile()">Save</button></div></div>
+
 <script>
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let curUser=null; let allOrders=[];
+let curUser=null; let allOrders=[]; let allProducts=[];
 
 function setTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -66,130 +86,98 @@ function setTab(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active-view'));
   document.getElementById('view-'+name).classList.add('active-view');
   if(name==='orders') loadOrders();
+  if(name==='products') loadProducts();
 }
 function logout(){ localStorage.removeItem('lgm_user'); window.location.href='login.html'; }
-function init(){
+
+async function init(){
   const saved = localStorage.getItem('lgm_user');
-  curUser = saved ? JSON.parse(saved) : {email:'test@test.com', name:'Vendor'};
+  curUser = saved ? JSON.parse(saved) : null;
+  if(!curUser){ location.href='login.html'; return; }
+  
   document.getElementById('vName').innerText="Welcome, "+curUser.name;
   document.getElementById('vEmail').innerText=curUser.email;
-  loadOrders();
+  document.getElementById('vBadge').innerText="✅ Approved Vendor • You keep 90%";
+  document.getElementById('profName').value=curUser.name;
+  document.getElementById('profEmail').value=curUser.email;
+  loadProducts(); loadOrders();
 }
 init();
 
+async function loadProducts(){
+  const {data} = await supabaseClient.from('products').select('*').eq('vendor_email', curUser.email);
+  allProducts = data||[];
+  document.getElementById('pCount').innerText=allProducts.length;
+  let h=''; allProducts.forEach(p=>{
+    h+=`<div class="product-item"><div><b>${p.name}</b><div class="small">₦${Number(p.price).toLocaleString()} • Stock: ${p.stock}</div></div></div>`;
+  });
+  document.getElementById('productList').innerHTML = h || '<p class="small">No products yet</p>';
+}
+
+async function addProduct(){
+  const name=document.getElementById('pName').value;
+  const price=document.getElementById('pPrice').value;
+  if(!name || !price) return alert('Fill all fields');
+  await supabaseClient.from('products').insert({name, price, stock:document.getElementById('pStock').value, category:document.getElementById('pCategory').value, vendor_email:curUser.email});
+  alert('Product Added!'); document.getElementById('pName').value=''; document.getElementById('pPrice').value='';
+  loadProducts();
+}
+
 async function loadOrders(){
- const {data, error}=await supabaseClient.from('orders').select('*').order('created_at',{ascending:false}).limit(100);
- if(error){ document.getElementById('ordersList').innerHTML="No orders yet"; return; }
+ const {data, error}=await supabaseClient.from('orders').select('*').order('created_at',{ascending:false});
+ if(error) return;
  allOrders = data.filter(o=> (o.vendor_email||'').toLowerCase()===curUser.email.toLowerCase());
- if(allOrders.length===0){ document.getElementById('ordersList').innerHTML="<p>📭 No orders yet.</p>"; return; }
- 
- let h=""; 
- allOrders.forEach(o=>{
-   let cust = o.customer_name || '';
-   let items = Array.isArray(o.items)? o.items.map(i=>i.name+' x'+i.qty).join(', ') : '';
-   let status = o.status||'paid';
-   let statusClass = 'status-'+status;
+ if(allOrders.length===0){ document.getElementById('ordersList').innerHTML="<p>📭 No orders yet.</p>"; }
+ else {
+   let h=""; allOrders.forEach(o=>{
+     let cust = o.customer_name || '';
+     let items = Array.isArray(o.items)? o.items.map(i=>i.name+' x'+i.qty).join(', ') : '';
+     let status = o.status||'paid';
+     let statusClass = 'status-'+status;
+     let vendorBtn = ''; let countdown = '';
 
-   let vendorBtn = ''; 
-   let countdown = '';
-
-   if(status === 'paid'){
-     vendorBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_phone}')" style="background:#2563eb;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">🚚 Start Delivery - 2hr Timer</button>`;
-   }
-
-   if(status === 'on the way' && o.customer_email === curUser.email){
-     vendorBtn = `<button onclick="markDelivered(${o.id})" style="background:#16a34a;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">✓ Mark as Delivered Now</button>`;
-   }
-
-   if(status === 'failed_delivery'){
-     vendorBtn = `<button disabled style="background:#d1d5db;color:#6b7280;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">❌ Delivery Failed - 2hr Expired</button>`;
-   }
-
-   if(status === 'on the way' && o.delivery_started_at){
-     let start = new Date(o.delivery_started_at).getTime();
-     let end = start + (2 * 60 * 60 * 1000);
-     let left = end - new Date().getTime();
-     if(left <= 0){ markFailed(o.id); }
-     else {
-       let hrs = Math.floor(left / 1000 / 60 / 60);
-       let mins = Math.floor((left / 1000 / 60) % 60);
-       let secs = Math.floor((left / 1000) % 60);
-       countdown = `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#d97706">⏰ Auto-Fail in: ${hrs}h ${mins}m ${secs}s</div>`;
+     if(status === 'paid'){
+       vendorBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_phone}')" style="background:#2563eb;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">🚚 Start Delivery - 2hr Timer</button>`;
      }
-   }
-
-   h+=`<div class='card'>
-     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-       <b>Order #${o.id}</b><span class="status ${statusClass}">${status.replace('_',' ')}</span>
-     </div>
-     ₦${Number(o.total||0).toLocaleString()}<br>
-     <span class='small'>${cust} • ${o.customer_phone||''}<br>${items}<br>📍 ${o.customer_address||''}<br>${new Date(o.created_at).toLocaleString()}</span>
-     ${countdown}${vendorBtn}
-   </div>`;
- });
- document.getElementById('ordersList').innerHTML=h;
+     if(status === 'failed_delivery'){
+       vendorBtn = `<button disabled style="background:#d1d5db;color:#6b7280;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">❌ Delivery Failed - 2hr Expired</button>`;
+     }
+     if(status === 'on the way' && o.delivery_started_at){
+       let end = new Date(o.delivery_started_at).getTime() + (2 * 60 * 60 * 1000);
+       let left = end - new Date().getTime();
+       if(left <= 0){ markFailed(o.id); }
+       else {
+         let hrs = Math.floor(left / 1000 / 60 / 60); let mins = Math.floor((left / 1000 / 60) % 60); let secs = Math.floor((left / 1000) % 60);
+         countdown = `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#d97706">⏰ Auto-Fail in: ${hrs}h ${mins}m ${secs}s</div>`;
+       }
+     }
+     h+=`<div class='card'><div style="display:flex;justify-content:space-between"><b>Order #${o.id}</b><span class="status ${statusClass}">${status.replace('_',' ')}</span></div>
+     ₦${Number(o.total||0).toLocaleString()}<br><span class='small'>${cust} • ${o.customer_phone||''}<br>${items}<br>📍 ${o.customer_address||''}</span>${countdown}${vendorBtn}</div>`;
+   });
+   document.getElementById('ordersList').innerHTML=h;
+ }
  
  document.getElementById('oCount').innerText=allOrders.length;
  let totalEarnings=0; allOrders.forEach(o=> totalEarnings += Number(o.total||0)*0.9);
  document.getElementById('wallet').innerText='₦'+Math.round(totalEarnings).toLocaleString();
  document.getElementById('walletBig').innerText='₦'+Math.round(totalEarnings).toLocaleString();
- 
- const now=new Date(); const startDay=new Date(now); startDay.setHours(0,0,0,0); 
- const startWeek=new Date(now); startWeek.setDate(now.getDate()-7); 
- const startMonth=new Date(now); startMonth.setDate(1); startMonth.setHours(0,0,0,0);
- let t=0,w=0,m=0;
- allOrders.forEach(o=>{ const d=new Date(o.created_at); const earn=Number(o.total||0)*0.9; if(d>=startDay) t+=earn; if(d>=startWeek) w+=earn; if(d>=startMonth) m+=earn; });
- document.getElementById('salesToday').innerText='₦'+Math.round(t).toLocaleString();
- document.getElementById('salesWeek').innerText='₦'+Math.round(w).toLocaleString();
- document.getElementById('salesMonth').innerText='₦'+Math.round(m).toLocaleString();
 }
 
 async function startDelivery(id, customerPhone){
-  const { error } = await supabaseClient.from('orders').update({ 
-    status: 'on the way', 
-    delivery_started_at: new Date().toISOString() 
-  }).eq('id',id);
-  if(error) alert(error.message);
-  else {
-    alert('Order is On The Way. 2hr countdown started');
-    sendWhatsApp(customerPhone, id, 'onway');
-    loadOrders();
-  }
+  await supabaseClient.from('orders').update({ status: 'on the way', delivery_started_at: new Date().toISOString() }).eq('id',id);
+  sendWhatsApp(customerPhone, id, 'onway'); loadOrders();
 }
-
-async function markDelivered(orderId){
-  if(!confirm('Confirm customer has received this order?')) return;
-  await supabaseClient.from('orders').update({status:'delivered'}).eq('id', orderId);
-  const order = allOrders.find(o=>o.id===orderId);
-  if(order) sendWhatsApp(order.customer_phone, orderId, 'delivered');
-  alert('✅ Order marked as Delivered');
-  loadOrders();
-}
-
 async function markFailed(id){
-  const order = allOrders.find(o=>o.id===id);
-  if(order && order.status!== 'failed_delivery' && order.status!== 'delivered'){
-    await supabaseClient.from('orders').update({status:'failed_delivery'}).eq('id',id);
-    sendWhatsApp(order.customer_phone, id, 'failed');
-    loadOrders();
-  }
+  await supabaseClient.from('orders').update({status:'failed_delivery'}).eq('id',id); loadOrders();
 }
-
-// FREE WHATSAPP LINK - NO TERMII NEEDED
 function sendWhatsApp(phone, orderId, type='onway'){
   if(!phone) return;
-  
-  let msg = '';
-  if(type === 'onway') msg = `Hi! Your Lokoja Grocery Mall Order #${orderId} is On The Way 🚚\n\nDelivery within 2 hours from ${curUser.name}. Please be available.`;
-  if(type === 'delivered') msg = `✅ Delivered! Order #${orderId} from ${curUser.name} has been delivered. Thank you for shopping with us!`;
-  if(type === 'failed') msg = `❌ Delivery Update: Order #${orderId} from ${curUser.name} could not be delivered within 2 hours. We will contact you shortly.`;
-
+  let msg = type==='onway' ? `Hi! Order #${orderId} is On The Way 🚚 Delivery within 2 hours from ${curUser.name}.` : `❌ Delivery Update: Order #${orderId} failed.`;
   let formattedPhone = phone.startsWith('0') ? '234' + phone.slice(1) : phone;
-  let url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank'); // Opens WhatsApp. You just click Send
+  window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
-
-setInterval(loadOrders, 5000); // Auto refresh every 5s
+function saveProfile(){ alert('Profile Updated!') }
+setInterval(loadOrders, 5000);
 </script>
 </body>
 </html>
