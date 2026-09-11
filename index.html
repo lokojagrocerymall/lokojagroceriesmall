@@ -16,7 +16,6 @@ body{font-family:system-ui,-apple-system;background:#f8fafc}
   ⏰ OPEN: Mon - Sat 8AM - 6PM • ⛔ Sunday CLOSED
 </div>
 
-<!-- HEADER - FIXED: Logo Bigger + Name Bigger Bolder -->
 <header class="bg-white shadow-sm sticky top-0 z-50 px-4 py-3 flex justify-between items-center">
   <div class="flex items-center gap-3" onclick="location.href='index.html'" style="cursor:pointer">
     <img src="logo.png" alt="logo" style="width:48px;height:48px;object-fit:contain;border-radius:10px">
@@ -31,7 +30,6 @@ body{font-family:system-ui,-apple-system;background:#f8fafc}
   </div>
 </header>
 
-<!-- MOBILE MENU -->
 <div id="menu" class="hidden bg-white border-b p-4 space-y-2 text-sm font-bold">
   <a href="browse.html" class="block py-2">🛍️ Browse Market</a>
   <a href="customer.html" class="block py-2">👤 My Account</a>
@@ -39,22 +37,17 @@ body{font-family:system-ui,-apple-system;background:#f8fafc}
   <a href="login.html" class="block py-2">🔐 Login</a>
   <a href="signup.html" class="block py-2 text-green-600">➕ Sign Up</a>
 </div>
-  
+
 <div class="mx-4 mt-4 bg-gradient-to-br from-green-600 to-green-800 rounded-[20px] p-6 text-white text-center">
-  <div class="inline-block bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs font-bold mb-3">
-    📍 Lokoja, Kogi State
-  </div>
+  <div class="inline-block bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs font-bold mb-3">📍 Lokoja, Kogi State</div>
   <h1 class="text-[26px] font-black leading-tight mb-4">Fresh groceries from local<br>vendors</h1>
   <div class="flex gap-2 max-w-md mx-auto">
     <input id="searchInput" placeholder="Search rice, yam..." class="flex-1 p-3.5 rounded-xl text-black text-sm outline-none" onkeyup="if(event.key==='Enter') doSearch()">
     <button onclick="doSearch()" class="bg-white text-green-700 px-5 rounded-xl font-black text-sm">Search</button>
   </div>
-  <div class="mt-4">
-    <span class="bg-green-400 text-green-900 px-4 py-1.5 rounded-full text-xs font-black">✅ OPEN NOW - Order now!</span>
-  </div>
+  <div class="mt-4"><span class="bg-green-400 text-green-900 px-4 py-1.5 rounded-full text-xs font-black">✅ OPEN NOW - Order now!</span></div>
 </div>
 
-<!-- CATEGORIES -->
 <div class="p-4">
   <h2 class="font-black text-[15px] mb-3">Shop by Category</h2>
   <div class="grid grid-cols-3 gap-3">
@@ -67,10 +60,9 @@ body{font-family:system-ui,-apple-system;background:#f8fafc}
   </div>
 </div>
 
-<!-- PRODUCTS -->
 <div class="px-4 pb-10">
   <div id="productsGrid" class="grid grid-cols-2 gap-3">
-    <div class="col-span-2 text-center text-sm text-gray-400 py-10">Loading products...<br>Go to Vendor Dashboard to add</div>
+    <div class="col-span-2 text-center text-sm text-gray-400 py-10">Loading products...</div>
   </div>
 </div>
 
@@ -80,7 +72,6 @@ body{font-family:system-ui,-apple-system;background:#f8fafc}
 </footer>
 
 <script>
-// NEW LGM-PRODUCTION KEYS
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -98,18 +89,25 @@ function updateCart(){
 }
 
 async function loadProducts(){
-  const { data, error } = await supabaseClient.from('products').select('*').eq('is_available', true).order('created_at',{ascending:false}).limit(20);
-  if(error ||!data || data.length===0){
+  const { data, error } = await supabaseClient.from('products').select('*').order('created_at',{ascending:false}).limit(50);
+  console.log('LOAD:', data, error);
+  if(error){
+    document.getElementById('productsGrid').innerHTML=`<div class="col-span-2 text-center text-sm text-red-400 py-10">Error: ${error.message}</div>`;
+    return;
+  }
+  if(!data || data.length===0){
     document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products yet<br>Go to Vendor Dashboard to add</div>';
     return;
   }
   let html='';
   data.forEach(p=>{
+    const img = p.image || p.image_url || '';
+    const imgTag = img? `<img src="${img}" class="h-full w-full object-cover rounded-xl">` : '🛒';
     html+=`<div class="bg-white rounded-2xl p-3 shadow-sm">
-      <div class="bg-gray-100 rounded-xl h-28 flex items-center justify-center text-3xl mb-2">${p.image_url?`<img src="${p.image_url}" class="h-full w-full object-cover rounded-xl">`:'🛒'}</div>
+      <div class="bg-gray-100 rounded-xl h-28 flex items-center justify-center text-3xl mb-2 overflow-hidden">${imgTag}</div>
       <div class="font-bold text-[13px] truncate">${p.name}</div>
-      <div class="text-[11px] text-gray-500 truncate">${p.vendor_name||''}</div>
-      <div class="flex justify-between items-center mt-2"><b class="text-green-700 text-[13px]">₦${Number(p.price).toLocaleString()}</b><button onclick="addToCart(${p.id},'${p.name.replace(/'/g,"")} ',${p.price})" class="bg-green-600 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button></div>
+      <div class="text-[11px] text-gray-500 truncate">${p.category||''} • Stock: ${p.stock||0}</div>
+      <div class="flex justify-between items-center mt-2"><b class="text-green-700 text-[13px]">₦${Number(p.price).toLocaleString()}</b><button onclick="addToCart(${p.id},'${(p.name||'').replace(/'/g,'').replace(/"/g,'')}',${p.price})" class="bg-green-600 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button></div>
     </div>`;
   });
   document.getElementById('productsGrid').innerHTML=html;
