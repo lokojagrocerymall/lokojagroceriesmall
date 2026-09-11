@@ -89,7 +89,7 @@ async function payWithFlutterwave(){
     customer: { email: email, phone_number: phone, name: name },
     customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery" },
     callback: async function(data){
-      document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order...</span>';
+      document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order & reducing stock...</span>';
       try{
         const orderData = {
           customer_name: name, customer_phone: phone, customer_address: addr,
@@ -100,11 +100,29 @@ async function payWithFlutterwave(){
         };
         const { error } = await supabaseClient.from('orders').insert([orderData]);
         if(error){ document.getElementById('orderMsg').innerHTML='<span style="color:red">❌ '+error.message+'</span>'; alert(error.message); return; }
+
+        // === FIX 1: AUTO-REDUCE STOCK ===
+        document.getElementById('orderMsg').innerHTML='<span style="color:blue">📦 Reducing stock...</span>';
+        for(let item of cart){
+          try{
+            const { data: prod } = await supabaseClient.from('products').select('id,stock_qty,stock,quantity').eq('id', item.id).single();
+            let current = prod?.stock_qty?? prod?.stock?? prod?.quantity?? 0;
+            let newQty = Math.max(0, Number(current) - Number(item.qty));
+            await supabaseClient.from('products').update({
+              stock_qty: newQty,
+              stock: newQty,
+              quantity: newQty
+            }).eq('id', item.id);
+          }catch(e){ console.log('stock err for', item.id, e.message); }
+        }
+
         const waMsg = `🚨 NEW PAID ORDER - Lokoja Mall%0ARef: ${tx_ref}%0AName: ${name}%0APhone: ${phone}%0AAddr: ${addr}%0ATotal: ₦${total.toLocaleString()}%0AItems: ${cart.map(i=>i.name+' x'+i.qty).join(', ')}`;
-        window.open(`https://wa.me/2348104282311?text=${waMsg}`, '_blank');
+        // Fix WhatsApp - don't auto open to avoid SMS invite bug, show button instead
+        document.getElementById('orderMsg').innerHTML+=`<br><a href="https://wa.me/2348104282311?text=${waMsg}" target="_blank" style="display:inline-block;margin-top:10px;background:#25D366;color:white;padding:10px 15px;border-radius:10px;font-weight:bold;text-decoration:none">📱 Open WhatsApp Alert</a>`;
+
         localStorage.removeItem('lgm_cart');
-        document.getElementById('orderMsg').innerHTML='<span style="color:green;font-weight:bold">✅ Paid! Saved as '+tx_ref+' - Opening Orders...</span>';
-        setTimeout(()=>{ window.location.href='vendor.html'; },1500);
+        document.getElementById('orderMsg').innerHTML = '<span style="color:green;font-weight:bold">✅ Paid! Stock reduced! Order '+tx_ref+' saved.</span>' + document.getElementById('orderMsg').innerHTML;
+        setTimeout(()=>{ window.location.href='vendor.html'; },2500);
       }catch(e){
         document.getElementById('orderMsg').innerHTML='<span style="color:red">❌ '+e.message+'</span>';
       }
