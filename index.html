@@ -103,20 +103,22 @@ async function loadProducts(){
   data.forEach(p=>{
     const img = p.image || p.image_url || '';
     const imgTag = img? `<img src="${img}" class="h-full w-full object-cover rounded-xl">` : '🛒';
+    const safeName = (p.name||'').replace(/'/g,"").replace(/"/g,'');
     html+=`<div class="bg-white rounded-2xl p-3 shadow-sm">
       <div class="bg-gray-100 rounded-xl h-28 flex items-center justify-center text-3xl mb-2 overflow-hidden">${imgTag}</div>
       <div class="font-bold text-[13px] truncate">${p.name}</div>
       <div class="text-[11px] text-gray-500 truncate">${p.category||''} • Stock: ${p.stock||0}</div>
-      <div class="flex justify-between items-center mt-2"><b class="text-green-700 text-[13px]">₦${Number(p.price).toLocaleString()}</b><button onclick="addToCart(${p.id},'${(p.name||'').replace(/'/g,'').replace(/"/g,'')}',${p.price})" class="bg-green-600 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button></div>
+      <div class="flex justify-between items-center mt-2"><b class="text-green-700 text-[13px]">₦${Number(p.price).toLocaleString()}</b><button onclick="addToCart(${p.id},'${safeName}',${p.price},'${img}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button></div>
     </div>`;
   });
   document.getElementById('productsGrid').innerHTML=html;
 }
 
-function addToCart(id,name,price){
+// FIXED: Now saves image too - so cart will show image!
+function addToCart(id,name,price,image){
   let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
   let f=cart.find(i=>i.id===id);
-  if(f) f.qty++; else cart.push({id,name,price,qty:1});
+  if(f){ f.qty++; if(image) f.image=image; } else { cart.push({id,name,price,image:image||'',qty:1}); }
   localStorage.setItem('lgm_cart', JSON.stringify(cart));
   updateCart();
   alert(name+' added to cart!');
