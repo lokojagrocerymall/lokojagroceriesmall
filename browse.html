@@ -45,22 +45,50 @@
 <div id="grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"><p class="col-span-full text-center text-xs text-gray-400 py-10">Loading products...</p></div>
 </div>
 
-<!-- CART MODAL -->
-<div id="cartModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-end justify-center"><div class="bg-white w-full md:max-w-sm rounded-t-[24px] p-5"><div class="flex gap-3 mb-4"><img id="mImage" class="w-20 h-20 object-cover rounded-xl"><div><p id="mName" class="font-black text-sm"></p><p id="mCategory" class="text-xs text-gray-400"></p><p id="mPrice" class="font-black text-green-700 mt-1"></p><p class="text-[9px] text-gray-400">+5% delivery at checkout</p></div></div><div class="bg-gray-50 rounded-xl p-3 flex justify-between items-center mb-4"><span class="text-sm font-bold">Qty</span><div class="flex items-center gap-3"><button onclick="changeQty(-1)" class="w-9 h-9 bg-white border-2 rounded-full font-black">-</button><span id="mQty" class="font-black w-6 text-center">1</span><button onclick="changeQty(1)" class="w-9 h-9 bg-green-600 text-white rounded-full font-black">+</button></div></div><div class="bg-green-50 p-3 rounded-xl text-xs mb-4"><div class="flex justify-between"><span>Total</span><span id="mTotal" class="font-bold"></span></div><div class="flex justify-between"><span>Delivery 5%</span><span id="mDel"></span></div><div class="flex justify-between font-black border-t mt-1 pt-1"><span>You Pay</span><span id="mGrand" class="text-green-700"></span></div></div><button onclick="confirmAddToCart()" class="w-full bg-green-600 text-white py-3.5 rounded-xl font-black mb-2">Add • <span id="mTotalBtn">₦0</span></button><button onclick="closeModal()" class="w-full bg-gray-100 py-3 rounded-xl font-bold text-sm">Continue</button></div></div>
+<div id="cartModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-end justify-center"><div class="bg-white w-full md:max-w-sm rounded-t-[24px] p-5"><div class="flex gap-3 mb-4"><img id="mImage" class="w-20 h-20 object-cover rounded-xl bg-gray-100"><div><p id="mName" class="font-black text-sm"></p><p id="mCategory" class="text-xs text-gray-400"></p><p id="mPrice" class="font-black text-green-700 mt-1"></p><p class="text-[9px] text-gray-400">+5% delivery at checkout</p></div></div><div class="bg-gray-50 rounded-xl p-3 flex justify-between items-center mb-4"><span class="text-sm font-bold">Qty</span><div class="flex items-center gap-3"><button onclick="changeQty(-1)" class="w-9 h-9 bg-white border-2 rounded-full font-black">-</button><span id="mQty" class="font-black w-6 text-center">1</span><button onclick="changeQty(1)" class="w-9 h-9 bg-green-600 text-white rounded-full font-black">+</button></div></div><div class="bg-green-50 p-3 rounded-xl text-xs mb-4"><div class="flex justify-between"><span>Total</span><span id="mTotal" class="font-bold"></span></div><div class="flex justify-between"><span>Delivery 5%</span><span id="mDel"></span></div><div class="flex justify-between font-black border-t mt-1 pt-1"><span>You Pay</span><span id="mGrand" class="text-green-700"></span></div></div><button onclick="confirmAddToCart()" class="w-full bg-green-600 text-white py-3.5 rounded-xl font-black mb-2">Add • <span id="mTotalBtn">₦0</span></button><button onclick="closeModal()" class="w-full bg-gray-100 py-3 rounded-xl font-bold text-sm">Continue</button></div></div>
 
 <script>
-// ✅ NEW PROJECT KEYS - FIXED
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";const SUPABASE_ANON_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 let all=[];let filtered=[];let selectedProduct=null;let currentQty=1;
 function toggleFilters(){document.getElementById('filterPanel').classList.toggle('active')}
 function clearFilters(){document.querySelectorAll('#locList input').forEach(i=>i.checked=false);document.getElementById('minPrice').value='';document.getElementById('maxPrice').value='';filtered=[...all];render(filtered);}
 async function load(){try{const{data,error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false});if(error) throw error;all=data||[];filtered=[...all];document.getElementById('count').innerText=all.length+' products found';render(filtered);}catch(e){document.getElementById('grid').innerHTML='<p class="text-xs text-red-500">Error: '+e.message+'</p>';}}
-function render(list){const g=document.getElementById('grid');g.innerHTML='';if(list.length===0){g.innerHTML='<div class="col-span-full text-center py-20 text-gray-400"><div class="text-5xl mb-2">🏪</div><p class="text-sm font-bold">No products yet</p><p class="text-xs">Vendor should add products</p></div>';return;}list.forEach(p=>{const d=document.createElement('div');d.className='bg-white rounded-2xl shadow p-2';d.innerHTML=`<img src="${p.image||'https://via.placeholder.com/200'}" class="w-full h-28 object-cover rounded-xl mb-2"><p class="font-bold text-xs truncate">${p.name}</p><p class="text-[10px] text-gray-400">${p.category||'Others'} • ${p.stock||0} left</p><p class="font-black text-green-700 text-sm">₦${Number(p.price).toLocaleString()}</p><p class="text-[8px] text-gray-400">+5% delivery</p><button onclick="openModal(${p.id})" class="w-full bg-green-600 text-white text-xs py-2.5 rounded-xl mt-1 font-bold">Add to Cart 🛒</button>`;g.appendChild(d);});}
-function openModal(id){selectedProduct=all.find(p=>p.id===id);if(!selectedProduct) return;currentQty=1;document.getElementById('mImage').src=selectedProduct.image||'https://via.placeholder.com/200';document.getElementById('mName').innerText=selectedProduct.name;document.getElementById('mCategory').innerText=(selectedProduct.category||'')+' • '+(selectedProduct.stock||0)+' left';document.getElementById('mPrice').innerText='₦'+Number(selectedProduct.price).toLocaleString();updateTotal();document.getElementById('cartModal').classList.remove('hidden');}
+function render(list){
+  const g=document.getElementById('grid');g.innerHTML='';
+  if(list.length===0){g.innerHTML='<div class="col-span-full text-center py-20 text-gray-400"><div class="text-5xl mb-2">🏪</div><p class="text-sm font-bold">No products yet</p><p class="text-xs">Vendor should add products</p></div>';return;}
+  list.forEach(p=>{
+    const imgUrl = p.image || p.image_url || '';
+    const imgSrc = imgUrl || 'https://via.placeholder.com/200?text=No+Image';
+    const d=document.createElement('div');d.className='bg-white rounded-2xl shadow p-2';
+    d.innerHTML=`<img src="${imgSrc}" class="w-full h-28 object-cover rounded-xl mb-2 bg-gray-100" onerror="this.src='https://via.placeholder.com/200'"><p class="font-bold text-xs truncate">${p.name}</p><p class="text-[10px] text-gray-400">${p.category||'Others'} • ${p.stock||0} left</p><p class="font-black text-green-700 text-sm">₦${Number(p.price).toLocaleString()}</p><p class="text-[8px] text-gray-400">+5% delivery</p><button onclick="openModal(${p.id})" class="w-full bg-green-600 text-white text-xs py-2.5 rounded-xl mt-1 font-bold">Add to Cart 🛒</button>`;
+    g.appendChild(d);
+  });
+}
+function openModal(id){
+  selectedProduct=all.find(p=>p.id===id);
+  if(!selectedProduct) return;
+  currentQty=1;
+  const imgUrl = selectedProduct.image || selectedProduct.image_url || 'https://via.placeholder.com/200';
+  document.getElementById('mImage').src=imgUrl;
+  document.getElementById('mName').innerText=selectedProduct.name;
+  document.getElementById('mCategory').innerText=(selectedProduct.category||'')+' • '+(selectedProduct.stock||0)+' left';
+  document.getElementById('mPrice').innerText='₦'+Number(selectedProduct.price).toLocaleString();
+  updateTotal();
+  document.getElementById('cartModal').classList.remove('hidden');
+}
 function changeQty(d){currentQty=Math.max(1,Math.min(selectedProduct.stock||99,currentQty+d));document.getElementById('mQty').innerText=currentQty;updateTotal();}
 function updateTotal(){const t=selectedProduct.price*currentQty;const del=Math.round(t*0.05);document.getElementById('mTotal').innerText='₦'+t.toLocaleString();document.getElementById('mDel').innerText='₦'+del.toLocaleString();document.getElementById('mGrand').innerText='₦'+(t+del).toLocaleString();document.getElementById('mTotalBtn').innerText='₦'+(t+del).toLocaleString();}
 function closeModal(){document.getElementById('cartModal').classList.add('hidden');}
-function confirmAddToCart(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');const ex=cart.find(c=>c.id===selectedProduct.id);if(ex)ex.qty+=currentQty;else cart.push({id:selectedProduct.id,name:selectedProduct.name,price:selectedProduct.price,image:selectedProduct.image,qty:currentQty});localStorage.setItem('lgm_cart',JSON.stringify(cart));loadCartCount();closeModal();if(confirm('Added! Go to cart?')) location.href='cart.html';}
+function confirmAddToCart(){
+  let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
+  const ex=cart.find(c=>c.id===selectedProduct.id);
+  const imgUrl = selectedProduct.image || selectedProduct.image_url || '';
+  if(ex){ ex.qty+=currentQty; ex.image=imgUrl||ex.image; }
+  else cart.push({id:selectedProduct.id,name:selectedProduct.name,price:selectedProduct.price,image:imgUrl,qty:currentQty});
+  localStorage.setItem('lgm_cart',JSON.stringify(cart));
+  loadCartCount();closeModal();
+  if(confirm('Added! Go to cart?')) location.href='cart.html';
+}
 function filterCat(c){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));if(c==='All'){filtered=[...all];document.getElementById('catAll').classList.add('active');} else {filtered=all.filter(p=>(p.category||'').toLowerCase().includes(c.toLowerCase()));}document.getElementById('count').innerText=filtered.length+' products found';render(filtered);}
 function sortProducts(){const s=document.getElementById('sortSelect').value;let l=[...filtered];if(s==='low')l.sort((a,b)=>a.price-b.price);if(s==='high')l.sort((a,b)=>b.price-a.price);if(s==='newest')l.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));render(l);}
 function applyPrice(){const min=Number(document.getElementById('minPrice').value)||0;const max=Number(document.getElementById('maxPrice').value)||Infinity;let l=all.filter(p=>p.price>=min && p.price<=max);filtered=l;render(l);document.getElementById('count').innerText=l.length+' products found';}
