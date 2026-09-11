@@ -27,7 +27,7 @@
 <input id="custName" placeholder="Full Name" class="w-full border rounded-xl p-3 mb-2 text-sm">
 <input id="custPhone" placeholder="Phone e.g. 080..." class="w-full border rounded-xl p-3 mb-2 text-sm">
 <input id="custAddress" placeholder="Address in Lokoja" class="w-full border rounded-xl p-3 mb-3 text-sm">
-<div class="bg-blue-50 border border-blue-200 p-3 rounded-xl text-xs mb-3">🔒 Secure payment by <b>Flutterwave TEST MODE</b> - Use test card 4242 4242 4242 4242</div>
+<div class="bg-blue-50 border border-blue-200 p-3 rounded-xl text-xs mb-3">🔒 Secure payment by <b>Flutterwave</b></div>
 <button onclick="payWithFlutterwave()" id="orderBtn" class="w-full bg-[#f5a623] text-white rounded-xl p-4 font-black">💳 Pay Now with Flutterwave - <span id="payAmount">₦0</span></button>
 <div id="orderMsg" class="text-sm text-center mt-2"></div>
 </div>
@@ -87,27 +87,29 @@ async function payWithFlutterwave(){
     currency: "NGN",
     payment_options: "card,ussd,banktransfer,opay",
     customer: { email: email, phone_number: phone, name: name },
-    customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery", logo: "https://y-mall.vercel.app/logo.png" },
+    customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery" },
     callback: async function(data){
       document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order...</span>';
       try{
-        const { data:prodData } = await supabaseClient.from('products').select('vendor_email').in('id', cart.map(c=>c.id)).limit(1);
-        const vendor_email = prodData && prodData[0]? prodData[0].vendor_email : 'agbemjames@gmail.com';
-        await supabaseClient.from('orders').insert([{
+        const orderData = {
           customer_name: name, customer_phone: phone, customer_address: addr,
           customer_email: email, total: total, total_amount: total,
-          delivery_fee: delivery, items: cart, vendor_email: vendor_email,
+          delivery_fee: delivery, items: cart, vendor_email: 'agbemjames@gmail.com',
           status: 'paid', payment_method: 'flutterwave',
-          transaction_id: data.transaction_id || tx_ref, tx_ref: tx_ref
-        }]);
+          transaction_id: String(data.transaction_id || tx_ref), tx_ref: tx_ref
+        };
+        const { error } = await supabaseClient.from('orders').insert([orderData]);
+        if(error){ document.getElementById('orderMsg').innerHTML='<span style="color:red">❌ '+error.message+'</span>'; alert(error.message); return; }
+        const waMsg = `🚨 NEW PAID ORDER - Lokoja Mall%0ARef: ${tx_ref}%0AName: ${name}%0APhone: ${phone}%0AAddr: ${addr}%0ATotal: ₦${total.toLocaleString()}%0AItems: ${cart.map(i=>i.name+' x'+i.qty).join(', ')}`;
+        window.open(`https://wa.me/2348104282311?text=${waMsg}`, '_blank');
         localStorage.removeItem('lgm_cart');
-        document.getElementById('orderMsg').innerHTML='<span style="color:green;font-weight:bold">✅ Paid! Order '+tx_ref+' saved.</span>';
-        setTimeout(()=>{ location.href='index.html'; },2000);
+        document.getElementById('orderMsg').innerHTML='<span style="color:green;font-weight:bold">✅ Paid! Saved as '+tx_ref+' - Opening Orders...</span>';
+        setTimeout(()=>{ window.location.href='vendor.html'; },1500);
       }catch(e){
-        document.getElementById('orderMsg').innerHTML='<span style="color:red">Paid but save failed: '+e.message+'</span>';
+        document.getElementById('orderMsg').innerHTML='<span style="color:red">❌ '+e.message+'</span>';
       }
     },
-    onclose: function(){ document.getElementById('orderMsg').innerText='Payment window closed'; }
+    onclose: function(){ document.getElementById('orderMsg').innerText='Payment closed'; }
   });
 }
 loadCart();
