@@ -12,6 +12,7 @@ h1{color:#16a34a;text-align:center}
 .tab{flex:1;padding:12px;border:2px solid #e5e7eb;border-radius:12px;text-align:center;cursor:pointer;font-weight:700;font-size:13px}
 .tab.active{background:#dcfce7;border-color:#16a34a;color:#16a34a}
 input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:12px}
+label{font-weight:600;font-size:14px;display:block;margin-bottom:4px}
 .btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
 .hidden{display:none}
 .small{font-size:12px;color:#6b7280;margin-top:-8px;margin-bottom:12px}
@@ -23,27 +24,31 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 <p style="text-align:center;color:#6b7280">I want to join as</p>
 
 <div class="tabs">
-  <div class="tab active" onclick="setRole('customer')">🛒<br>Customer</div>
-  <div class="tab" onclick="setRole('vendor')">🏪<br>Vendor</div>
-  <div class="tab" onclick="setRole('agent')">🚚<br>Delivery Agent</div>
+  <div class="tab active" id="tab-customer" onclick="setRole('customer')">🛒<br>Customer</div>
+  <div class="tab" id="tab-vendor" onclick="setRole('vendor')">🏪<br>Vendor</div>
+  <div class="tab" id="tab-agent" onclick="setRole('agent')">🚚<br>Delivery Agent</div>
 </div>
 
-<input id="name" placeholder="Full Name">
-<input id="location" placeholder="Area in Lokoja e.g Ganaja, Felele">
+<label>Full Name</label><input id="name" placeholder="Full Name">
+<label>Location in Lokoja</label>
+<select id="location">
+  <option>Ganaja</option><option>Felele</option><option>Zango</option><option>Adankolo</option>
+</select>
 
-<input id="address" placeholder="Home/Shop Address">
-<input id="busstop" placeholder="Nearest Bus Stop / Landmark">
+<label id="addressLabel">Home Address</label><input id="address" placeholder="Home Address">
+
+<label>Nearest Bus Stop / Landmark</label><input id="busstop" placeholder="e.g B243 Junction, NNPC">
 <p class="small">This helps delivery riders find you fast</p>
 
-<input id="phone" placeholder="WhatsApp Number 080...">
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
+<label>WhatsApp Number</label><input id="phone" placeholder="080...">
+<label>Email</label><input id="email" placeholder="Email">
+<label>Password</label><input id="password" type="password" placeholder="At least 6 characters">
 
 <div id="bankFields" class="hidden">
-  <h4 style="margin:0 0 8px 0">Bank Details for Payment</h4>
-  <input id="bank" placeholder="Bank Name">
-  <input id="account" placeholder="Account Number">
-  <input id="accountName" placeholder="Account Name">
+  <h4 style="margin:16px 0 8px 0">Bank Details for Payment</h4>
+  <label>Bank Name</label><input id="bank" placeholder="Bank Name">
+  <label>Account Number</label><input id="account" placeholder="Account Number">
+  <label>Account Name</label><input id="accountName" placeholder="Account Name">
 </div>
 
 <button class="btn" onclick="signup()">Continue</button>
@@ -59,9 +64,11 @@ let currentRole = 'customer';
 function setRole(role){
   currentRole = role;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  event.target.closest('.tab').classList.add('active');
+  document.getElementById('tab-'+role).classList.add('active');
   
-  document.getElementById('bankFields').classList.toggle('hidden', role==='customer');
+  const showBank = role!=='customer';
+  document.getElementById('bankFields').classList.toggle('hidden', !showBank);
+  document.getElementById('addressLabel').innerText = role==='customer' ? 'Home Address' : 'Shop Address';
   document.getElementById('address').placeholder = role==='customer' ? 'Home Address' : 'Shop Address';
 }
 
@@ -70,14 +77,14 @@ async function signup(){
     name: name.value, 
     location: location.value, 
     address: address.value,
-    busstop: busstop.value, // NEW FIELD
+    busstop: busstop.value,
     phone: phone.value, 
     email: email.value, 
     password: password.value,
     role: currentRole,
     bank: bank.value, 
     account: account.value, 
-    accountName: accountName.value
+    accountname: accountName.value
   };
   const {error} = await supabaseClient.from('users').insert(user);
   if(error) return alert(error.message);
