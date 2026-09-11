@@ -20,8 +20,9 @@
 </div>
 
 <script>
-const SUPABASE_URL="https://fkpzglifmsykztndlcyh.supabase.co";
-const SUPABASE_KEY="sb_publishable_WcXsHfmHAx8TgzyDUtlynw_Ri-OTJDk";
+// NEW LGM-PRODUCTION KEYS - FIXED
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function login(){
@@ -37,19 +38,21 @@ async function login(){
   if(error){ btn.disabled=false; btn.innerText="Login"; msg.innerText="❌ "+error.message; return; }
   if(!data || data.length===0){
     btn.disabled=false; btn.innerText="Login";
-    msg.innerText="❌ Wrong email or password. If you signed up before today, please Sign Up again (old data was wiped).";
+    msg.innerText="❌ Wrong email or password. Please Sign Up again.";
     return;
   }
   const user=data[0];
   if(user.is_approved===false){
     btn.disabled=false; btn.innerText="Login";
-    msg.innerText="⏳ Your account is PENDING approval. Admin will approve soon. Contact Admin on WhatsApp.";
+    msg.innerText="⏳ PENDING approval. Admin will approve soon.";
     return;
   }
-  // Save session
   localStorage.setItem('lgm_user', JSON.stringify(user));
   msg.innerText="✅ Login successful!";
-  setTimeout(()=>{ window.location.href='vendor.html'; }, 800);
+  setTimeout(()=>{
+    if(user.role==='admin') window.location.href='admin.html';
+    else window.location.href='vendor.html';
+  }, 800);
 }
 </script>
 </body>
