@@ -47,18 +47,19 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 <div id="list"></div>
 
 <script>
-const SUPABASE_URL = "https://jzlkoospzibvdigbkwkf.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6bGtvb3NwemlidmRpZ2Jrd2tmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxOTc0NjIsImV4cCI6MjEwMzc3MzQ2Mn0.F4xfurKdBQVvTSEMoBK6FPfGSZuBMMIf4YfpvZXZoFw";
+// NEW LGM-PRODUCTION KEYS
+const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let curUser=null; let imgUrl="";
 
-async function init(){
- const {data:{user}} = await supabaseClient.auth.getUser();
- if(!user) { location.href="login.html"; return; }
- curUser=user;
- document.getElementById('vName').innerText="Welcome, "+user.email.split('@')[0];
- document.getElementById('vEmail').innerText=user.email;
- load();
+function init(){
+  const saved = localStorage.getItem('lgm_user');
+  if(!saved){ location.href="login.html"; return; }
+  curUser = JSON.parse(saved);
+  document.getElementById('vName').innerText="Welcome, "+(curUser.name || curUser.full_name || curUser.email.split('@')[0]);
+  document.getElementById('vEmail').innerText=curUser.email + " • " + curUser.role;
+  load();
 }
 document.getElementById('pFile').addEventListener('change', async(e)=>{
  const f=e.target.files[0]; if(!f) return;
@@ -77,15 +78,21 @@ async function addProduct(){
  const cat=document.getElementById('pCat').value;
  if(!name||!price) return alert("Enter name & price");
  if(!imgUrl) return alert("Please choose image first!");
- const {error}=await supabaseClient.from('products').insert({name, price:Number(price), stock:Number(stock)||0, category:cat, image_url:imgUrl, vendor_id:curUser.id, vendor_email:curUser.email});
+ const {error}=await supabaseClient.from('products').insert({
+   name, price:Number(price), stock:Number(stock)||0, category:cat,
+   image: imgUrl, image_url: imgUrl,
+   vendor_id: curUser.id, vendor_email: curUser.email
+ });
  if(error) alert(error.message); else { alert("✅ Product added!"); imgUrl=""; document.getElementById('pName').value=""; document.getElementById('status').innerText=""; load(); }
 }
 async function load(){
- const {data}=await supabaseClient.from('products').select('*').eq('vendor_id',curUser.id).order('id',{ascending:false});
+ const {data}=await supabaseClient.from('products').select('*').eq('vendor_email',curUser.email).order('id',{ascending:false});
  document.getElementById('pCount').innerText=data?data.length:0;
- let h="<div class='small' style='margin:8px'>My Products (inside Products tab)</div>";
+ let h="<div class='small' style='margin:8px'>My Products</div>";
  if(!data||data.length==0) h+="<p class='small'>No products yet.</p>";
- else data.forEach(p=>{ h+=`<div class='card' style='display:flex;gap:10px;align-items:center'><img src='${p.image_url}' style='width:56px;height:56px;border-radius:10px;object-fit:cover'><div><b style='font-size:14px'>${p.name}</b><br><span class='small'>₦${p.price} • ${p.stock} left</span></div></div>` });
+ else data.forEach(p=>{
+   let img = p.image || p.image_url || '';
+   h+=`<div class='card' style='display:flex;gap:10px;align-items:center'><img src='${img}' style='width:56px;height:56px;border-radius:10px;object-fit:cover'><div><b style='font-size:14px'>${p.name}</b><br><span class='small'>₦${p.price} • ${p.stock} left</span></div></div>` });
  document.getElementById('list').innerHTML=h;
 }
 init();
