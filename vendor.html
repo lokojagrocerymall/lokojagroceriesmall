@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vendor Portal - Lokoja Grocery Mall</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -20,81 +19,95 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 </style>
 </head>
 <body>
-
-<div class="card"><b id="vName">Welcome...</b><div id="vEmail" class="small"></div><div class="small" style="color:green">✅ Approved Vendor • You keep 90%</div></div>
-
+<div class="card"><b id="vName">Welcome...</b><div id="vEmail" class="small"></div><div class="small" style="color:green">✅ Approved Vendor • You keep 90% • Operation Mon-Sat</div></div>
 <div class="stats">
 <div class="stat"><div class="small">Products</div><h2 id="pCount" style="margin:0">0</h2></div>
-<div class="stat"><div class="small">Orders</div><h2 style="margin:0;color:#2563eb">0</h2></div>
-<div class="stat wallet"><div class="small">Wallet</div><h2 style="margin:0">₦0</h2></div>
+<div class="stat"><div class="small">Orders</div><h2 id="oCount" style="margin:0;color:#2563eb">0</h2></div>
+<div class="stat wallet"><div class="small">Wallet (90%)</div><h2 id="wallet" style="margin:0">₦0</h2></div>
 </div>
-
-<div class="tabs"><span class="tab active">Products</span><span class="tab">Orders</span><span class="tab">Wallet</span><span class="tab">Shop</span></div>
-
+<div class="tabs"><span class="tab active">Products</span><span class="tab">Orders</span><span class="tab">Wallet</span></div>
 <div class="card">
-<h3 style="margin:0 0 10px">Add New Product - With Image Upload</h3>
+<h3 style="margin:0 0 10px">Add New Product</h3>
 <input id="pName" placeholder="Product Name e.g. White Garri 4L">
-<div style="display:flex;gap:8px"><input id="pPrice" placeholder="Price ₦"><input id="pStock" placeholder="Stock Qty"></div>
-<select id="pCat"><option>Others</option><option>Foodstuff</option><option>Provisions</option><option>Vegetables</option></select>
+<div style="display:flex;gap:8px"><input id="pPrice" type="number" placeholder="Price ₦"><input id="pStock" type="number" placeholder="Stock Qty"></div>
+<select id="pCat"><option>Foodstuff</option><option>Fruits & Vegetables</option><option>Meat & Fish</option><option>Drinks</option><option>Household</option><option>Baby</option><option>Others</option></select>
 <div class="upload">
-<b>🖼️ Product Image (Tap to choose from gallery)</b>
+<b>🖼️ Product Image</b>
 <input type="file" id="pFile" accept="image/*" style="margin-top:8px">
+<img id="preview" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin-top:8px;display:none">
 <div id="status" class="small" style="color:green;margin-top:6px"></div>
 </div>
-<button class="btn" onclick="addProduct()" style="margin-top:12px">Add Product</button>
+<button class="btn" onclick="addProduct()" style="margin-top:12px" id="addBtn">Add Product</button>
 </div>
-
 <div id="list"></div>
-
 <script>
-// NEW LGM-PRODUCTION KEYS
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let curUser=null; let imgUrl="";
 
 function init(){
-  const saved = localStorage.getItem('lgm_user');
-  if(!saved){ location.href="login.html"; return; }
-  curUser = JSON.parse(saved);
-  document.getElementById('vName').innerText="Welcome, "+(curUser.name || curUser.full_name || curUser.email.split('@')[0]);
-  document.getElementById('vEmail').innerText=curUser.email + " • " + curUser.role;
+  const saved = localStorage.getItem('lgm_user') || localStorage.getItem('lgm_vendor');
+  if(!saved){
+    // allow test vendor if not logged in
+    curUser = {id:'test-vendor', email:'vendor@test.com', name:'Test Vendor', role:'vendor'};
+    document.getElementById('vName').innerText="Welcome, Test Vendor (Login to save real email)";
+    document.getElementById('vEmail').innerText="vendor@test.com • test mode - go to login.html to login";
+  } else {
+    curUser = JSON.parse(saved);
+    document.getElementById('vName').innerText="Welcome, "+(curUser.name || curUser.full_name || curUser.email.split('@')[0]);
+    document.getElementById('vEmail').innerText=curUser.email + " • " + (curUser.role||'vendor');
+  }
   load();
 }
 document.getElementById('pFile').addEventListener('change', async(e)=>{
  const f=e.target.files[0]; if(!f) return;
+ const preview=document.getElementById('preview'); preview.src=URL.createObjectURL(f); preview.style.display='block';
  document.getElementById('status').innerText="Uploading to product-images...";
  const name=Date.now()+"-"+f.name.replace(/\s/g,'_');
- const {data, error}=await supabaseClient.storage.from('product-images').upload(name,f);
- if(error){ alert(error.message); document.getElementById('status').innerText=""; return; }
+ const {data, error}=await supabaseClient.storage.from('product-images').upload(name,f, {upsert:true});
+ if(error){ alert("Upload error: "+error.message+"\nMake sure bucket product-images exists and is public"); document.getElementById('status').innerText="❌ "+error.message; return; }
  const {data:u}=supabaseClient.storage.from('product-images').getPublicUrl(data.path);
  imgUrl=u.publicUrl;
  document.getElementById('status').innerText="✅ Uploaded! Ready to save.";
 });
 async function addProduct(){
- const name=document.getElementById('pName').value;
+ const name=document.getElementById('pName').value.trim();
  const price=document.getElementById('pPrice').value;
  const stock=document.getElementById('pStock').value;
  const cat=document.getElementById('pCat').value;
  if(!name||!price) return alert("Enter name & price");
- if(!imgUrl) return alert("Please choose image first!");
+ if(!imgUrl) return alert("Please choose image first - wait for ✅ Uploaded");
+ document.getElementById('addBtn').innerText="Saving...";
  const {error}=await supabaseClient.from('products').insert({
    name, price:Number(price), stock:Number(stock)||0, category:cat,
    image: imgUrl, image_url: imgUrl,
-   vendor_id: curUser.id, vendor_email: curUser.email
+   vendor_email: curUser.email,
+   vendor_id: curUser.id
  });
- if(error) alert(error.message); else { alert("✅ Product added!"); imgUrl=""; document.getElementById('pName').value=""; document.getElementById('status').innerText=""; load(); }
+ if(error){ alert("Error: "+error.message); document.getElementById('addBtn').innerText="Add Product"; }
+ else { alert("✅ Product added! It will show on homepage"); imgUrl=""; document.getElementById('pName').value=""; document.getElementById('pPrice').value=""; document.getElementById('pStock').value=""; document.getElementById('status').innerText=""; document.getElementById('preview').style.display='none'; document.getElementById('addBtn').innerText="Add Product"; load(); }
 }
 async function load(){
- const {data}=await supabaseClient.from('products').select('*').eq('vendor_email',curUser.email).order('id',{ascending:false});
- document.getElementById('pCount').innerText=data?data.length:0;
- let h="<div class='small' style='margin:8px'>My Products</div>";
- if(!data||data.length==0) h+="<p class='small'>No products yet.</p>";
- else data.forEach(p=>{
-   let img = p.image || p.image_url || '';
-   h+=`<div class='card' style='display:flex;gap:10px;align-items:center'><img src='${img}' style='width:56px;height:56px;border-radius:10px;object-fit:cover'><div><b style='font-size:14px'>${p.name}</b><br><span class='small'>₦${p.price} • ${p.stock} left</span></div></div>` });
+ const {data, error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false}).limit(50);
+ if(error){ document.getElementById('list').innerHTML="<p class='small' style='color:red'>Error: "+error.message+"</p>"; return; }
+ // show my products only if email matches, else show all
+ let my = data.filter(p=> (p.vendor_email||'').toLowerCase() === (curUser.email||'').toLowerCase());
+ let list = my.length>0? my : data;
+ document.getElementById('pCount').innerText=list.length;
+ let total=0; list.forEach(p=> total+= (Number(p.price)*Number(p.stock||0))*0.9 );
+ document.getElementById('wallet').innerText="₦"+Math.round(total).toLocaleString();
+ let h="<div class='small' style='margin:8px'>My Products ("+list.length+")</div>";
+ if(list.length==0) h+="<p class='small' style='padding:10px'>No products yet. Add your first product above - it will appear on homepage instantly!</p>";
+ else list.forEach(p=>{
+   let img = p.image || p.image_url || 'https://via.placeholder.com/100';
+   h+=`<div class='card' style='display:flex;gap:10px;align-items:center'><img src='${img}' style='width:56px;height:56px;border-radius:10px;object-fit:cover'><div style='flex:1'><b style='font-size:14px'>${p.name}</b><br><span class='small'>₦${Number(p.price).toLocaleString()} • ${p.stock} left • ${p.category||''}</span></div><button onclick="delProduct(${p.id})" style='background:#fee2e2;color:#dc2626;border:0;padding:6px 10px;border-radius:8px;font-size:12px'>Del</button></div>` });
  document.getElementById('list').innerHTML=h;
+ // orders count
+ const {data:orders}=await supabaseClient.from('orders').select('id');
+ document.getElementById('oCount').innerText=orders?orders.length:0;
 }
+async function delProduct(id){ if(!confirm('Delete product?')) return; await supabaseClient.from('products').delete().eq('id',id); load(); }
 init();
 </script>
 </body>
