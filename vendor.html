@@ -18,6 +18,7 @@
 .tab{padding-bottom:8px;color:#9ca3af;cursor:pointer;white-space:nowrap}.active{color:#16a34a;border-bottom:3px solid #16a34a}
 input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
 .btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
+.btn-sm{padding:8px 12px;border-radius:8px;border:0;font-weight:700;font-size:12px;cursor:pointer}
 .small{font-size:12px;color:#6b7280}
 .view{display:none}.view.active-view{display:block}
 .sales-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
@@ -26,7 +27,9 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 .status-on-the-way{background:#fef3c7;color:#92400e}
 .status-delivered{background:#dcfce7;color:#166534}
 .status-failed_delivery{background:#fee2e2;color:#dc2626}
-.product-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px}
+.product-item{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px}
+.product-item img{width:60px;height:60px;border-radius:8px;object-fit:cover}
+.withdraw-row{display:flex;gap:8px}
 </style>
 </head>
 <body>
@@ -47,6 +50,7 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 <span class="tab" id="tab-profile" onclick="setTab('profile')">Profile</span>
 </div>
 
+<!-- PRODUCTS TAB -->
 <div id="view-products" class="view active-view">
 <div class="card">
 <h3>Add New Product</h3>
@@ -55,12 +59,14 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 <input id="pPrice" type="number" placeholder="Price ₦">
 <input id="pStock" type="number" placeholder="Stock Qty">
 </div>
+<input id="pImage" type="file" accept="image/*">
 <select id="pCategory"><option>Foodstuff</option><option>Drinks</option><option>Household</option></select>
 <button class="btn" onclick="addProduct()">Add Product</button>
 </div>
 <div class="card"><h3>My Products</h3><div id="productList"></div></div>
 </div>
 
+<!-- ORDERS TAB -->
 <div id="view-orders" class="view">
 <div class="sales-grid">
 <div class="stat"><div class="small">Today Sales</div><b id="salesToday">₦0</b></div>
@@ -70,8 +76,23 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 <div class="card"><h3>📦 Customer Orders</h3><div id="ordersList" class="small">Loading orders...</div></div>
 </div>
 
-<div id="view-wallet" class="view"><div class="card"><h3>💰 My Wallet (90%)</h3><h1 id="walletBig" style="color:#16a34a">₦0</h1></div></div>
+<!-- WALLET TAB -->
+<div id="view-wallet" class="view">
+<div class="card">
+<h3>💰 My Wallet (90%)</h3>
+<h1 id="walletBig" style="color:#16a34a;margin:0">₦0</h1>
+<div class="small">Available for withdrawal</div>
+<hr>
+<h4>Withdraw to Bank</h4>
+<input id="wAccount" placeholder="Account Number">
+<input id="wBank" placeholder="Bank Name e.g. Opay, GTB">
+<input id="wAmount" type="number" placeholder="Amount to withdraw ₦">
+<button class="btn" onclick="requestWithdrawal()">Request Withdrawal</button>
+<div id="withdrawHistory" class="small" style="margin-top:12px"></div>
+</div>
+</div>
 
+<!-- PROFILE TAB -->
 <div id="view-profile" class="view"><div class="card"><h3>👤 My Profile</h3><input id="profName" placeholder="Full Name"><input id="profEmail" disabled><button class="btn" onclick="saveProfile()">Save</button></div></div>
 
 <script>
@@ -87,6 +108,7 @@ function setTab(name){
   document.getElementById('view-'+name).classList.add('active-view');
   if(name==='orders') loadOrders();
   if(name==='products') loadProducts();
+  if(name==='wallet') loadWallet();
 }
 function logout(){ localStorage.removeItem('lgm_user'); window.location.href='login.html'; }
 
@@ -94,13 +116,12 @@ async function init(){
   const saved = localStorage.getItem('lgm_user');
   curUser = saved ? JSON.parse(saved) : null;
   if(!curUser){ location.href='login.html'; return; }
-  
   document.getElementById('vName').innerText="Welcome, "+curUser.name;
   document.getElementById('vEmail').innerText=curUser.email;
   document.getElementById('vBadge').innerText="✅ Approved Vendor • You keep 90%";
   document.getElementById('profName').value=curUser.name;
   document.getElementById('profEmail').value=curUser.email;
-  loadProducts(); loadOrders();
+  loadProducts(); loadOrders(); loadWallet();
 }
 init();
 
@@ -109,54 +130,66 @@ async function loadProducts(){
   allProducts = data||[];
   document.getElementById('pCount').innerText=allProducts.length;
   let h=''; allProducts.forEach(p=>{
-    h+=`<div class="product-item"><div><b>${p.name}</b><div class="small">₦${Number(p.price).toLocaleString()} • Stock: ${p.stock}</div></div></div>`;
+    h+=`<div class="product-item">
+      <img src="${p.image_url || 'https://placehold.co/60x60/e5e7eb/6b7280?text=No+Img'}" alt="">
+      <div style="flex:1">
+        <b>${p.name}</b>
+        <div class="small">₦${Number(p.price).toLocaleString()} • Stock: ${p.stock}</div>
+        <button class="btn-sm" style="background:#2563eb;color:#fff;margin-top:4px" onclick="editProduct(${p.id})">Edit Price/Stock</button>
+      </div>
+    </div>`;
   });
   document.getElementById('productList').innerHTML = h || '<p class="small">No products yet</p>';
 }
 
 async function addProduct(){
+  const file = document.getElementById('pImage').files[0];
+  let image_url = '';
+  if(file){
+    const {data} = await supabaseClient.storage.from('products').upload(`${curUser.email}/${Date.now()}_${file.name}`, file);
+    image_url = SUPABASE_URL + '/storage/v1/object/public/products/' + data.path;
+  }
   const name=document.getElementById('pName').value;
   const price=document.getElementById('pPrice').value;
-  if(!name || !price) return alert('Fill all fields');
-  await supabaseClient.from('products').insert({name, price, stock:document.getElementById('pStock').value, category:document.getElementById('pCategory').value, vendor_email:curUser.email});
-  alert('Product Added!'); document.getElementById('pName').value=''; document.getElementById('pPrice').value='';
+  if(!name || !price) return alert('Fill name and price');
+  await supabaseClient.from('products').insert({name, price, stock:document.getElementById('pStock').value, category:document.getElementById('pCategory').value, vendor_email:curUser.email, image_url});
+  alert('Product Added!'); 
+  ['pName','pPrice','pStock','pImage'].forEach(id=>document.getElementById(id).value='');
+  loadProducts();
+}
+
+async function editProduct(id){
+  const newPrice = prompt('Enter new price ₦:');
+  const newStock = prompt('Enter new stock:');
+  if(newPrice) await supabaseClient.from('products').update({price:newPrice, stock:newStock}).eq('id',id);
   loadProducts();
 }
 
 async function loadOrders(){
- const {data, error}=await supabaseClient.from('orders').select('*').order('created_at',{ascending:false});
- if(error) return;
+ const {data} = await supabaseClient.from('orders').select('*').order('created_at',{ascending:false});
  allOrders = data.filter(o=> (o.vendor_email||'').toLowerCase()===curUser.email.toLowerCase());
- if(allOrders.length===0){ document.getElementById('ordersList').innerHTML="<p>📭 No orders yet.</p>"; }
- else {
-   let h=""; allOrders.forEach(o=>{
-     let cust = o.customer_name || '';
-     let items = Array.isArray(o.items)? o.items.map(i=>i.name+' x'+i.qty).join(', ') : '';
-     let status = o.status||'paid';
-     let statusClass = 'status-'+status;
-     let vendorBtn = ''; let countdown = '';
-
-     if(status === 'paid'){
-       vendorBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_phone}')" style="background:#2563eb;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">🚚 Start Delivery - 2hr Timer</button>`;
+ let h=""; allOrders.forEach(o=>{
+   let status = o.status||'paid';
+   let vendorBtn = ''; let countdown = '';
+   if(status === 'paid'){
+     vendorBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_phone}')" style="background:#2563eb;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">🚚 Start Delivery - 2hr Timer</button>`;
+   }
+   if(status === 'on the way' && o.delivery_started_at){
+     let end = new Date(o.delivery_started_at).getTime() + (2 * 60 * 60 * 1000);
+     let left = end - new Date().getTime();
+     if(left <= 0){ markFailed(o.id); }
+     else {
+       let hrs = Math.floor(left / 1000 / 60 / 60); let mins = Math.floor((left / 1000 / 60) % 60); let secs = Math.floor((left / 1000) % 60);
+       countdown = `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#d97706">⏰ Auto-Fail in: ${hrs}h ${mins}m ${secs}s</div>`;
      }
-     if(status === 'failed_delivery'){
-       vendorBtn = `<button disabled style="background:#d1d5db;color:#6b7280;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">❌ Delivery Failed - 2hr Expired</button>`;
-     }
-     if(status === 'on the way' && o.delivery_started_at){
-       let end = new Date(o.delivery_started_at).getTime() + (2 * 60 * 60 * 1000);
-       let left = end - new Date().getTime();
-       if(left <= 0){ markFailed(o.id); }
-       else {
-         let hrs = Math.floor(left / 1000 / 60 / 60); let mins = Math.floor((left / 1000 / 60) % 60); let secs = Math.floor((left / 1000) % 60);
-         countdown = `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#d97706">⏰ Auto-Fail in: ${hrs}h ${mins}m ${secs}s</div>`;
-       }
-     }
-     h+=`<div class='card'><div style="display:flex;justify-content:space-between"><b>Order #${o.id}</b><span class="status ${statusClass}">${status.replace('_',' ')}</span></div>
-     ₦${Number(o.total||0).toLocaleString()}<br><span class='small'>${cust} • ${o.customer_phone||''}<br>${items}<br>📍 ${o.customer_address||''}</span>${countdown}${vendorBtn}</div>`;
-   });
-   document.getElementById('ordersList').innerHTML=h;
- }
- 
+   }
+   if(status === 'failed_delivery'){
+     vendorBtn = `<button disabled style="background:#d1d5db;color:#6b7280;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">❌ Delivery Failed</button>`;
+   }
+   h+=`<div class='card'><div style="display:flex;justify-content:space-between"><b>Order #${o.id}</b><span class="status status-${status}">${status.replace('_',' ')}</span></div>
+   ₦${Number(o.total||0).toLocaleString()}<br><span class='small'>${o.customer_name} • ${o.customer_phone}<br>${o.customer_address}</span>${countdown}${vendorBtn}</div>`;
+ });
+ document.getElementById('ordersList').innerHTML=h || '<p>📭 No orders yet.</p>';
  document.getElementById('oCount').innerText=allOrders.length;
  let totalEarnings=0; allOrders.forEach(o=> totalEarnings += Number(o.total||0)*0.9);
  document.getElementById('wallet').innerText='₦'+Math.round(totalEarnings).toLocaleString();
@@ -165,17 +198,36 @@ async function loadOrders(){
 
 async function startDelivery(id, customerPhone){
   await supabaseClient.from('orders').update({ status: 'on the way', delivery_started_at: new Date().toISOString() }).eq('id',id);
-  sendWhatsApp(customerPhone, id, 'onway'); loadOrders();
+  sendWhatsApp(customerPhone, id); loadOrders();
 }
 async function markFailed(id){
   await supabaseClient.from('orders').update({status:'failed_delivery'}).eq('id',id); loadOrders();
 }
-function sendWhatsApp(phone, orderId, type='onway'){
+function sendWhatsApp(phone, orderId){
   if(!phone) return;
-  let msg = type==='onway' ? `Hi! Order #${orderId} is On The Way 🚚 Delivery within 2 hours from ${curUser.name}.` : `❌ Delivery Update: Order #${orderId} failed.`;
+  let msg = `Hi! Your LGM Order #${orderId} is On The Way 🚚 Delivery within 2 hours from ${curUser.name}.`;
   let formattedPhone = phone.startsWith('0') ? '234' + phone.slice(1) : phone;
   window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
+
+async function loadWallet(){
+  // Load withdrawal history
+  const {data} = await supabaseClient.from('withdrawals').select('*').eq('vendor_email', curUser.email).order('created_at',{ascending:false});
+  let h='<b>Withdrawal History:</b><br>';
+  data?.forEach(w=> h+=`₦${Number(w.amount).toLocaleString()} - ${w.status} - ${new Date(w.created_at).toLocaleDateString()}<br>`);
+  document.getElementById('withdrawHistory').innerHTML = h || 'No withdrawals yet';
+}
+
+async function requestWithdrawal(){
+  const amount = document.getElementById('wAmount').value;
+  const account = document.getElementById('wAccount').value;
+  const bank = document.getElementById('wBank').value;
+  if(!amount || !account || !bank) return alert('Fill all fields');
+  await supabaseClient.from('withdrawals').insert({vendor_email:curUser.email, amount, account_number:account, bank_name:bank, status:'pending'});
+  alert('Withdrawal request sent! Admin will approve in 24hrs');
+  document.getElementById('wAmount').value=''; loadWallet();
+}
+
 function saveProfile(){ alert('Profile Updated!') }
 setInterval(loadOrders, 5000);
 </script>
