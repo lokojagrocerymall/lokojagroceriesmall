@@ -1,76 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Cart - Lokoja Grocery Mall</title>
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cart - Lokoja Grocery Mall</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>body{font-family:system-ui;background:#f8fafc}</style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-<div class="bg-yellow-400 text-black text-center py-1.5 text-[11px] font-black">⏰ OPEN: Mon - Sat 8AM - 6PM • ⛔ Sunday CLOSED • 🚚 Delivery 5% (Customer pays)</div>
-<header class="bg-white shadow p-3 flex justify-between items-center sticky top-[28px] z-10">
+<body>
+<div style="background:#facc15;text-align:center;padding:7px;font-size:12px;font-weight:900">⏰ OPEN: Mon - Sat 8AM - 6PM • ⛔ Sunday CLOSED • 🚚 Delivery 5% (Customer pays)</div>
+<header class="bg-white p-4 flex justify-between items-center shadow-sm sticky top-0 z-10">
 <a href="index.html" class="font-black text-green-700">← Back to Shopping</a>
-<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">Cart</span>
+<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">Cart</span>
 </header>
+
 <div class="p-4 max-w-xl mx-auto">
-<div id="emptyDiv" class="text-center py-20">
-<div class="text-6xl mb-3">🛒</div>
-<p class="font-bold">Your cart is empty</p>
-<a href="index.html" class="inline-block mt-4 bg-green-600 text-white px-6 py-3 rounded-xl font-bold">Start Shopping</a>
+<div id="cartList" class="space-y-3"></div>
+
+<div class="bg-white rounded-2xl p-4 mt-4 shadow-sm">
+<div class="flex justify-between py-1"><span>Subtotal (<span id="subCount">0</span> items)</span><b id="subTotal">₦0</b></div>
+<div class="flex justify-between py-1 text-sm"><span>Delivery (Lokoja) <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px]">5%</span></span><b id="deliveryFee">₦0 (5%)</b></div>
+<div class="text-[11px] text-gray-400 flex justify-between"><span>Your delivery = 5% of subtotal</span><span>Vendor pays 10% to you</span></div>
+<div class="border-t mt-3 pt-3 flex justify-between text-lg font-black"><span>Total You Pay</span><span id="grandTotal" class="text-green-600">₦0</span></div>
+<div class="text-[10px] text-gray-400 text-right mt-1">Incl. 5% delivery • Vendors get 90%</div>
 </div>
-<div id="cartDiv" class="hidden">
-<div id="items"></div>
-<div class="bg-white rounded-2xl shadow p-4 mt-4">
-<div class="flex justify-between text-sm mb-2"><span>Subtotal (<span id="count">0</span> items)</span><b id="sub">₦0</b></div>
-<div class="flex justify-between text-sm mb-2"><span>Delivery (Lokoja) <span class="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded">5%</span></span><b id="delFee">₦0</b></div>
-<div class="flex justify-between text-[10px] text-gray-400 mb-2"><span>Your delivery = 5% of subtotal</span><span>Vendor pays 10% to you</span></div>
-<hr class="my-2">
-<div class="flex justify-between font-black text-lg"><span>Total You Pay</span><span id="total" class="text-green-700">₦0</span></div>
-<p class="text-[9px] text-gray-400 mt-1 text-right">Incl. 5% delivery • Vendors get 90%</p>
-</div>
-<div class="bg-white rounded-2xl shadow p-4 mt-4">
-<p class="font-black text-sm mb-2">Delivery Details</p>
-<input id="name" placeholder="Full Name" class="w-full border-2 p-3 rounded-xl mb-2 text-sm">
-<input id="phone" placeholder="Phone 080..." class="w-full border-2 p-3 rounded-xl mb-2 text-sm">
-<input id="addr" placeholder="Address e.g Ganaja" class="w-full border-2 p-3 rounded-xl mb-2 text-sm">
-<p id="sundayMsg" class="hidden text-[11px] font-bold text-red-600 bg-red-50 p-2 rounded-xl">⛔ We are CLOSED on Sunday! Operation Mon-Sat only. Come back tomorrow 🙏</p>
-</div>
-<button id="checkoutBtn" onclick="checkout()" class="w-full bg-green-600 text-white py-4 rounded-xl font-black mt-4">Checkout • Pay on Delivery</button>
-<p id="msg" class="text-center text-sm font-bold mt-3"></p>
+
+<div class="bg-white rounded-2xl p-4 mt-4 shadow-sm">
+<h3 class="font-black mb-3">Delivery Details</h3>
+<input id="custName" placeholder="Full Name" class="w-full border rounded-xl p-3 mb-2 text-sm">
+<input id="custPhone" placeholder="Phone e.g. 080..." class="w-full border rounded-xl p-3 mb-2 text-sm">
+<input id="custAddress" placeholder="Address in Lokoja" class="w-full border rounded-xl p-3 mb-2 text-sm">
+<select id="payMethod" class="w-full border rounded-xl p-3 mb-3 text-sm"><option value="pay_on_delivery">Pay on Delivery</option><option value="transfer">Bank Transfer</option></select>
+<button onclick="placeOrder()" id="orderBtn" class="w-full bg-green-600 text-white rounded-xl p-4 font-black">Place Order - Pay on Delivery</button>
+<div id="orderMsg" class="text-sm text-center mt-2"></div>
 </div>
 </div>
+
 <script>
-// ✅ NEW PROJECT KEYS - FIXED
-const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";const SUPABASE_ANON_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-function isSunday(){return new Date().getDay()===0;}
-function getCart(){return JSON.parse(localStorage.getItem('lgm_cart')||'[]');}
-function saveCart(c){localStorage.setItem('lgm_cart',JSON.stringify(c));}
-function load(){
-let cart=getCart();
-let emptyDiv=document.getElementById('emptyDiv');let cartDiv=document.getElementById('cartDiv');let sundayMsg=document.getElementById('sundayMsg');let btn=document.getElementById('checkoutBtn');
-if(cart.length===0){emptyDiv.classList.remove('hidden');cartDiv.classList.add('hidden');return;}
-emptyDiv.classList.add('hidden');cartDiv.classList.remove('hidden');
-if(isSunday()){sundayMsg.classList.remove('hidden');btn.disabled=true;btn.innerText='⛔ CLOSED on Sunday - Mon-Sat Only';btn.className='w-full bg-red-500 text-white py-4 rounded-xl font-black mt-4';}else{sundayMsg.classList.add('hidden');btn.disabled=false;btn.className='w-full bg-green-600 text-white py-4 rounded-xl font-black mt-4';}
-let itemsDiv=document.getElementById('items');itemsDiv.innerHTML='';let sub=0;let totalQty=0;
-cart.forEach((it,i)=>{sub+=it.price*it.qty;totalQty+=it.qty;let d=document.createElement('div');d.className='bg-white rounded-2xl shadow p-3 flex gap-3 mb-3';d.innerHTML=`<img src="${it.image||'https://via.placeholder.com/80'}" class="w-16 h-16 object-cover rounded-xl"><div class="flex-1"><p class="font-bold text-xs">${it.name}</p><p class="text-green-700 font-black text-xs">₦${Number(it.price).toLocaleString()}</p><div class="flex items-center gap-2 mt-2"><button onclick="chg(${i},-1)" class="w-7 h-7 bg-gray-100 rounded-full font-bold">-</button><span class="font-bold text-sm w-6 text-center">${it.qty}</span><button onclick="chg(${i},1)" class="w-7 h-7 bg-green-600 text-white rounded-full font-bold">+</button><span class="ml-auto font-bold text-xs">₦${(it.price*it.qty).toLocaleString()}</span></div></div><button onclick="del(${i})" class="text-red-400">✕</button>`;itemsDiv.appendChild(d);});
-let delivery=Math.round(sub*0.05);let total=sub+delivery;
-document.getElementById('count').innerText=totalQty;document.getElementById('sub').innerText='₦'+sub.toLocaleString();document.getElementById('delFee').innerText='₦'+delivery.toLocaleString()+' (5%)';document.getElementById('total').innerText='₦'+total.toLocaleString();if(!isSunday()){btn.innerText=`Checkout • Pay ₦${total.toLocaleString()} on Delivery`;}
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
+
+async function loadCart(){
+  const listDiv = document.getElementById('cartList');
+  if(cart.length===0){ listDiv.innerHTML='<div class="bg-white rounded-xl p-10 text-center text-gray-400">🛒 Cart empty<br><a href="index.html" class="text-green-600 font-bold">Go shopping</a></div>'; updateTotals(); return; }
+
+  // Fetch images for all cart items
+  try{
+    const ids = cart.map(c=>c.id);
+    const { data:products } = await supabaseClient.from('products').select('id,image,image_url').in('id', ids);
+    const imgMap = {};
+    (products||[]).forEach(p=>{ imgMap[p.id]=p.image||p.image_url||''; });
+    cart = cart.map(c=>({...c, image: c.image || imgMap[c.id] || ''}));
+  }catch(e){}
+
+  let html='';
+  cart.forEach((item, idx)=>{
+    const img = item.image? `<img src="${item.image}" class="w-16 h-16 rounded-lg object-cover bg-gray-100">` : `<div class="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">🛒</div>`;
+    html+=`<div class="bg-white rounded-xl p-3 flex gap-3 items-center shadow-sm">
+      ${img}
+      <div class="flex-1"><div class="font-bold text-sm">${item.name}</div><div class="text-green-600 font-bold text-sm">₦${Number(item.price).toLocaleString()}</div>
+      <div class="flex items-center gap-2 mt-1"><button onclick="changeQty(${idx},-1)" class="w-8 h-8 rounded-full bg-gray-100 font-bold">-</button><span class="w-6 text-center font-bold text-sm">${item.qty}</span><button onclick="changeQty(${idx},1)" class="w-8 h-8 rounded-full bg-green-600 text-white font-bold">+</button></div></div>
+      <div class="text-right"><div class="font-bold text-sm">₦${(item.price*item.qty).toLocaleString()}</div><button onclick="removeItem(${idx})" class="text-red-400 text-lg mt-1">✕</button></div>
+    </div>`;
+  });
+  listDiv.innerHTML=html;
+  updateTotals();
 }
-function chg(i,d){let c=getCart();c[i].qty=Math.max(1,c[i].qty+d);saveCart(c);load();}
-function del(i){let c=getCart();if(!confirm('Remove?'))return;c.splice(i,1);saveCart(c);load();}
-async function checkout(){
-if(isSunday()){alert('⛔ CLOSED on Sundays');return;}
-let n=document.getElementById('name').value.trim();let p=document.getElementById('phone').value.trim();let a=document.getElementById('addr').value.trim();
-if(!n||!p||!a){alert('Fill name phone address');return;}
-let cart=getCart();let sub=cart.reduce((s,it)=>s+it.price*it.qty,0);let delivery=Math.round(sub*0.05);let total=sub+delivery;
-document.getElementById('msg').innerText='⏳ Placing order...';document.getElementById('msg').className='text-center text-sm font-bold mt-3 text-yellow-600';
-try{
-// ✅ Works with your new orders table
-let {error}=await supabaseClient.from('orders').insert([{customer_name:n,customer_phone:p,total:total,items:cart,payment_ref:a+' | Sub:'+sub+' Del:5% '+delivery}]);
-if(error) throw error;
-document.getElementById('msg').innerText=`✅ Order placed! ₦${sub.toLocaleString()} + Delivery ₦${delivery.toLocaleString()} = ₦${total.toLocaleString()}. We will call ${p} soon!`;
-document.getElementById('msg').className='text-center text-sm font-bold mt-3 text-green-600';localStorage.removeItem('lgm_cart');setTimeout(()=>{location.href='index.html';},2500);
-}catch(e){document.getElementById('msg').innerText='⚠️ Error: '+e.message;document.getElementById('msg').className='text-center text-sm font-bold mt-3 text-red-600';}
+
+function updateTotals(){
+  let sub=0, count=0;
+  cart.forEach(i=>{ sub+=i.price*i.qty; count+=i.qty; });
+  const delivery = Math.round(sub*0.05);
+  const total = sub+delivery;
+  document.getElementById('subCount').innerText=count;
+  document.getElementById('subTotal').innerText='₦'+sub.toLocaleString();
+  document.getElementById('deliveryFee').innerText='₦'+delivery.toLocaleString()+' (5%)';
+  document.getElementById('grandTotal').innerText='₦'+total.toLocaleString();
+  localStorage.setItem('lgm_cart', JSON.stringify(cart));
 }
-load();
+
+function changeQty(idx, delta){
+  cart[idx].qty+=delta;
+  if(cart[idx].qty<=0) cart.splice(idx,1);
+  loadCart();
+}
+function removeItem(idx){ cart.splice(idx,1); loadCart(); }
+
+async function placeOrder(){
+  const name=document.getElementById('custName').value.trim();
+  const phone=document.getElementById('custPhone').value.trim();
+  const addr=document.getElementById('custAddress').value.trim();
+  if(!name||!phone||!addr) return alert('Fill name, phone, address');
+  if(cart.length===0) return alert('Cart empty');
+  document.getElementById('orderBtn').innerText='Placing...'; document.getElementById('orderBtn').disabled=true;
+  const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const delivery=Math.round(sub*0.05);
+  const total=sub+delivery;
+  try{
+    // Try to save order - group by vendor if needed, for now one order
+    const firstVendor = await supabaseClient.from('products').select('vendor_email').in('id', cart.map(c=>c.id)).limit(1);
+    const vendor_email = firstVendor.data && firstVendor.data[0]? firstVendor.data[0].vendor_email : 'agbemjames@gmail.com';
+    const { error } = await supabaseClient.from('orders').insert([{
+      customer_name: name, customer_phone: phone, customer_address: addr,
+      customer_email: name.replace(/\s/g,'')+'@customer.local',
+      total: total, total_amount: total,
+      delivery_fee: delivery,
+      items: cart,
+      vendor_email: vendor_email,
+      status: 'new',
+      payment_method: document.getElementById('payMethod').value,
+      created_at: new Date().toISOString()
+    }]);
+    if(error) throw error;
+    localStorage.removeItem('lgm_cart');
+    document.getElementById('orderMsg').innerHTML='<span style="color:green;font-weight:bold">✅ Order placed! Vendor will call you. Total: ₦'+total.toLocaleString()+'</span>';
+    setTimeout(()=>{ location.href='index.html'; },2000);
+  }catch(e){
+    document.getElementById('orderMsg').innerText='Error: '+e.message+' (Check orders table exists)';
+    document.getElementById('orderBtn').innerText='Place Order - Pay on Delivery'; document.getElementById('orderBtn').disabled=false;
+  }
+}
+
+loadCart();
 </script>
 </body>
 </html>
