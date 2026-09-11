@@ -10,7 +10,6 @@
 .nav{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .nav a,.nav button{padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;border:0;cursor:pointer}
 .nav-home{background:#fff;color:#16a34a;border:1px solid #e5e7eb!important}
-.nav-admin{background:#fff;color:#111;border:1px solid #e5e7eb!important}
 .nav-logout{background:#fee2e2;color:#dc2626}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .stat{background:#fff;padding:12px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
@@ -109,9 +108,28 @@ async function addProduct(){
  if(!name||!price) return alert("Enter name & price");
  if(!imgUrl) return alert("Please choose image first - wait for ✅ Uploaded");
  document.getElementById('addBtn').innerText="Saving...";
- const {error}=await supabaseClient.from('products').insert({name, price:Number(price), stock:Number(stock)||0, category:cat,image: imgUrl, image_url: imgUrl,vendor_email: curUser.email,vendor_id: curUser.id});
- if(error){ alert("Error: "+error.message); document.getElementById('addBtn').innerText="Add Product"; }
- else { alert("✅ Product added!"); imgUrl=""; document.getElementById('pName').value=""; document.getElementById('pPrice').value=""; document.getElementById('pStock').value=""; document.getElementById('status').innerText=""; document.getElementById('preview').style.display='none'; document.getElementById('addBtn').innerText="Add Product"; load(); }
+ const {error}=await supabaseClient.from('products').insert({
+   name,
+   price:Number(price),
+   stock:Number(stock)||0,
+   category:cat,
+   image: imgUrl,
+   vendor_email: curUser.email
+ });
+ if(error){
+   alert("Error: "+error.message);
+   document.getElementById('addBtn').innerText="Add Product";
+ } else {
+   alert("✅ Product added! It will show on homepage");
+   imgUrl="";
+   document.getElementById('pName').value="";
+   document.getElementById('pPrice').value="";
+   document.getElementById('pStock').value="";
+   document.getElementById('status').innerText="";
+   document.getElementById('preview').style.display='none';
+   document.getElementById('addBtn').innerText="Add Product";
+   load();
+ }
 }
 async function load(){
  const {data, error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false}).limit(100);
