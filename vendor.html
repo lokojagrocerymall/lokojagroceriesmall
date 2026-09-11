@@ -28,7 +28,7 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 .status-delivered{background:#dcfce7;color:#166534}
 .status-failed_delivery{background:#fee2e2;color:#dc2626}
 .product-item{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px}
-.product-item img{width:60px;height:60px;border-radius:8px;object-fit:cover}
+.product-item img{width:60px;height:60px;border-radius:8px;object-fit:cover;background:#f3f4f6}
 .withdraw-row{display:flex;gap:8px}
 </style>
 </head>
@@ -60,7 +60,18 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 <input id="pStock" type="number" placeholder="Stock Qty">
 </div>
 <input id="pImage" type="file" accept="image/*">
-<select id="pCategory"><option>Foodstuff</option><option>Drinks</option><option>Household</option></select>
+<select id="pCategory">
+  <option>Foodstuff</option>
+  <option>Drinks</option>
+  <option>Household</option>
+  <option>Meat & Fish</option>
+  <option>Grains</option>
+  <option>Spices & Seasoning</option>
+  <option>Oil & Condiments</option>
+  <option>Fruits & Vegetables</option>
+  <option>Beverages</option>
+  <option>Baby & Personal Care</option>
+</select>
 <button class="btn" onclick="addProduct()">Add Product</button>
 </div>
 <div class="card"><h3>My Products</h3><div id="productList"></div></div>
@@ -114,7 +125,7 @@ function logout(){ localStorage.removeItem('lgm_user'); window.location.href='lo
 
 async function init(){
   const saved = localStorage.getItem('lgm_user');
-  curUser = saved ? JSON.parse(saved) : null;
+  curUser = saved? JSON.parse(saved) : null;
   if(!curUser){ location.href='login.html'; return; }
   document.getElementById('vName').innerText="Welcome, "+curUser.name;
   document.getElementById('vEmail').innerText=curUser.email;
@@ -134,7 +145,7 @@ async function loadProducts(){
       <img src="${p.image_url || 'https://placehold.co/60x60/e5e7eb/6b7280?text=No+Img'}" alt="">
       <div style="flex:1">
         <b>${p.name}</b>
-        <div class="small">₦${Number(p.price).toLocaleString()} • Stock: ${p.stock}</div>
+        <div class="small">₦${Number(p.price).toLocaleString()} • Stock: ${p.stock} • ${p.category}</div>
         <button class="btn-sm" style="background:#2563eb;color:#fff;margin-top:4px" onclick="editProduct(${p.id})">Edit Price/Stock</button>
       </div>
     </div>`;
@@ -151,7 +162,7 @@ async function addProduct(){
   }
   const name=document.getElementById('pName').value;
   const price=document.getElementById('pPrice').value;
-  if(!name || !price) return alert('Fill name and price');
+  if(!name ||!price) return alert('Fill name and price');
   await supabaseClient.from('products').insert({name, price, stock:document.getElementById('pStock').value, category:document.getElementById('pCategory').value, vendor_email:curUser.email, image_url});
   alert('Product Added!'); 
   ['pName','pPrice','pStock','pImage'].forEach(id=>document.getElementById(id).value='');
@@ -168,6 +179,7 @@ async function editProduct(id){
 async function loadOrders(){
  const {data} = await supabaseClient.from('orders').select('*').order('created_at',{ascending:false});
  allOrders = data.filter(o=> (o.vendor_email||'').toLowerCase()===curUser.email.toLowerCase());
+ 
  let h=""; allOrders.forEach(o=>{
    let status = o.status||'paid';
    let vendorBtn = ''; let countdown = '';
@@ -191,9 +203,26 @@ async function loadOrders(){
  });
  document.getElementById('ordersList').innerHTML=h || '<p>📭 No orders yet.</p>';
  document.getElementById('oCount').innerText=allOrders.length;
- let totalEarnings=0; allOrders.forEach(o=> totalEarnings += Number(o.total||0)*0.9);
+ 
+ // WALLET = 90% of all non-failed orders
+ let totalEarnings=0; allOrders.filter(o=>o.status!=='failed_delivery').forEach(o=> totalEarnings += Number(o.total||0)*0.9);
  document.getElementById('wallet').innerText='₦'+Math.round(totalEarnings).toLocaleString();
  document.getElementById('walletBig').innerText='₦'+Math.round(totalEarnings).toLocaleString();
+ 
+ // SALES CALC: Count all orders except failed
+ const now=new Date(); const startDay=new Date(now); startDay.setHours(0,0,0,0); 
+ const startWeek=new Date(now); startWeek.setDate(now.getDate()-7); 
+ const startMonth=new Date(now); startMonth.setDate(1); startMonth.setHours(0,0,0,0);
+ let t=0,w=0,m=0;
+ allOrders.filter(o=>o.status!=='failed_delivery').forEach(o=>{ 
+   const d=new Date(o.created_at); const earn=Number(o.total||0)*0.9; 
+   if(d>=startDay) t+=earn; 
+   if(d>=startWeek) w+=earn; 
+   if(d>=startMonth) m+=earn; 
+ });
+ document.getElementById('salesToday').innerText='₦'+Math.round(t).toLocaleString();
+ document.getElementById('salesWeek').innerText='₦'+Math.round(w).toLocaleString();
+ document.getElementById('salesMonth').innerText='₦'+Math.round(m).toLocaleString();
 }
 
 async function startDelivery(id, customerPhone){
@@ -206,12 +235,11 @@ async function markFailed(id){
 function sendWhatsApp(phone, orderId){
   if(!phone) return;
   let msg = `Hi! Your LGM Order #${orderId} is On The Way 🚚 Delivery within 2 hours from ${curUser.name}.`;
-  let formattedPhone = phone.startsWith('0') ? '234' + phone.slice(1) : phone;
+  let formattedPhone = phone.startsWith('0')? '234' + phone.slice(1) : phone;
   window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 async function loadWallet(){
-  // Load withdrawal history
   const {data} = await supabaseClient.from('withdrawals').select('*').eq('vendor_email', curUser.email).order('created_at',{ascending:false});
   let h='<b>Withdrawal History:</b><br>';
   data?.forEach(w=> h+=`₦${Number(w.amount).toLocaleString()} - ${w.status} - ${new Date(w.created_at).toLocaleDateString()}<br>`);
@@ -222,7 +250,7 @@ async function requestWithdrawal(){
   const amount = document.getElementById('wAmount').value;
   const account = document.getElementById('wAccount').value;
   const bank = document.getElementById('wBank').value;
-  if(!amount || !account || !bank) return alert('Fill all fields');
+  if(!amount ||!account ||!bank) return alert('Fill all fields');
   await supabaseClient.from('withdrawals').insert({vendor_email:curUser.email, amount, account_number:account, bank_name:bank, status:'pending'});
   alert('Withdrawal request sent! Admin will approve in 24hrs');
   document.getElementById('wAmount').value=''; loadWallet();
