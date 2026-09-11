@@ -48,8 +48,9 @@ input, select { width:100%; padding:12px; border:1px solid #ddd; border-radius:1
 </div>
 
 <script>
-const SUPABASE_URL = 'https://fkpzglifmsykztndlcyh.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_WcXsHfmHAx8TgzyDUtlynw_Ri-OTJDk';
+// NEW LGM-PRODUCTION KEYS
+const SUPABASE_URL = 'https://yhfxmrpqaccbllszoxyf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let selectedRole = 'vendor';
@@ -84,14 +85,16 @@ async function signup(){
     email: email,
     password: password,
     name: name,
+    full_name: name,
     phone: phone,
     shop_address: shop,
+    shop_name: shop,
     location: location,
     bank_name: bank,
     account_number: accNo,
     account_name: accName,
-    shop_name: shop,
-    is_approved: false
+    role: selectedRole,
+    is_approved: selectedRole==='customer' ? true : false
   }]).select();
 
   if(error){
