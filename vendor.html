@@ -18,7 +18,7 @@
 .tab{padding-bottom:8px;color:#9ca3af;cursor:pointer;white-space:nowrap}.active{color:#16a34a;border-bottom:3px solid #16a34a}
 input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
 .btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
-.btn-sm{padding:8px 12px;border-radius:8px;border:0;font-weight:700;font-size:12px;cursor:pointer}
+.btn-sm{padding:8px 12px;border-radius:8px;border:0;font-weight:700;font-size:12px;cursor:pointer;margin-right:6px}
 .small{font-size:12px;color:#6b7280}
 .view{display:none}.view.active-view{display:block}
 .sales-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
@@ -29,7 +29,6 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 .status-failed_delivery{background:#fee2e2;color:#dc2626}
 .product-item{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px}
 .product-item img{width:60px;height:60px;border-radius:8px;object-fit:cover;background:#f3f4f6}
-.withdraw-row{display:flex;gap:8px}
 </style>
 </head>
 <body>
@@ -61,16 +60,10 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 </div>
 <input id="pImage" type="file" accept="image/*">
 <select id="pCategory">
-  <option>Foodstuff</option>
-  <option>Drinks</option>
-  <option>Household</option>
-  <option>Meat & Fish</option>
-  <option>Grains</option>
-  <option>Spices & Seasoning</option>
-  <option>Oil & Condiments</option>
-  <option>Fruits & Vegetables</option>
-  <option>Beverages</option>
-  <option>Baby & Personal Care</option>
+  <option>Foodstuff</option><option>Drinks</option><option>Household</option>
+  <option>Meat & Fish</option><option>Grains</option><option>Spices & Seasoning</option>
+  <option>Oil & Condiments</option><option>Fruits & Vegetables</option>
+  <option>Beverages</option><option>Baby & Personal Care</option>
 </select>
 <button class="btn" onclick="addProduct()">Add Product</button>
 </div>
@@ -146,7 +139,10 @@ async function loadProducts(){
       <div style="flex:1">
         <b>${p.name}</b>
         <div class="small">₦${Number(p.price).toLocaleString()} • Stock: ${p.stock} • ${p.category}</div>
-        <button class="btn-sm" style="background:#2563eb;color:#fff;margin-top:4px" onclick="editProduct(${p.id})">Edit Price/Stock</button>
+        <div style="margin-top:6px">
+          <button class="btn-sm" style="background:#2563eb;color:#fff" onclick="editProduct(${p.id})">Edit</button>
+          <button class="btn-sm" style="background:#dc2626;color:#fff" onclick="deleteProduct(${p.id}, '${p.name}')">Delete</button>
+        </div>
       </div>
     </div>`;
   });
@@ -164,7 +160,7 @@ async function addProduct(){
   const price=document.getElementById('pPrice').value;
   if(!name ||!price) return alert('Fill name and price');
   await supabaseClient.from('products').insert({name, price, stock:document.getElementById('pStock').value, category:document.getElementById('pCategory').value, vendor_email:curUser.email, image_url});
-  alert('Product Added!'); 
+  alert('Product Added!');
   ['pName','pPrice','pStock','pImage'].forEach(id=>document.getElementById(id).value='');
   loadProducts();
 }
@@ -176,10 +172,17 @@ async function editProduct(id){
   loadProducts();
 }
 
+async function deleteProduct(id, name){
+  if(!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  await supabaseClient.from('products').delete().eq('id',id);
+  alert('Product Deleted');
+  loadProducts();
+}
+
 async function loadOrders(){
  const {data} = await supabaseClient.from('orders').select('*').order('created_at',{ascending:false});
  allOrders = data.filter(o=> (o.vendor_email||'').toLowerCase()===curUser.email.toLowerCase());
- 
+
  let h=""; allOrders.forEach(o=>{
    let status = o.status||'paid';
    let vendorBtn = ''; let countdown = '';
@@ -203,22 +206,20 @@ async function loadOrders(){
  });
  document.getElementById('ordersList').innerHTML=h || '<p>📭 No orders yet.</p>';
  document.getElementById('oCount').innerText=allOrders.length;
- 
- // WALLET = 90% of all non-failed orders
+
  let totalEarnings=0; allOrders.filter(o=>o.status!=='failed_delivery').forEach(o=> totalEarnings += Number(o.total||0)*0.9);
  document.getElementById('wallet').innerText='₦'+Math.round(totalEarnings).toLocaleString();
  document.getElementById('walletBig').innerText='₦'+Math.round(totalEarnings).toLocaleString();
- 
- // SALES CALC: Count all orders except failed
- const now=new Date(); const startDay=new Date(now); startDay.setHours(0,0,0,0); 
- const startWeek=new Date(now); startWeek.setDate(now.getDate()-7); 
+
+ const now=new Date(); const startDay=new Date(now); startDay.setHours(0,0,0,0);
+ const startWeek=new Date(now); startWeek.setDate(now.getDate()-7);
  const startMonth=new Date(now); startMonth.setDate(1); startMonth.setHours(0,0,0,0);
  let t=0,w=0,m=0;
- allOrders.filter(o=>o.status!=='failed_delivery').forEach(o=>{ 
-   const d=new Date(o.created_at); const earn=Number(o.total||0)*0.9; 
-   if(d>=startDay) t+=earn; 
-   if(d>=startWeek) w+=earn; 
-   if(d>=startMonth) m+=earn; 
+ allOrders.filter(o=>o.status!=='failed_delivery').forEach(o=>{
+   const d=new Date(o.created_at); const earn=Number(o.total||0)*0.9;
+   if(d>=startDay) t+=earn;
+   if(d>=startWeek) w+=earn;
+   if(d>=startMonth) m+=earn;
  });
  document.getElementById('salesToday').innerText='₦'+Math.round(t).toLocaleString();
  document.getElementById('salesWeek').innerText='₦'+Math.round(w).toLocaleString();
