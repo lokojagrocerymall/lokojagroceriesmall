@@ -51,6 +51,8 @@ async function login(){
   msg.innerText="✅ Login successful!";
   setTimeout(()=>{
     if(user.role==='admin') window.location.href='admin.html';
+    else if(user.role==='customer') window.location.href='customer.html';
+    else if(user.role==='delivery') window.location.href='delivery-agent.html';
     else window.location.href='vendor.html';
   }, 800);
 }
