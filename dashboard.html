@@ -1,0 +1,11 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dashboard - LGM</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{font-family:system-ui;padding:20px;background:#f8fafc} .card{background:#fff;padding:16px;border-radius:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}</style></head><body>
+<div class="card"><h2>Dashboard</h2><p id="info"></p><button onclick="localStorage.clear();location.href='login.html'">Logout</button></div>
+<script>
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const u=JSON.parse(localStorage.getItem('lgm_user')||'{}');document.getElementById('info').innerText=u.email? u.email+' • '+u.role : 'Not logged in - go to login.html';
+if(!u.email) location.href='login.html';
+else if(u.role==='admin') location.href='admin.html';
+else if(u.role==='vendor') location.href='vendor.html';
+else if(u.role==='delivery') location.href='delivery-agent.html';
+else location.href='index.html';
+</script></body></html>
