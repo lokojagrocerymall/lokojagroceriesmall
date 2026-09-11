@@ -1,205 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vendor Portal - Lokoja Grocery Mall</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-*{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:12px}
-.card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:12px}
-.nav{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.nav a,.nav button{padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;border:0;cursor:pointer}
-.nav-home{background:#fff;color:#16a34a;border:1px solid #e5e7eb!important}
-.nav-logout{background:#fee2e2;color:#dc2626}
-.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.stat{background:#fff;padding:12px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-.wallet{background:#16a34a;color:#fff}
-.tabs{display:flex;gap:18px;border-bottom:1px solid #e5e7eb;margin:14px 0;font-weight:700;font-size:14px;overflow-x:auto}
-.tab{padding-bottom:8px;color:#9ca3af;cursor:pointer;white-space:nowrap}.active{color:#16a34a;border-bottom:3px solid #16a34a}
-input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
-.upload{border:2px dashed #86efac;background:#f0fdf4;padding:12px;border-radius:12px}
-.btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
-.small{font-size:12px;color:#6b7280}
-.view{display:none}.view.active-view{display:block}
-.btn-sm{padding:6px 10px;border-radius:8px;border:0;font-weight:700;font-size:11px;cursor:pointer;margin-bottom:4px;display:block;width:100%}
-.sales-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
-.status{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:800;text-transform:capitalize}
-.status-paid{background:#dbeafe;color:#1d4ed8}
-.status-on-the-way{background:#fef3c7;color:#92400e}
-.status-delivered{background:#dcfce7;color:#166534}
-</style>
-</head>
-<body>
-<div class="nav">
-<a href="index.html" class="nav-home">🏠 Store / Home</a>
-<button class="nav-logout" onclick="logout()">Logout</button>
-</div>
-<div class="card"><b id="vName">Welcome...</b><div id="vEmail" class="small"></div><div class="small" style="color:green">✅ Approved Vendor • You keep 90% • Operation Mon-Sat</div></div>
-<div class="stats">
-<div class="stat"><div class="small">Products</div><h2 id="pCount" style="margin:0">0</h2></div>
-<div class="stat"><div class="small">Orders</div><h2 id="oCount" style="margin:0;color:#2563eb">0</h2></div>
-<div class="stat wallet"><div class="small">Wallet (90%)</div><h2 id="wallet" style="margin:0">₦0</h2></div>
-</div>
-<div class="tabs">
-<span class="tab active" id="tab-products" onclick="setTab('products')">Products</span>
-<span class="tab" id="tab-orders" onclick="setTab('orders')">Orders</span>
-<span class="tab" id="tab-wallet" onclick="setTab('wallet')">Wallet</span>
-<span class="tab" id="tab-profile" onclick="setTab('profile')">Profile</span>
-</div>
-
-<div id="view-products" class="view active-view">
-<div class="card">
-<h3 style="margin:0 0 10px">Add New Product</h3>
-<input id="pName" placeholder="Product Name e.g. White Garri 4L">
-<div style="display:flex;gap:8px"><input id="pPrice" type="number" placeholder="Price ₦"><input id="pStock" type="number" placeholder="Stock Qty"></div>
-<select id="pCat"><option>Foodstuff</option><option>Fruits & Vegetables</option><option>Meat & Fish</option><option>Drinks</option><option>Household</option><option>Baby</option><option>Others</option></select>
-<div class="upload">
-<b>🖼️ Product Image</b>
-<input type="file" id="pFile" accept="image/*" style="margin-top:8px">
-<img id="preview" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin-top:8px;display:none">
-<div id="status" class="small" style="color:green;margin-top:6px"></div>
-</div>
-<button class="btn" onclick="addProduct()" style="margin-top:12px" id="addBtn">Add Product</button>
-</div>
-<div id="list"></div>
-</div>
-
-<div id="view-orders" class="view">
-<div class="sales-grid">
-<div class="stat"><div class="small">Today Sales (90%)</div><b id="salesToday">₦0</b></div>
-<div class="stat"><div class="small">This Week (90%)</div><b id="salesWeek">₦0</b></div>
-<div class="stat"><div class="small">This Month (90%)</div><b id="salesMonth">₦0</b></div>
-</div>
-<div class="card"><h3>📦 Customer Orders</h3><div id="ordersList" class="small">Loading orders...</div></div>
-</div>
-
-<div id="view-wallet" class="view">
-<div class="card"><h3>💰 My Wallet (90% Earnings)</h3><p class="small">You keep 90% of every PAID sale. Platform keeps 10%.</p><h1 id="walletBig" style="color:#16a34a">₦0</h1><div id="walletBreak" class="small"></div><a href="index.html" style="display:inline-block;margin-top:12px;padding:10px 14px;border:1px solid #e5e7eb;border-radius:10px;text-decoration:none;color:#16a34a">Go to Store →</a></div>
-<div class="card">
-<h3>🏦 Withdraw to Bank</h3>
-<input id="bankName" placeholder="Bank Name e.g. Opay, First Bank">
-<input id="acctNumber" placeholder="Account Number">
-<input id="acctName" placeholder="Account Name">
-<input id="withdrawAmt" type="number" placeholder="Amount to withdraw ₦">
-<button class="btn" onclick="requestWithdraw()">Request Withdrawal</button>
-<div class="small" style="text-align:center;margin-top:6px">Withdrawal reviewed within 24hrs Mon-Sat</div>
-</div>
-<div class="card"><h3>📜 Withdrawal History</h3><div id="withdrawList" class="small">No withdrawals yet.</div></div>
-</div>
-
-<div id="view-profile" class="view">
-<div class="card">
-<h3>👤 My Profile & Bank Details</h3>
-<label class="small"><b>Full Name</b></label><input id="profName">
-<label class="small"><b>Email</b></label><input id="profEmail" disabled style="background:#f3f4f6">
-<label class="small"><b>Phone / WhatsApp</b></label><input id="profPhone" placeholder="080...">
-<label class="small"><b>Store Name</b></label><input id="profStore" placeholder="e.g. James Foodstuff">
-<label class="small"><b>Store Address</b></label><input id="profAddress" placeholder="Felele, Lokoja">
-<div style="border-top:1px solid #e5e7eb;margin-top:12px;padding-top:12px"><b class="small">BANK FOR PAYOUT</b>
-<input id="profBank" placeholder="Bank Name" style="margin-top:8px">
-<input id="profAcctNum" placeholder="Account Number">
-<input id="profAcctName" placeholder="Account Name">
-</div>
-<button class="btn" onclick="saveProfile()">Save Profile</button>
-<div id="profMsg" class="small" style="text-align:center;margin-top:8px;color:green"></div>
-</div>
-</div>
-
-<script>
-const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let curUser=null; let imgUrl=""; let allMyProducts=[]; let allOrders=[];
-
-function setTab(name){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active-view'));
-  document.getElementById('view-'+name).classList.add('active-view');
-  if(name==='orders') loadOrders();
-  if(name==='wallet'){ loadWallet(); loadWithdrawals(); }
-  if(name==='profile') loadProfile();
-}
-function logout(){
-  localStorage.removeItem('lgm_user');localStorage.removeItem('lgm_vendor');localStorage.removeItem('user');
-  window.location.href='login.html';
-}
-function init(){
-  const saved = localStorage.getItem('lgm_user') || localStorage.getItem('lgm_vendor') || localStorage.getItem('user');
-  if(!saved){
-    curUser = {id:'test-vendor', email:'agbemjames@gmail.com', name:'James Agbem', role:'vendor'};
-  } else {
-    try{curUser = JSON.parse(saved);}catch{curUser={email:saved};}
-  }
-  document.getElementById('vName').innerText="Welcome, "+(curUser.name || curUser.full_name || curUser.email.split('@')[0]);
-  document.getElementById('vEmail').innerText=curUser.email + " • " + (curUser.role||'vendor');
-  document.getElementById('profEmail').value=curUser.email;
-  loadProfile();
-  load();
-}
-document.getElementById('pFile').addEventListener('change', async(e)=>{
- const f=e.target.files[0]; if(!f) return;
- const preview=document.getElementById('preview'); preview.src=URL.createObjectURL(f); preview.style.display='block';
- document.getElementById('status').innerText="Uploading...";
- const name=Date.now()+"-"+f.name.replace(/\s/g,'_');
- const {data, error}=await supabaseClient.storage.from('product-images').upload(name,f, {upsert:true});
- if(error){ document.getElementById('status').innerText="❌ "+error.message; return; }
- const {data:u}=supabaseClient.storage.from('product-images').getPublicUrl(data.path);
- imgUrl=u.publicUrl;
- document.getElementById('status').innerText="✅ Uploaded! Ready to save.";
-});
-async function addProduct(){
- const name=document.getElementById('pName').value.trim();
- const price=document.getElementById('pPrice').value;
- const stock=document.getElementById('pStock').value;
- const cat=document.getElementById('pCat').value;
- if(!name||!price) return alert("Enter name & price");
- if(!imgUrl) return alert("Please choose image first - wait for ✅ Uploaded");
- document.getElementById('addBtn').innerText="Saving...";
- const {error}=await supabaseClient.from('products').insert({
-   name, price:Number(price), stock:Number(stock)||0, stock_qty:Number(stock)||0, quantity:Number(stock)||0,
-   category:cat, image: imgUrl, vendor_email: curUser.email
- });
- if(error){
-   alert("Error: "+error.message);
-   document.getElementById('addBtn').innerText="Add Product";
- } else {
-   alert("✅ Product added!");
-   imgUrl=""; document.getElementById('pName').value=""; document.getElementById('pPrice').value=""; document.getElementById('pStock').value=""; document.getElementById('status').innerText=""; document.getElementById('preview').style.display='none'; document.getElementById('addBtn').innerText="Add Product"; load();
- }
-}
-async function load(){
- const {data, error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false}).limit(100);
- if(error) return;
- let my = data.filter(p=> (p.vendor_email||'').toLowerCase() === (curUser.email||'').toLowerCase());
- allMyProducts = my.length>0? my : data;
- document.getElementById('pCount').innerText=allMyProducts.length;
- document.getElementById('wallet').innerText="₦0 - loading...";
- let h="<div class='small' style='margin:8px'>My Products ("+allMyProducts.length+")</div>";
- if(allMyProducts.length==0) h+="<p class='small' style='padding:10px'>No products yet. Add your first product above!</p>";
- else allMyProducts.forEach(p=>{
-   let img = p.image || p.image_url || 'https://via.placeholder.com/100';
-   let st = p.stock_qty?? p.stock?? p.quantity?? 0;
-   h+=`<div class='card' style='display:flex;gap:10px;align-items:center'>
-   <img src='${img}' style='width:56px;height:56px;border-radius:10px;object-fit:cover'>
-   <div style='flex:1'><b style='font-size:14px'>${p.name}</b><br><span class='small'>₦${Number(p.price).toLocaleString()} • ${st} left • ${p.category||''}</span></div>
-   <div style='width:90px'>
-   <button onclick="editPrice(${p.id}, ${p.price}, '${p.name.replace(/'/g,'')}')" class='btn-sm' style='background:#dbeafe;color:#1d4ed8'>✏️ ₦${Number(p.price).toLocaleString()}</button>
-   <button onclick="editStock(${p.id}, ${st})" class='btn-sm' style='background:#fef3c7;color:#92400e'>Stock ${st}</button>
-   <button onclick="delProduct(${p.id})" class='btn-sm' style='background:#fee2e2;color:#dc2626'>Del</button>
-   </div></div>` });
- document.getElementById('list').innerHTML=h;
- loadOrdersCount();
- loadOrders();
-}
-async function loadOrdersCount(){
- const {data:orders}=await supabaseClient.from('orders').select('id, vendor_email');
- if(!orders) return;
- let my = orders.filter(o=>!o.vendor_email || o.vendor_email.toLowerCase()===curUser.email.toLowerCase());
- document.getElementById('oCount').innerText=my.length;
-}
-
-// UPDATED: Shows status + "Mark as Delivered" button for customer only
 async function loadOrders(){
  const {data, error}=await supabaseClient.from('orders').select('*').order('created_at',{ascending:false}).limit(100);
  if(error){ document.getElementById('ordersList').innerHTML="No orders yet"; return; }
@@ -212,133 +10,43 @@ async function loadOrders(){
      let status = o.status||'paid';
      let statusClass = 'status-'+status.replace(' ','-');
 
-     // BUTTON LOGIC: Only show if status is "on the way" AND current user is the customer
-     let deliverBtn = '';
+     let deliverBtn = ''; let countdown = '';
      if(status === 'on the way' && o.customer_email === curUser.email){
-       deliverBtn = `<button onclick="markDelivered(${o.id})" style="background:#16a34a;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">✓ Mark as Delivered</button>`;
+       deliverBtn = `<button onclick="markDelivered(${o.id})" style="background:#16a34a;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">✓ Mark as Delivered Now</button>`;
+     }
+     if(status === 'failed_delivery'){
+       deliverBtn = `<button disabled style="background:#d1d5db;color:#6b7280;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">❌ Delivery Failed - Contact Admin</button>`;
+     }
+     if(status === 'on the way' && o.delivery_started_at){
+       let start = new Date(o.delivery_started_at).getTime();
+       let end = start + (2 * 60 * 60 * 1000);
+       let left = end - new Date().getTime();
+       if(left <= 0){ markDelivered(o.id, true); } // auto fail
+       else {
+         let hrs = Math.floor(left / 1000 / 60 / 60);
+         let mins = Math.floor((left / 1000 / 60) % 60);
+         let secs = Math.floor((left / 1000) % 60);
+         countdown = `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#d97706">⏰ Auto-Fail in: ${hrs}h ${mins}m ${secs}s</div>`;
+       }
      }
 
      h+=`<div class='card'>
        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-         <b>Order #${o.id}</b>
-         <span class="status ${statusClass}">${status}</span>
+         <b>Order #${o.id}</b><span class="status ${statusClass}">${status.replace('_',' ')}</span>
        </div>
-       ₦${Number(o.total||o.total_amount||0).toLocaleString()}<br>
-       <span class='small'>${cust} • ${o.customer_phone||''}<br>${items}<br>📍 ${o.customer_address||''}<br>${new Date(o.created_at).toLocaleString()} • Ref: ${o.tx_ref||''}</span>
-       ${deliverBtn}
+       ₦${Number(o.total||0).toLocaleString()}<br>
+       <span class='small'>${cust} • ${o.customer_phone||''}<br>${items}<br>📍 ${o.customer_address||''}<br>${new Date(o.created_at).toLocaleString()}</span>
+       ${countdown}${deliverBtn}
      </div>`;
    });
    document.getElementById('ordersList').innerHTML=h;
  }
- const now=new Date(); const startDay=new Date(now); startDay.setHours(0,0,0,0); const startWeek=new Date(now); startWeek.setDate(now.getDate()-7); const startMonth=new Date(now); startMonth.setDate(1); startMonth.setHours(0,0,0,0);
- let t=0,w=0,m=0,totalEarnings=0;
- allOrders.forEach(o=>{ const d=new Date(o.created_at); const amt=Number(o.total||o.total_amount||0); const earn=amt*0.9; totalEarnings+=earn; if(d>=startDay) t+=earn; if(d>=startWeek) w+=earn; if(d>=startMonth) m+=earn; });
- document.getElementById('salesToday').innerText='₦'+Math.round(t).toLocaleString();
- document.getElementById('salesWeek').innerText='₦'+Math.round(w).toLocaleString();
- document.getElementById('salesMonth').innerText='₦'+Math.round(m).toLocaleString();
- document.getElementById('oCount').innerText=allOrders.length;
- document.getElementById('wallet').innerText='₦'+Math.round(totalEarnings).toLocaleString();
- document.getElementById('walletBig').innerText='₦'+Math.round(totalEarnings).toLocaleString();
- loadWallet();
+ //... keep your sales calculation code
 }
 
-// NEW FUNCTION: Customer clicks this
-async function markDelivered(orderId){
-  if(!confirm('Confirm you have received this order?')) return;
+async function markDelivered(orderId, isAuto=false){
+  if(!isAuto &&!confirm('Confirm you have received this order?')) return;
   const {error} = await supabaseClient.from('orders').update({status:'delivered'}).eq('id', orderId);
-  if(error) alert('Error: '+error.message);
-  else {
-    alert('✅ Thank you! Order marked as Delivered');
-    loadOrders();
-  }
+  if(!isAuto) alert('✅ Order marked as Delivered');
+  loadOrders();
 }
-
-function loadWallet(){
- let stockValue=0; let items=0;
- allMyProducts.forEach(p=>{
-   let st = p.stock_qty?? p.stock?? p.quantity?? 0;
-   stockValue+= Number(p.price)*Number(st); items+=Number(st);
- });
- let realEarnings=0;
- allOrders.forEach(o=>{ realEarnings += Number(o.total||o.total_amount||0)*0.9; });
- document.getElementById('walletBreak').innerHTML=`
-   <b>Real Earnings (90%): ₦${Math.round(realEarnings).toLocaleString()}</b><br><hr style='margin:8px 0'>
-   Stock Value (for restock): ₦${stockValue.toLocaleString()}<br>
-   Items in stock: ${items}<br>
-   <span style='font-size:10px'>Stock value is separate - not your earnings.</span>`;
-}
-
-async function editPrice(id, oldPrice, name){
-  let np = prompt(`Change PRICE for:\n${name}\nCurrent: ₦${Number(oldPrice).toLocaleString()}\n\nEnter NEW price:`, oldPrice);
-  if(np===null) return;
-  np = Number(np.replace(/,/g,'').trim());
-  if(isNaN(np) || np<=0) return alert('Invalid price');
-  const {error} = await supabaseClient.from('products').update({ price: np }).eq('id', id);
-  if(error) alert('Error: '+error.message);
-  else { alert('✅ Price updated to ₦'+np.toLocaleString()); load(); }
-}
-async function editStock(id, oldStock){
-  let ns = prompt(`Update STOCK remaining:\nCurrent: ${oldStock}\nEnter new qty:`, oldStock);
-  if(ns===null) return;
-  ns = Number(ns);
-  if(isNaN(ns) || ns<0) return alert('Invalid stock');
-  const {error} = await supabaseClient.from('products').update({ stock: ns, stock_qty: ns, quantity: ns }).eq('id', id);
-  if(error) alert('Error: '+error.message);
-  else { alert('✅ Stock updated to '+ns); load(); }
-}
-async function delProduct(id){ if(!confirm('Delete this product?')) return; await supabaseClient.from('products').delete().eq('id',id); load(); }
-
-async function loadWithdrawals(){
-  try{
-    const {data} = await supabaseClient.from('withdrawals').select('*').eq('vendor_email', curUser.email).order('created_at',{ascending:false}).limit(20);
-    if(data && data.length>0){
-      let h=''; data.forEach(w=>{ h+=`<div style='display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6'><span>₦${Number(w.amount).toLocaleString()} • ${w.bank_name} • ${w.status}</span><span class='small'>${new Date(w.created_at).toLocaleDateString()}</span></div>`; });
-      document.getElementById('withdrawList').innerHTML=h; return;
-    }
-  }catch(e){}
-  const localW = JSON.parse(localStorage.getItem('lgm_withdrawals_'+curUser.email)||'[]');
-  if(localW.length===0) document.getElementById('withdrawList').innerHTML='No withdrawals yet.';
-  else { let h=''; localW.forEach(w=>{ h+=`<div style='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee'><span>₦${Number(w.amount).toLocaleString()} • ${w.bank}</span><span class='small'>${w.date} - ${w.status}</span></div>`; }); document.getElementById('withdrawList').innerHTML=h; }
-}
-async function requestWithdraw(){
-  const bankName=document.getElementById('bankName').value.trim();
-  const acctNum=document.getElementById('acctNumber').value.trim();
-  const acctName=document.getElementById('acctName').value.trim();
-  const amt=Number(document.getElementById('withdrawAmt').value);
-  if(!bankName||!acctNum||!acctName||!amt) return alert('Fill all bank fields and amount');
-  if(!confirm(`Request ₦${amt.toLocaleString()} to ${bankName} - ${acctNum} (${acctName})?`)) return;
-  const rec={ vendor_email: curUser.email, bank_name: bankName, account_number: acctNum, account_name: acctName, amount: amt, status: 'pending', created_at: new Date().toISOString() };
-  try{ const {error}=await supabaseClient.from('withdrawals').insert([rec]); if(error) throw error; }catch(e){
-    const localW=JSON.parse(localStorage.getItem('lgm_withdrawals_'+curUser.email)||'[]');
-    localW.unshift({ bank: bankName, amount: amt, status: 'pending', date: new Date().toLocaleDateString() });
-    localStorage.setItem('lgm_withdrawals_'+curUser.email, JSON.stringify(localW));
-  }
-  alert('✅ Withdrawal request sent! Admin pays within 24hrs Mon-Sat');
-  document.getElementById('withdrawAmt').value=''; loadWithdrawals();
-}
-
-function loadProfile(){
-  const saved=JSON.parse(localStorage.getItem('lgm_profile_'+curUser.email)||'{}');
-  document.getElementById('profName').value=saved.name || curUser.name || '';
-  document.getElementById('profPhone').value=saved.phone||'';
-  document.getElementById('profStore').value=saved.store||'';
-  document.getElementById('profAddress').value=saved.address||'';
-  document.getElementById('profBank').value=saved.bank||'';
-  document.getElementById('profAcctNum').value=saved.acctNum||'';
-  document.getElementById('profAcctName').value=saved.acctName||'';
-  if(saved.bank) document.getElementById('bankName').value=saved.bank;
-  if(saved.acctNum) document.getElementById('acctNumber').value=saved.acctNum;
-  if(saved.acctName) document.getElementById('acctName').value=saved.acctName;
-  if(saved.name) document.getElementById('vName').innerText='Welcome, '+saved.name;
-}
-function saveProfile(){
-  const p={ name: document.getElementById('profName').value.trim(), phone: document.getElementById('profPhone').value.trim(), store: document.getElementById('profStore').value.trim(), address: document.getElementById('profAddress').value.trim(), bank: document.getElementById('profBank').value.trim(), acctNum: document.getElementById('profAcctNum').value.trim(), acctName: document.getElementById('profAcctName').value.trim() };
-  localStorage.setItem('lgm_profile_'+curUser.email, JSON.stringify(p));
-  document.getElementById('bankName').value=p.bank; document.getElementById('acctNumber').value=p.acctNum; document.getElementById('acctName').value=p.acctName;
-  document.getElementById('vName').innerText='Welcome, '+(p.name||curUser.email);
-  document.getElementById('profMsg').innerText='✅ Profile saved! Bank details synced to Withdrawal.'; setTimeout(()=>document.getElementById('profMsg').innerText='',3000);
-}
-init();
-</script>
-</body>
-</html>
