@@ -1,139 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Browse Products - LGM</title>
-<link rel="stylesheet" href="style.css">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Browse Products - LGM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.tab.active{background:#16a34a;color:white;border-color:#16a34a}
+.filter-panel{display:none}.filter-panel.active{display:block}
+.location-list{max-height:200px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px}
+</style>
 </head>
-<body>
-
-<header class="app-header">
-  <div class="brand">
-    <div class="logo"><img src="logo.png" alt="LGM"></div>
-    <span>Lokoja Grocery Mall</span>
-  </div>
-  <div class="header-icons">
-    <a href="cart.html">🛒</a>
-    <span onclick="toggleMenu()">☰</span>
-  </div>
+<body class="bg-gray-50 min-h-screen">
+<header class="bg-white shadow p-3 flex justify-between items-center sticky top-0 z-20">
+<div class="flex items-center gap-2"><img src="logo.png" onerror="this.src='https://via.placeholder.com/40?text=LGM'" class="w-8 h-8 rounded"><span class="font-black text-green-700 text-sm">Lokoja Grocery Mall</span></div>
+<div class="flex gap-3 text-xl"><a href="cart.html" class="relative">🛒<span id="cartCount" class="absolute -top-2 -right-2 bg-green-600 text-white text-[10px] rounded-full px-1.5">0</span></a><span onclick="document.getElementById('sideMenu').classList.toggle('hidden')" class="cursor-pointer">☰</span></div>
 </header>
+<div id="sideMenu" class="hidden bg-white shadow p-4 absolute right-0 top-[52px] w-56 z-10 rounded-bl-2xl"><a href="index.html" class="block py-2 font-bold text-sm">🏠 Home</a><a href="brows.html" class="block py-2 text-sm bg-green-50 rounded px-2">🛍️ Browse</a><a href="vendor.html" class="block py-2 text-sm">🏪 Vendor</a><a href="admin.html" class="block py-2 text-sm">👑 Admin</a></div>
 
-<div id="sideMenu" class="side-menu">
-  <a href="index.html">Home</a>
-  <a href="browse.html">Browse</a>
-  <a href="vendors.html">Vendors</a>
-  <a href="login.html" class="btn-primary" style="margin:15px">Sign In / Sign Up</a>
+<div class="p-3 max-w-6xl mx-auto">
+<div class="flex gap-2 mb-3"><div class="flex-1 relative"><input id="searchInput" placeholder="Search rice, yam, oil..." class="w-full p-3 pl-10 border-2 rounded-xl text-sm"><span class="absolute left-3 top-3.5 text-sm">🔍</span></div><button onclick="toggleFilters()" class="px-4 bg-green-50 border border-green-600 text-green-700 rounded-xl font-bold text-xs">⚙️ Filters</button></div>
+
+<div class="flex gap-2 overflow-x-auto pb-2 mb-3 text-xs font-bold whitespace-nowrap">
+<button onclick="filterCat('All')" id="catAll" class="tab active px-4 py-2 rounded-full border bg-white">All</button>
+<button onclick="filterCat('Fruits')" class="tab px-4 py-2 rounded-full border bg-white">Fruits & Veg</button>
+<button onclick="filterCat('Meat')" class="tab px-4 py-2 rounded-full border bg-white">Meat & Fish</button>
+<button onclick="filterCat('Foodstuff')" class="tab px-4 py-2 rounded-full border bg-white">Foodstuff</button>
+<button onclick="filterCat('Drinks')" class="tab px-4 py-2 rounded-full border bg-white">Drinks</button>
+<button onclick="filterCat('Household')" class="tab px-4 py-2 rounded-full border bg-white">Household</button>
+<button onclick="filterCat('Baby')" class="tab px-4 py-2 rounded-full border bg-white">Baby</button>
 </div>
 
-<main class="container">
-  <!-- SEARCH + FILTER BUTTON -->
-  <div style="display:flex;gap:10px;margin:15px 0">
-    <div style="flex:1;position:relative">
-      <input type="text" placeholder="Search products..." style="width:100%;padding:12px 12px 12px 40px;border:1px solid #ddd;border-radius:10px">
-      <span style="position:absolute;left:12px;top:12px">🔍</span>
-    </div>
-    <button onclick="toggleFilters()" style="padding:12px 16px;background:#f0fdf4;border:1px solid #16a34a;color:#16a34a;border-radius:10px;font-weight:700">⚙️ Filters</button>
-  </div>
+<div class="flex justify-between items-center mb-3"><span id="count" class="text-xs text-gray-500">0 products</span><select id="sortSelect" onchange="sortProducts()" class="border p-2 rounded-xl text-xs"><option value="newest">Newest</option><option value="low">Price Low-High</option><option value="high">Price High-Low</option></select></div>
 
-  <!-- CATEGORY TABS -->
-  <div class="category-tabs">
-    <button class="tab active">All</button>
-    <button class="tab">Fruits & Vegetables</button>
-    <button class="tab">Meat & Fish</button>
-    <button class="tab">Foodstuff</button>
-    <button class="tab">Drinks</button>
-    <button class="tab">Household</button>
-    <button class="tab">Baby</button>
-  </div>
+<div id="filterPanel" class="filter-panel bg-white rounded-2xl shadow p-4 mb-4">
+<div class="flex justify-between mb-3"><h4 class="font-black text-sm">Filters</h4><span onclick="clearFilters()" class="text-green-600 text-xs cursor-pointer font-bold">Clear all</span></div>
+<h5 class="text-[11px] font-black mb-2">PRICE RANGE</h5>
+<div class="flex gap-2 mb-4"><input id="minPrice" type="number" placeholder="Min ₦" class="flex-1 p-2.5 border-2 rounded-xl text-xs"><span class="py-2">—</span><input id="maxPrice" type="number" placeholder="Max ₦" class="flex-1 p-2.5 border-2 rounded-xl text-xs"><button onclick="applyPrice()" class="bg-green-600 text-white px-4 rounded-xl text-xs font-bold">Go</button></div>
+<h5 class="text-[11px] font-black mb-2">LOCATION IN LOKOJA</h5>
+<div class="location-list" id="locList">
+<label><input type="checkbox" value="Ganaja"> Ganaja</label><label><input type="checkbox" value="Adankolo"> Adankolo</label><label><input type="checkbox" value="Felele"> Felele</label><label><input type="checkbox" value="Phase 2"> Phase 2</label><label><input type="checkbox" value="Phase 1"> Phase 1</label><label><input type="checkbox" value="Old Market"> Old Market</label><label><input type="checkbox" value="Kpata"> Kpata Market</label><label><input type="checkbox" value="FUL"> FUL</label><label><input type="checkbox" value="Zone 8"> Zone 8</label><label><input type="checkbox" value="Nataco"> Nataco</label>
+</div>
+</div>
 
-  <!-- SORT + COUNT -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin:15px 0">
-    <span style="color:#666;font-size:13px">0 products found</span>
-    <select id="sortSelect" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px">
-      <option>Newest</option>
-      <option>Price: Low to High</option>
-      <option>Price: High to Low</option>
-      <option>Top Rated</option>
-    </select>
-  </div>
+<div id="grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"><p class="col-span-full text-center text-xs text-gray-400 py-10">Loading products...</p></div>
+</div>
 
-  <!-- FILTER DROPDOWN -->
-  <div id="filterPanel" class="filter-panel">
-    <div style="display:flex;justify-content:space-between;margin-bottom:15px">
-      <h4>Filters</h4>
-      <span onclick="clearFilters()" style="color:#16a34a;font-size:13px;cursor:pointer">Clear all</span>
-    </div>
-    
-    <h5>PRICE RANGE</h5>
-    <div style="display:flex;gap:8px;margin-bottom:15px">
-      <input type="number" placeholder="Min" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px">
-      <span>—</span>
-      <input type="number" placeholder="Max" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px">
-    </div>
-
-    <h5>LOCATION IN LOKOJA</h5>
-    <div class="location-list">
-      <label><input type="checkbox"> Jimgbe</label>
-      <label><input type="checkbox"> Ganaja</label>
-      <label><input type="checkbox"> Ibaji Qtrs</label>
-      <label><input type="checkbox"> Gadumo/Anebo Qtrs</label>
-      <label><input type="checkbox"> Old Poly Qtrs</label>
-      <label><input type="checkbox"> Kabba Junction</label>
-      <label><input type="checkbox"> Zango</label>
-      <label><input type="checkbox"> Barracks/Shetima/Otokiti</label>
-      <label><input type="checkbox"> Zone 8</label>
-      <label><input type="checkbox"> Phase 2</label>
-      <label><input type="checkbox"> Phase 1</label>
-      <label><input type="checkbox"> Ganaja Junction</label>
-      <label><input type="checkbox"> Specialist Hospital/Deeper Life</label>
-      <label><input type="checkbox"> Government House/Zenith Bank</label>
-      <label><input type="checkbox"> Adankolo Newlayout</label>
-      <label><input type="checkbox"> Hydro Junction</label>
-      <label><input type="checkbox"> Adankolo Junction/Adankolo</label>
-      <label><input type="checkbox"> Post Office</label>
-      <label><input type="checkbox"> NUJ</label>
-      <label><input type="checkbox"> NEPA Office/Baptist Church</label>
-      <label><input type="checkbox"> Crusher</label>
-      <label><input type="checkbox"> FUL</label>
-      <label><input type="checkbox"> Felele</label>
-      <label><input type="checkbox"> Poly</label>
-      <label><input type="checkbox"> Nataco</label>
-      <label><input type="checkbox"> Int'l Market</label>
-      <label><input type="checkbox"> Como</label>
-      <label><input type="checkbox"> Kabawa</label>
-      <label><input type="checkbox"> Maigeri Palace</label>
-      <label><input type="checkbox"> Karaworo</label>
-      <label><input type="checkbox"> Old Market</label>
-      <label><input type="checkbox"> Kpata Market</label>
-      <label><input type="checkbox"> Marine</label>
-      <label><input type="checkbox"> Kogi Traveler</label>
-    </div>
-  </div>
-
-  <div style="text-align:center;padding:40px 0;color:#888">
-    <div style="font-size:40px">🏪</div>
-    <p>No products yet. Add products from vendor dashboard</p>
-  </div>
-</main>
-
-<footer class="app-footer-dark">
-  <div class="container">
-    <div class="footer-brand">
-      <div class="logo"><img src="logo.png" alt="LGM"></div>
-      <span>Lokoja Grocery Mall</span>
-    </div>
-    <p>Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State.</p>
-    <div class="footer-bottom">
-      <p>© 2026 Lokoja Grocery Mall. All rights reserved.</p>
-    </div>
-  </div>
-</footer>
+<!-- CART MODAL -->
+<div id="cartModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-end justify-center"><div class="bg-white w-full md:max-w-sm rounded-t-[24px] p-5"><div class="flex gap-3 mb-4"><img id="mImage" class="w-20 h-20 object-cover rounded-xl"><div><p id="mName" class="font-black text-sm"></p><p id="mCategory" class="text-xs text-gray-400"></p><p id="mPrice" class="font-black text-green-700 mt-1"></p><p class="text-[9px] text-gray-400">+5% delivery at checkout</p></div></div><div class="bg-gray-50 rounded-xl p-3 flex justify-between items-center mb-4"><span class="text-sm font-bold">Qty</span><div class="flex items-center gap-3"><button onclick="changeQty(-1)" class="w-9 h-9 bg-white border-2 rounded-full font-black">-</button><span id="mQty" class="font-black w-6 text-center">1</span><button onclick="changeQty(1)" class="w-9 h-9 bg-green-600 text-white rounded-full font-black">+</button></div></div><div class="bg-green-50 p-3 rounded-xl text-xs mb-4"><div class="flex justify-between"><span>Total</span><span id="mTotal" class="font-bold"></span></div><div class="flex justify-between"><span>Delivery 5%</span><span id="mDel"></span></div><div class="flex justify-between font-black border-t mt-1 pt-1"><span>You Pay</span><span id="mGrand" class="text-green-700"></span></div></div><button onclick="confirmAddToCart()" class="w-full bg-green-600 text-white py-3.5 rounded-xl font-black mb-2">Add • <span id="mTotalBtn">₦0</span></button><button onclick="closeModal()" class="w-full bg-gray-100 py-3 rounded-xl font-bold text-sm">Continue</button></div></div>
 
 <script>
-function toggleMenu(){document.getElementById('sideMenu').classList.toggle('active')}
+// ✅ NEW PROJECT KEYS - FIXED
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";const SUPABASE_ANON_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let all=[];let filtered=[];let selectedProduct=null;let currentQty=1;
 function toggleFilters(){document.getElementById('filterPanel').classList.toggle('active')}
-function clearFilters(){document.querySelectorAll('.location-list input').forEach(i=>i.checked=false)}
+function clearFilters(){document.querySelectorAll('#locList input').forEach(i=>i.checked=false);document.getElementById('minPrice').value='';document.getElementById('maxPrice').value='';filtered=[...all];render(filtered);}
+async function load(){try{const{data,error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false});if(error) throw error;all=data||[];filtered=[...all];document.getElementById('count').innerText=all.length+' products found';render(filtered);}catch(e){document.getElementById('grid').innerHTML='<p class="text-xs text-red-500">Error: '+e.message+'</p>';}}
+function render(list){const g=document.getElementById('grid');g.innerHTML='';if(list.length===0){g.innerHTML='<div class="col-span-full text-center py-20 text-gray-400"><div class="text-5xl mb-2">🏪</div><p class="text-sm font-bold">No products yet</p><p class="text-xs">Vendor should add products</p></div>';return;}list.forEach(p=>{const d=document.createElement('div');d.className='bg-white rounded-2xl shadow p-2';d.innerHTML=`<img src="${p.image||'https://via.placeholder.com/200'}" class="w-full h-28 object-cover rounded-xl mb-2"><p class="font-bold text-xs truncate">${p.name}</p><p class="text-[10px] text-gray-400">${p.category||'Others'} • ${p.stock||0} left</p><p class="font-black text-green-700 text-sm">₦${Number(p.price).toLocaleString()}</p><p class="text-[8px] text-gray-400">+5% delivery</p><button onclick="openModal(${p.id})" class="w-full bg-green-600 text-white text-xs py-2.5 rounded-xl mt-1 font-bold">Add to Cart 🛒</button>`;g.appendChild(d);});}
+function openModal(id){selectedProduct=all.find(p=>p.id===id);if(!selectedProduct) return;currentQty=1;document.getElementById('mImage').src=selectedProduct.image||'https://via.placeholder.com/200';document.getElementById('mName').innerText=selectedProduct.name;document.getElementById('mCategory').innerText=(selectedProduct.category||'')+' • '+(selectedProduct.stock||0)+' left';document.getElementById('mPrice').innerText='₦'+Number(selectedProduct.price).toLocaleString();updateTotal();document.getElementById('cartModal').classList.remove('hidden');}
+function changeQty(d){currentQty=Math.max(1,Math.min(selectedProduct.stock||99,currentQty+d));document.getElementById('mQty').innerText=currentQty;updateTotal();}
+function updateTotal(){const t=selectedProduct.price*currentQty;const del=Math.round(t*0.05);document.getElementById('mTotal').innerText='₦'+t.toLocaleString();document.getElementById('mDel').innerText='₦'+del.toLocaleString();document.getElementById('mGrand').innerText='₦'+(t+del).toLocaleString();document.getElementById('mTotalBtn').innerText='₦'+(t+del).toLocaleString();}
+function closeModal(){document.getElementById('cartModal').classList.add('hidden');}
+function confirmAddToCart(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');const ex=cart.find(c=>c.id===selectedProduct.id);if(ex)ex.qty+=currentQty;else cart.push({id:selectedProduct.id,name:selectedProduct.name,price:selectedProduct.price,image:selectedProduct.image,qty:currentQty});localStorage.setItem('lgm_cart',JSON.stringify(cart));loadCartCount();closeModal();if(confirm('Added! Go to cart?')) location.href='cart.html';}
+function filterCat(c){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));if(c==='All'){filtered=[...all];document.getElementById('catAll').classList.add('active');} else {filtered=all.filter(p=>(p.category||'').toLowerCase().includes(c.toLowerCase()));}document.getElementById('count').innerText=filtered.length+' products found';render(filtered);}
+function sortProducts(){const s=document.getElementById('sortSelect').value;let l=[...filtered];if(s==='low')l.sort((a,b)=>a.price-b.price);if(s==='high')l.sort((a,b)=>b.price-a.price);if(s==='newest')l.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));render(l);}
+function applyPrice(){const min=Number(document.getElementById('minPrice').value)||0;const max=Number(document.getElementById('maxPrice').value)||Infinity;let l=all.filter(p=>p.price>=min && p.price<=max);filtered=l;render(l);document.getElementById('count').innerText=l.length+' products found';}
+document.getElementById('searchInput').addEventListener('input',e=>{const q=e.target.value.toLowerCase();render(all.filter(p=>p.name.toLowerCase().includes(q)));});
+function loadCartCount(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');document.getElementById('cartCount').innerText=cart.reduce((a,b)=>a+b.qty,0);}
+loadCartCount();load();
 </script>
 </body>
 </html>
