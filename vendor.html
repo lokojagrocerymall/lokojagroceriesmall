@@ -7,25 +7,41 @@
 <style>
 *{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:12px}
 .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:12px}
+.nav{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.nav a,.nav button{padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;border:0;cursor:pointer}
+.nav-home{background:#fff;color:#16a34a;border:1px solid #e5e7eb!important}
+.nav-admin{background:#fff;color:#111;border:1px solid #e5e7eb!important}
+.nav-logout{background:#fee2e2;color:#dc2626}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .stat{background:#fff;padding:12px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .wallet{background:#16a34a;color:#fff}
 .tabs{display:flex;gap:18px;border-bottom:1px solid #e5e7eb;margin:14px 0;font-weight:700;font-size:14px}
-.tab{padding-bottom:8px;color:#9ca3af}.active{color:#16a34a;border-bottom:3px solid #16a34a}
+.tab{padding-bottom:8px;color:#9ca3af;cursor:pointer}.active{color:#16a34a;border-bottom:3px solid #16a34a}
 input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
 .upload{border:2px dashed #86efac;background:#f0fdf4;padding:12px;border-radius:12px}
-.btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800}
+.btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
 .small{font-size:12px;color:#6b7280}
+.view{display:none}.view.active-view{display:block}
 </style>
 </head>
 <body>
+<div class="nav">
+<a href="index.html" class="nav-home">🏠 Store / Home</a>
+<a href="admin.html" class="nav-admin">👑 Admin</a>
+<button class="nav-logout" onclick="logout()">Logout</button>
+</div>
 <div class="card"><b id="vName">Welcome...</b><div id="vEmail" class="small"></div><div class="small" style="color:green">✅ Approved Vendor • You keep 90% • Operation Mon-Sat</div></div>
 <div class="stats">
 <div class="stat"><div class="small">Products</div><h2 id="pCount" style="margin:0">0</h2></div>
 <div class="stat"><div class="small">Orders</div><h2 id="oCount" style="margin:0;color:#2563eb">0</h2></div>
 <div class="stat wallet"><div class="small">Wallet (90%)</div><h2 id="wallet" style="margin:0">₦0</h2></div>
 </div>
-<div class="tabs"><span class="tab active">Products</span><span class="tab">Orders</span><span class="tab">Wallet</span></div>
+<div class="tabs">
+<span class="tab active" id="tab-products" onclick="setTab('products')">Products</span>
+<span class="tab" id="tab-orders" onclick="setTab('orders')">Orders</span>
+<span class="tab" id="tab-wallet" onclick="setTab('wallet')">Wallet</span>
+</div>
+<div id="view-products" class="view active-view">
 <div class="card">
 <h3 style="margin:0 0 10px">Add New Product</h3>
 <input id="pName" placeholder="Product Name e.g. White Garri 4L">
@@ -40,33 +56,48 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 <button class="btn" onclick="addProduct()" style="margin-top:12px" id="addBtn">Add Product</button>
 </div>
 <div id="list"></div>
+</div>
+<div id="view-orders" class="view">
+<div class="card"><h3>📦 Customer Orders</h3><div id="ordersList" class="small">Loading orders...</div></div>
+</div>
+<div id="view-wallet" class="view">
+<div class="card"><h3>💰 My Wallet</h3><p class="small">You keep 90% of every sale.</p><h1 id="walletBig" style="color:#16a34a">₦0</h1><div id="walletBreak" class="small"></div><a href="index.html" style="display:inline-block;margin-top:12px;padding:10px 14px;border:1px solid #e5e7eb;border-radius:10px;text-decoration:none;color:#16a34a">Go to Store →</a></div>
+</div>
 <script>
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let curUser=null; let imgUrl="";
-
+let curUser=null; let imgUrl=""; let allMyProducts=[];
+function setTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active-view'));
+  document.getElementById('view-'+name).classList.add('active-view');
+  if(name==='orders') loadOrders();
+  if(name==='wallet') loadWallet();
+}
+function logout(){
+  localStorage.removeItem('lgm_user');localStorage.removeItem('lgm_vendor');localStorage.removeItem('user');
+  window.location.href='login.html';
+}
 function init(){
-  const saved = localStorage.getItem('lgm_user') || localStorage.getItem('lgm_vendor');
+  const saved = localStorage.getItem('lgm_user') || localStorage.getItem('lgm_vendor') || localStorage.getItem('user');
   if(!saved){
-    // allow test vendor if not logged in
-    curUser = {id:'test-vendor', email:'vendor@test.com', name:'Test Vendor', role:'vendor'};
-    document.getElementById('vName').innerText="Welcome, Test Vendor (Login to save real email)";
-    document.getElementById('vEmail').innerText="vendor@test.com • test mode - go to login.html to login";
+    curUser = {id:'test-vendor', email:'agbemjames@gmail.com', name:'James Agbem', role:'vendor'};
   } else {
-    curUser = JSON.parse(saved);
-    document.getElementById('vName').innerText="Welcome, "+(curUser.name || curUser.full_name || curUser.email.split('@')[0]);
-    document.getElementById('vEmail').innerText=curUser.email + " • " + (curUser.role||'vendor');
+    try{curUser = JSON.parse(saved);}catch{curUser={email:saved};}
   }
+  document.getElementById('vName').innerText="Welcome, "+(curUser.name || curUser.full_name || curUser.email.split('@')[0]);
+  document.getElementById('vEmail').innerText=curUser.email + " • " + (curUser.role||'vendor');
   load();
 }
 document.getElementById('pFile').addEventListener('change', async(e)=>{
  const f=e.target.files[0]; if(!f) return;
  const preview=document.getElementById('preview'); preview.src=URL.createObjectURL(f); preview.style.display='block';
- document.getElementById('status').innerText="Uploading to product-images...";
+ document.getElementById('status').innerText="Uploading...";
  const name=Date.now()+"-"+f.name.replace(/\s/g,'_');
  const {data, error}=await supabaseClient.storage.from('product-images').upload(name,f, {upsert:true});
- if(error){ alert("Upload error: "+error.message+"\nMake sure bucket product-images exists and is public"); document.getElementById('status').innerText="❌ "+error.message; return; }
+ if(error){ document.getElementById('status').innerText="❌ "+error.message; return; }
  const {data:u}=supabaseClient.storage.from('product-images').getPublicUrl(data.path);
  imgUrl=u.publicUrl;
  document.getElementById('status').innerText="✅ Uploaded! Ready to save.";
@@ -79,35 +110,43 @@ async function addProduct(){
  if(!name||!price) return alert("Enter name & price");
  if(!imgUrl) return alert("Please choose image first - wait for ✅ Uploaded");
  document.getElementById('addBtn').innerText="Saving...";
- const {error}=await supabaseClient.from('products').insert({
-   name, price:Number(price), stock:Number(stock)||0, category:cat,
-   image: imgUrl, image_url: imgUrl,
-   vendor_email: curUser.email,
-   vendor_id: curUser.id
- });
+ const {error}=await supabaseClient.from('products').insert({name, price:Number(price), stock:Number(stock)||0, category:cat,image: imgUrl, image_url: imgUrl,vendor_email: curUser.email,vendor_id: curUser.id});
  if(error){ alert("Error: "+error.message); document.getElementById('addBtn').innerText="Add Product"; }
- else { alert("✅ Product added! It will show on homepage"); imgUrl=""; document.getElementById('pName').value=""; document.getElementById('pPrice').value=""; document.getElementById('pStock').value=""; document.getElementById('status').innerText=""; document.getElementById('preview').style.display='none'; document.getElementById('addBtn').innerText="Add Product"; load(); }
+ else { alert("✅ Product added!"); imgUrl=""; document.getElementById('pName').value=""; document.getElementById('pPrice').value=""; document.getElementById('pStock').value=""; document.getElementById('status').innerText=""; document.getElementById('preview').style.display='none'; document.getElementById('addBtn').innerText="Add Product"; load(); }
 }
 async function load(){
- const {data, error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false}).limit(50);
- if(error){ document.getElementById('list').innerHTML="<p class='small' style='color:red'>Error: "+error.message+"</p>"; return; }
- // show my products only if email matches, else show all
+ const {data, error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false}).limit(100);
+ if(error) return;
  let my = data.filter(p=> (p.vendor_email||'').toLowerCase() === (curUser.email||'').toLowerCase());
- let list = my.length>0? my : data;
- document.getElementById('pCount').innerText=list.length;
- let total=0; list.forEach(p=> total+= (Number(p.price)*Number(p.stock||0))*0.9 );
+ allMyProducts = my.length>0? my : data;
+ document.getElementById('pCount').innerText=allMyProducts.length;
+ let total=0; allMyProducts.forEach(p=> total+= (Number(p.price)*Number(p.stock||0))*0.9 );
  document.getElementById('wallet').innerText="₦"+Math.round(total).toLocaleString();
- let h="<div class='small' style='margin:8px'>My Products ("+list.length+")</div>";
- if(list.length==0) h+="<p class='small' style='padding:10px'>No products yet. Add your first product above - it will appear on homepage instantly!</p>";
- else list.forEach(p=>{
+ document.getElementById('walletBig').innerText="₦"+Math.round(total).toLocaleString();
+ let h="<div class='small' style='margin:8px'>My Products ("+allMyProducts.length+")</div>";
+ if(allMyProducts.length==0) h+="<p class='small' style='padding:10px'>No products yet. Add your first product above!</p>";
+ else allMyProducts.forEach(p=>{
    let img = p.image || p.image_url || 'https://via.placeholder.com/100';
-   h+=`<div class='card' style='display:flex;gap:10px;align-items:center'><img src='${img}' style='width:56px;height:56px;border-radius:10px;object-fit:cover'><div style='flex:1'><b style='font-size:14px'>${p.name}</b><br><span class='small'>₦${Number(p.price).toLocaleString()} • ${p.stock} left • ${p.category||''}</span></div><button onclick="delProduct(${p.id})" style='background:#fee2e2;color:#dc2626;border:0;padding:6px 10px;border-radius:8px;font-size:12px'>Del</button></div>` });
+   h+=`<div class='card' style='display:flex;gap:10px;align-items:center'><img src='${img}' style='width:56px;height:56px;border-radius:10px;object-fit:cover'><div style='flex:1'><b style='font-size:14px'>${p.name}</b><br><span class='small'>₦${Number(p.price).toLocaleString()} • ${p.stock} left</span></div><button onclick="delProduct(${p.id})" style='background:#fee2e2;color:#dc2626;border:0;padding:6px 10px;border-radius:8px'>Del</button></div>` });
  document.getElementById('list').innerHTML=h;
- // orders count
  const {data:orders}=await supabaseClient.from('orders').select('id');
  document.getElementById('oCount').innerText=orders?orders.length:0;
+ loadWallet();
 }
-async function delProduct(id){ if(!confirm('Delete product?')) return; await supabaseClient.from('products').delete().eq('id',id); load(); }
+async function loadOrders(){
+ const {data, error}=await supabaseClient.from('orders').select('*').order('created_at',{ascending:false}).limit(30);
+ if(error){ document.getElementById('ordersList').innerHTML="No orders yet"; return; }
+ let filtered = data.filter(o=> (o.vendor_email||'').toLowerCase()===curUser.email.toLowerCase() ||!o.vendor_email);
+ if(filtered.length===0){ document.getElementById('ordersList').innerHTML="<p>📭 No orders yet.</p>"; return; }
+ let h=""; filtered.forEach(o=>{ h+=`<div class='card'><b>Order #${o.id}</b> - ₦${o.total||0}<br><span class='small'>${o.customer_email||''}</span></div>`; });
+ document.getElementById('ordersList').innerHTML=h;
+}
+function loadWallet(){
+ let total=0; let items=0;
+ allMyProducts.forEach(p=>{ total+= Number(p.price)*Number(p.stock||0); items+=Number(p.stock||0); });
+ document.getElementById('walletBreak').innerHTML=`Total value: ₦${total.toLocaleString()}<br>Items: ${items}<br>Your 90%: <b>₦${Math.round(total*0.9).toLocaleString()}</b>`;
+}
+async function delProduct(id){ if(!confirm('Delete?')) return; await supabaseClient.from('products').delete().eq('id',id); load(); }
 init();
 </script>
 </body>
