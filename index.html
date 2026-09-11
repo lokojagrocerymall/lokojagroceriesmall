@@ -1,34 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
-<body class="bg-gray-50 min-h-screen">
-<div class="bg-yellow-400 text-black text-center py-1.5 text-[11px] font-black sticky top-0 z-20">⏰ OPEN: Mon - Sat 8AM - 6PM • ⛔ Sunday CLOSED • 🚚 Delivery 5% (Customer pays)</div>
-<header class="bg-white shadow-sm sticky top-[26px] z-10 p-3 flex justify-between items-center">
-<div class="flex items-center gap-2"><img src="logo.png" onerror="this.src='https://via.placeholder.com/40?text=LGM'" class="w-10 h-10 object-contain bg-white rounded-lg p-1"><h1 class="font-black text-green-700 text-sm">Lokoja Grocery Mall</h1></div>
-<div class="flex gap-3 items-center"><a href="cart.html" class="text-xl relative">🛒<span id="cartCount" class="absolute -top-2 -right-2 bg-green-600 text-white text-[10px] rounded-full px-1.5 py-0.5">0</span></a><button onclick="document.getElementById('menu').classList.toggle('hidden')" class="text-xl">☰</button></div>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lokoja Grocery Mall - Fresh Groceries</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{font-family:system-ui,-apple-system;background:#f8fafc}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR - FIXED: Removed Delivery 5% -->
+<div style="background:#facc15;text-align:center;padding:7px 10px;font-size:12px;font-weight:900;letter-spacing:0.2px">
+  ⏰ OPEN: Mon - Sat 8AM - 6PM • ⛔ Sunday CLOSED
+</div>
+
+<!-- HEADER - FIXED: Logo Bigger + Name Bigger Bolder -->
+<header class="bg-white shadow-sm sticky top-0 z-50 px-4 py-3 flex justify-between items-center">
+  <div class="flex items-center gap-3" onclick="location.href='index.html'" style="cursor:pointer">
+    <img src="logo.png" alt="logo" style="width:48px;height:48px;object-fit:contain;border-radius:10px">
+    <span style="font-size:21px;font-weight:900;letter-spacing:-0.5px;color:#166534;line-height:1">Lokoja Grocery Mall</span>
+  </div>
+  <div class="flex items-center gap-3">
+    <div onclick="location.href='cart.html'" class="relative cursor-pointer">
+      <span style="font-size:26px">🛒</span>
+      <span id="cartCount" class="absolute -top-2 -right-2 bg-green-600 text-white text-[11px] font-black rounded-full w-5 h-5 flex items-center justify-center">0</span>
+    </div>
+    <button onclick="document.getElementById('menu').classList.toggle('hidden')" style="font-size:26px">☰</button>
+  </div>
 </header>
-<div id="menu" class="hidden bg-white p-4 shadow"><a href="index.html" class="block py-2 font-bold">🏠 Home</a><a href="products.html" class="block py-2">🛍️ Browse All Products</a><a href="vendor.html" class="block py-2 text-green-700 font-bold">🏪 Vendor Dashboard</a><a href="admin.html" class="block py-2">👑 Admin</a></div>
-<div class="bg-gradient-to-br from-green-600 to-green-800 text-white p-6 rounded-2xl m-3 text-center"><p class="bg-white/20 inline-block px-3 py-1 rounded-full text-xs mb-2">📍 Lokoja, Kogi State • Mon-Sat</p><h2 class="text-xl font-black mb-2">Fresh groceries from local vendors</h2><div class="flex gap-2 mt-3"><input id="searchInput" placeholder="Search rice, yam..." class="flex-1 p-3 rounded-xl text-black text-sm"><button onclick="searchProducts()" class="bg-white text-green-700 px-4 rounded-xl font-bold text-sm">Search</button></div><p id="openStatus" class="text-[10px] mt-2 font-black"></p></div>
-<div class="px-3 mb-3"><h3 class="font-black text-sm mb-2">Shop by Category</h3><div class="grid grid-cols-3 gap-2"><button onclick="filterCat('Fruits')" class="bg-white p-3 rounded-xl shadow text-[11px] font-bold">🥬<br>Fruits</button><button onclick="filterCat('Meat')" class="bg-white p-3 rounded-xl shadow text-[11px] font-bold">🐟<br>Meat & Fish</button><button onclick="filterCat('Foodstuff')" class="bg-white p-3 rounded-xl shadow text-[11px] font-bold">🌾<br>Foodstuff</button><button onclick="filterCat('Drinks')" class="bg-white p-3 rounded-xl shadow text-[11px] font-bold">🥤<br>Drinks</button><button onclick="filterCat('Household')" class="bg-white p-3 rounded-xl shadow text-[11px] font-bold">🏠<br>Household</button><button onclick="filterCat('Baby')" class="bg-white p-3 rounded-xl shadow text-[11px] font-bold">🍼<br>Baby</button></div></div>
-<div class="px-3"><div id="productGrid" class="grid grid-cols-2 gap-3"><p class="text-xs text-gray-400">Loading products...</p></div></div>
-<div class="text-center py-6"><p class="font-bold text-sm">Lokoja Grocery Mall</p><p class="text-xs text-gray-500">Mon-Sat 8AM-6PM • Sunday CLOSED</p></div>
-<div id="cartModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-end justify-center p-0"><div class="bg-white w-full rounded-t-[24px] p-5"><div class="flex gap-3 mb-4"><img id="mImage" class="w-20 h-20 object-cover rounded-xl"><div><p id="mName" class="font-black text-sm"></p><p id="mCategory" class="text-xs text-gray-400"></p><p id="mPrice" class="font-black text-green-700 mt-1"></p></div></div><div class="bg-gray-50 rounded-xl p-3 flex justify-between items-center mb-4"><span class="text-sm font-bold">Quantity</span><div class="flex items-center gap-3"><button onclick="changeQty(-1)" class="w-9 h-9 bg-white border-2 rounded-full font-black">-</button><span id="mQty" class="font-black text-lg w-6 text-center">1</span><button onclick="changeQty(1)" class="w-9 h-9 bg-green-600 text-white rounded-full font-black">+</button></div></div><div class="bg-green-50 p-3 rounded-xl text-xs mb-4"><div class="flex justify-between"><span>Products</span><span id="mTotal" class="font-bold"></span></div><div class="flex justify-between"><span>Delivery 5%</span><span id="mDelivery"></span></div><div class="flex justify-between font-black border-t pt-1"><span>You Pay</span><span id="mGrand" class="text-green-700"></span></div></div><button onclick="confirmAddToCart()" class="w-full bg-green-600 text-white py-3.5 rounded-xl font-black mb-2">Add to Cart • <span id="mTotalBtn"></span></button><button onclick="closeModal()" class="w-full bg-gray-100 py-3 rounded-xl font-bold text-sm">Continue Shopping</button></div></div>
+
+<!-- MOBILE MENU -->
+<div id="menu" class="hidden bg-white border-b p-4 space-y-2 text-sm font-bold">
+  <a href="browse.html" class="block py-2">🛍️ Browse Market</a>
+  <a href="customer.html" class="block py-2">👤 My Account</a>
+  <a href="vendor.html" class="block py-2">🏪 Vendor Dashboard</a>
+  <a href="login.html" class="block py-2">🔐 Login</a>
+  <a href="signup.html" class="block py-2 text-green-600">➕ Sign Up</a>
+</div>
+
+<!-- HERO - FIXED: Removed Mon-Sat from badge -->
+<div class="mx-4 mt-4 bg-gradient-to-br from-green-600 to-green-800 rounded-[20px] p-6 text-white text-center">
+  <div class="inline-block bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs font-bold mb-3">
+    📍 Lokoja, Kogi State
+  </div>
+  <h1 class="text-[26px] font-black leading-tight mb-4">Fresh groceries from local<br>vendors</h1>
+  <div class="flex gap-2 max-w-md mx-auto">
+    <input id="searchInput" placeholder="Search rice, yam..." class="flex-1 p-3.5 rounded-xl text-black text-sm outline-none" onkeyup="if(event.key==='Enter') doSearch()">
+    <button onclick="doSearch()" class="bg-white text-green-700 px-5 rounded-xl font-black text-sm">Search</button>
+  </div>
+  <div class="mt-4">
+    <span class="bg-green-400 text-green-900 px-4 py-1.5 rounded-full text-xs font-black">✅ OPEN NOW - Order now!</span>
+  </div>
+</div>
+
+<!-- CATEGORIES -->
+<div class="p-4">
+  <h2 class="font-black text-[15px] mb-3">Shop by Category</h2>
+  <div class="grid grid-cols-3 gap-3">
+    <button onclick="goCat('Fruits')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🥬<br>Fruits</button>
+    <button onclick="goCat('Meat & Fish')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🐟<br>Meat & Fish</button>
+    <button onclick="goCat('Foodstuff')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🌾<br>Foodstuff</button>
+    <button onclick="goCat('Drinks')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🥤<br>Drinks</button>
+    <button onclick="goCat('Household')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🏠<br>Household</button>
+    <button onclick="goCat('Baby')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">👶<br>Baby</button>
+  </div>
+</div>
+
+<!-- PRODUCTS -->
+<div class="px-4 pb-10">
+  <div id="productsGrid" class="grid grid-cols-2 gap-3">
+    <div class="col-span-2 text-center text-sm text-gray-400 py-10">Loading products...<br>Go to Vendor Dashboard to add</div>
+  </div>
+</div>
+
+<footer class="bg-white border-t p-6 text-center">
+  <b class="text-[14px]">Lokoja Grocery Mall</b><br>
+  <span class="text-xs text-gray-500">Mon-Sat 8AM-6PM • Sunday CLOSED<br>Lokoja, Kogi State, Nigeria</span>
+</footer>
+
 <script>
-const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";const SUPABASE_ANON_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-let allProducts=[];let selectedProduct=null;let currentQty=1;
-function isSunday(){return new Date().getDay()===0;}
-function checkOpen(){let el=document.getElementById('openStatus');if(isSunday()){el.innerText='⛔ CLOSED TODAY (Sunday)';el.className='text-[10px] mt-2 font-black bg-red-500 px-2 py-1 rounded text-white inline-block';}else{el.innerText='✅ OPEN NOW - Order now!';el.className='text-[10px] mt-2 font-black bg-green-500 px-2 py-1 rounded text-white inline-block';}}
-async function loadProducts(){try{const{data,error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false}).limit(20);if(error) throw error;allProducts=data||[];renderProducts(allProducts);}catch(e){document.getElementById('productGrid').innerHTML='<p class="text-xs text-red-400">Error: '+e.message+'</p>';}}
-function renderProducts(list){const grid=document.getElementById('productGrid');grid.innerHTML='';if(list.length===0){grid.innerHTML='<p class="col-span-2 text-center text-xs text-gray-400 py-10">No products yet<br>Go to Vendor Dashboard to add</p>';return;}list.forEach(p=>{const c=document.createElement('div');c.className='bg-white rounded-2xl shadow p-2';c.innerHTML=`<img src="${p.image||'https://via.placeholder.com/200'}" class="w-full h-24 object-cover rounded-xl mb-2"><p class="font-bold text-xs truncate">${p.name}</p><p class="text-[10px] text-gray-500">${p.category} • ${p.stock} left</p><p class="font-black text-green-700 text-sm">₦${Number(p.price).toLocaleString()}</p><button onclick="openModal(${p.id})" class="w-full bg-green-600 text-white text-xs py-2.5 rounded-xl mt-1 font-bold">Add to Cart 🛒</button>`;grid.appendChild(c);});}
-function openModal(id){if(isSunday()){alert('⛔ CLOSED on Sundays');return;}selectedProduct=allProducts.find(p=>p.id===id);currentQty=1;document.getElementById('mImage').src=selectedProduct.image;document.getElementById('mName').innerText=selectedProduct.name;document.getElementById('mCategory').innerText=selectedProduct.category+' • '+selectedProduct.stock+' left';document.getElementById('mPrice').innerText='₦'+Number(selectedProduct.price).toLocaleString();updateTotal();document.getElementById('cartModal').classList.remove('hidden');}
-function changeQty(d){currentQty=Math.max(1,currentQty+d);document.getElementById('mQty').innerText=currentQty;updateTotal();}
-function updateTotal(){const t=selectedProduct.price*currentQty;const del=Math.round(t*0.05);document.getElementById('mTotal').innerText='₦'+t.toLocaleString();document.getElementById('mDelivery').innerText='₦'+del.toLocaleString();document.getElementById('mGrand').innerText='₦'+(t+del).toLocaleString();document.getElementById('mTotalBtn').innerText='₦'+(t+del).toLocaleString();}
-function closeModal(){document.getElementById('cartModal').classList.add('hidden');}
-function confirmAddToCart(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');const ex=cart.find(c=>c.id===selectedProduct.id);if(ex)ex.qty+=currentQty;else cart.push({id:selectedProduct.id,name:selectedProduct.name,price:selectedProduct.price,image:selectedProduct.image,qty:currentQty});localStorage.setItem('lgm_cart',JSON.stringify(cart));loadCartCount();closeModal();if(confirm('Added! Go to cart?'))location.href='cart.html';}
-function searchProducts(){const q=document.getElementById('searchInput').value.toLowerCase();renderProducts(allProducts.filter(p=>p.name.toLowerCase().includes(q)));}
-function filterCat(cat){renderProducts(allProducts.filter(p=>(p.category||'').toLowerCase().includes(cat.toLowerCase())));}
-function loadCartCount(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');document.getElementById('cartCount').innerText=cart.reduce((a,b)=>a+b.qty,0);}
-checkOpen();loadCartCount();loadProducts();
+// NEW LGM-PRODUCTION KEYS
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function doSearch(){
+  const q=document.getElementById('searchInput').value.trim();
+  if(q) location.href='browse.html?q='+encodeURIComponent(q);
+}
+function goCat(c){ location.href='browse.html?cat='+encodeURIComponent(c); }
+
+function updateCart(){
+  let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
+  let total=cart.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('cartCount').innerText=total;
+}
+
+async function loadProducts(){
+  const { data, error } = await supabaseClient.from('products').select('*').eq('is_available', true).order('created_at',{ascending:false}).limit(20);
+  if(error ||!data || data.length===0){
+    document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products yet<br>Go to Vendor Dashboard to add</div>';
+    return;
+  }
+  let html='';
+  data.forEach(p=>{
+    html+=`<div class="bg-white rounded-2xl p-3 shadow-sm">
+      <div class="bg-gray-100 rounded-xl h-28 flex items-center justify-center text-3xl mb-2">${p.image_url?`<img src="${p.image_url}" class="h-full w-full object-cover rounded-xl">`:'🛒'}</div>
+      <div class="font-bold text-[13px] truncate">${p.name}</div>
+      <div class="text-[11px] text-gray-500 truncate">${p.vendor_name||''}</div>
+      <div class="flex justify-between items-center mt-2"><b class="text-green-700 text-[13px]">₦${Number(p.price).toLocaleString()}</b><button onclick="addToCart(${p.id},'${p.name.replace(/'/g,"")} ',${p.price})" class="bg-green-600 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button></div>
+    </div>`;
+  });
+  document.getElementById('productsGrid').innerHTML=html;
+}
+
+function addToCart(id,name,price){
+  let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
+  let f=cart.find(i=>i.id===id);
+  if(f) f.qty++; else cart.push({id,name,price,qty:1});
+  localStorage.setItem('lgm_cart', JSON.stringify(cart));
+  updateCart();
+  alert(name+' added to cart!');
+}
+
+updateCart();
+loadProducts();
 </script>
 </body>
 </html>
