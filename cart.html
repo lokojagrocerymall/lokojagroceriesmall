@@ -5,6 +5,7 @@
 <title>Cart - Lokoja Grocery Mall</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://checkout.flutterwave.com/v3.js"></script>
 <style>body{font-family:system-ui;background:#f8fafc}</style>
 </head>
 <body>
@@ -16,22 +17,18 @@
 
 <div class="p-4 max-w-xl mx-auto">
 <div id="cartList" class="space-y-3"></div>
-
 <div class="bg-white rounded-2xl p-4 mt-4 shadow-sm">
 <div class="flex justify-between py-1"><span>Subtotal (<span id="subCount">0</span> items)</span><b id="subTotal">₦0</b></div>
 <div class="flex justify-between py-1 text-sm"><span>Delivery (Lokoja) <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px]">5%</span></span><b id="deliveryFee">₦0 (5%)</b></div>
-<div class="text-[11px] text-gray-400 flex justify-between"><span>Your delivery = 5% of subtotal</span><span>Vendor pays 10% to you</span></div>
 <div class="border-t mt-3 pt-3 flex justify-between text-lg font-black"><span>Total You Pay</span><span id="grandTotal" class="text-green-600">₦0</span></div>
-<div class="text-[10px] text-gray-400 text-right mt-1">Incl. 5% delivery • Vendors get 90%</div>
 </div>
-
 <div class="bg-white rounded-2xl p-4 mt-4 shadow-sm">
 <h3 class="font-black mb-3">Delivery Details</h3>
 <input id="custName" placeholder="Full Name" class="w-full border rounded-xl p-3 mb-2 text-sm">
 <input id="custPhone" placeholder="Phone e.g. 080..." class="w-full border rounded-xl p-3 mb-2 text-sm">
-<input id="custAddress" placeholder="Address in Lokoja" class="w-full border rounded-xl p-3 mb-2 text-sm">
-<select id="payMethod" class="w-full border rounded-xl p-3 mb-3 text-sm"><option value="pay_on_delivery">Pay on Delivery</option><option value="transfer">Bank Transfer</option></select>
-<button onclick="placeOrder()" id="orderBtn" class="w-full bg-green-600 text-white rounded-xl p-4 font-black">Place Order - Pay on Delivery</button>
+<input id="custAddress" placeholder="Address in Lokoja" class="w-full border rounded-xl p-3 mb-3 text-sm">
+<div class="bg-blue-50 border border-blue-200 p-3 rounded-xl text-xs mb-3">🔒 Secure payment by <b>Flutterwave TEST MODE</b> - Use test card 4242 4242 4242 4242</div>
+<button onclick="payWithFlutterwave()" id="orderBtn" class="w-full bg-[#f5a623] text-white rounded-xl p-4 font-black">💳 Pay Now with Flutterwave - <span id="payAmount">₦0</span></button>
 <div id="orderMsg" class="text-sm text-center mt-2"></div>
 </div>
 </div>
@@ -40,90 +37,79 @@
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const FLW_PUBLIC_KEY = "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X";
 
 let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
-
 async function loadCart(){
   const listDiv = document.getElementById('cartList');
   if(cart.length===0){ listDiv.innerHTML='<div class="bg-white rounded-xl p-10 text-center text-gray-400">🛒 Cart empty<br><a href="index.html" class="text-green-600 font-bold">Go shopping</a></div>'; updateTotals(); return; }
-
-  // Fetch images for all cart items
   try{
     const ids = cart.map(c=>c.id);
     const { data:products } = await supabaseClient.from('products').select('id,image,image_url').in('id', ids);
-    const imgMap = {};
-    (products||[]).forEach(p=>{ imgMap[p.id]=p.image||p.image_url||''; });
+    const imgMap = {}; (products||[]).forEach(p=>{ imgMap[p.id]=p.image||p.image_url||''; });
     cart = cart.map(c=>({...c, image: c.image || imgMap[c.id] || ''}));
   }catch(e){}
-
   let html='';
   cart.forEach((item, idx)=>{
-    const img = item.image? `<img src="${item.image}" class="w-16 h-16 rounded-lg object-cover bg-gray-100">` : `<div class="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">🛒</div>`;
-    html+=`<div class="bg-white rounded-xl p-3 flex gap-3 items-center shadow-sm">
-      ${img}
-      <div class="flex-1"><div class="font-bold text-sm">${item.name}</div><div class="text-green-600 font-bold text-sm">₦${Number(item.price).toLocaleString()}</div>
-      <div class="flex items-center gap-2 mt-1"><button onclick="changeQty(${idx},-1)" class="w-8 h-8 rounded-full bg-gray-100 font-bold">-</button><span class="w-6 text-center font-bold text-sm">${item.qty}</span><button onclick="changeQty(${idx},1)" class="w-8 h-8 rounded-full bg-green-600 text-white font-bold">+</button></div></div>
-      <div class="text-right"><div class="font-bold text-sm">₦${(item.price*item.qty).toLocaleString()}</div><button onclick="removeItem(${idx})" class="text-red-400 text-lg mt-1">✕</button></div>
-    </div>`;
+    const img = item.image? `<img src="${item.image}" class="w-16 h-16 rounded-lg object-cover">` : `<div class="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">🛒</div>`;
+    html+=`<div class="bg-white rounded-xl p-3 flex gap-3 items-center shadow-sm">${img}<div class="flex-1"><div class="font-bold text-sm">${item.name}</div><div class="text-green-600 font-bold text-sm">₦${Number(item.price).toLocaleString()}</div><div class="flex items-center gap-2 mt-1"><button onclick="changeQty(${idx},-1)" class="w-8 h-8 rounded-full bg-gray-100 font-bold">-</button><span class="w-6 text-center font-bold text-sm">${item.qty}</span><button onclick="changeQty(${idx},1)" class="w-8 h-8 rounded-full bg-green-600 text-white font-bold">+</button></div></div><div class="text-right"><div class="font-bold text-sm">₦${(item.price*item.qty).toLocaleString()}</div><button onclick="removeItem(${idx})" class="text-red-400 text-lg mt-1">✕</button></div></div>`;
   });
-  listDiv.innerHTML=html;
-  updateTotals();
+  listDiv.innerHTML=html; updateTotals();
 }
-
 function updateTotals(){
-  let sub=0, count=0;
-  cart.forEach(i=>{ sub+=i.price*i.qty; count+=i.qty; });
-  const delivery = Math.round(sub*0.05);
-  const total = sub+delivery;
+  let sub=0, count=0; cart.forEach(i=>{ sub+=i.price*i.qty; count+=i.qty; });
+  const delivery = Math.round(sub*0.05); const total = sub+delivery;
   document.getElementById('subCount').innerText=count;
   document.getElementById('subTotal').innerText='₦'+sub.toLocaleString();
   document.getElementById('deliveryFee').innerText='₦'+delivery.toLocaleString()+' (5%)';
   document.getElementById('grandTotal').innerText='₦'+total.toLocaleString();
+  document.getElementById('payAmount').innerText='₦'+total.toLocaleString();
   localStorage.setItem('lgm_cart', JSON.stringify(cart));
 }
-
-function changeQty(idx, delta){
-  cart[idx].qty+=delta;
-  if(cart[idx].qty<=0) cart.splice(idx,1);
-  loadCart();
-}
+function changeQty(idx, delta){ cart[idx].qty+=delta; if(cart[idx].qty<=0) cart.splice(idx,1); loadCart(); }
 function removeItem(idx){ cart.splice(idx,1); loadCart(); }
 
-async function placeOrder(){
+async function payWithFlutterwave(){
   const name=document.getElementById('custName').value.trim();
   const phone=document.getElementById('custPhone').value.trim();
   const addr=document.getElementById('custAddress').value.trim();
-  if(!name||!phone||!addr) return alert('Fill name, phone, address');
+  if(!name||!phone||!addr) return alert('Fill Full Name, Phone, Address');
   if(cart.length===0) return alert('Cart empty');
-  document.getElementById('orderBtn').innerText='Placing...'; document.getElementById('orderBtn').disabled=true;
   const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
   const delivery=Math.round(sub*0.05);
   const total=sub+delivery;
-  try{
-    // Try to save order - group by vendor if needed, for now one order
-    const firstVendor = await supabaseClient.from('products').select('vendor_email').in('id', cart.map(c=>c.id)).limit(1);
-    const vendor_email = firstVendor.data && firstVendor.data[0]? firstVendor.data[0].vendor_email : 'agbemjames@gmail.com';
-    const { error } = await supabaseClient.from('orders').insert([{
-      customer_name: name, customer_phone: phone, customer_address: addr,
-      customer_email: name.replace(/\s/g,'')+'@customer.local',
-      total: total, total_amount: total,
-      delivery_fee: delivery,
-      items: cart,
-      vendor_email: vendor_email,
-      status: 'new',
-      payment_method: document.getElementById('payMethod').value,
-      created_at: new Date().toISOString()
-    }]);
-    if(error) throw error;
-    localStorage.removeItem('lgm_cart');
-    document.getElementById('orderMsg').innerHTML='<span style="color:green;font-weight:bold">✅ Order placed! Vendor will call you. Total: ₦'+total.toLocaleString()+'</span>';
-    setTimeout(()=>{ location.href='index.html'; },2000);
-  }catch(e){
-    document.getElementById('orderMsg').innerText='Error: '+e.message+' (Check orders table exists)';
-    document.getElementById('orderBtn').innerText='Place Order - Pay on Delivery'; document.getElementById('orderBtn').disabled=false;
-  }
+  const email = phone.replace(/[^0-9]/g,'') + "@lgm.customer";
+  const tx_ref = "LGM-" + Date.now();
+  FlutterwaveCheckout({
+    public_key: FLW_PUBLIC_KEY,
+    tx_ref: tx_ref,
+    amount: total,
+    currency: "NGN",
+    payment_options: "card,ussd,banktransfer,opay",
+    customer: { email: email, phone_number: phone, name: name },
+    customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery", logo: "https://y-mall.vercel.app/logo.png" },
+    callback: async function(data){
+      document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order...</span>';
+      try{
+        const { data:prodData } = await supabaseClient.from('products').select('vendor_email').in('id', cart.map(c=>c.id)).limit(1);
+        const vendor_email = prodData && prodData[0]? prodData[0].vendor_email : 'agbemjames@gmail.com';
+        await supabaseClient.from('orders').insert([{
+          customer_name: name, customer_phone: phone, customer_address: addr,
+          customer_email: email, total: total, total_amount: total,
+          delivery_fee: delivery, items: cart, vendor_email: vendor_email,
+          status: 'paid', payment_method: 'flutterwave',
+          transaction_id: data.transaction_id || tx_ref, tx_ref: tx_ref
+        }]);
+        localStorage.removeItem('lgm_cart');
+        document.getElementById('orderMsg').innerHTML='<span style="color:green;font-weight:bold">✅ Paid! Order '+tx_ref+' saved.</span>';
+        setTimeout(()=>{ location.href='index.html'; },2000);
+      }catch(e){
+        document.getElementById('orderMsg').innerHTML='<span style="color:red">Paid but save failed: '+e.message+'</span>';
+      }
+    },
+    onclose: function(){ document.getElementById('orderMsg').innerText='Payment window closed'; }
+  });
 }
-
 loadCart();
 </script>
 </body>
