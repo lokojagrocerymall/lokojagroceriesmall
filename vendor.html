@@ -19,7 +19,6 @@
 input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
 .upload{border:2px dashed #86efac;background:#f0fdf4;padding:12px;border-radius:12px}
 .btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
-.btn-blue{background:#2563eb}
 .small{font-size:12px;color:#6b7280}
 .view{display:none}.view.active-view{display:block}
 .btn-sm{padding:6px 10px;border-radius:8px;border:0;font-weight:700;font-size:11px;cursor:pointer;margin-bottom:4px;display:block;width:100%}
@@ -171,7 +170,6 @@ async function load(){
  let my = data.filter(p=> (p.vendor_email||'').toLowerCase() === (curUser.email||'').toLowerCase());
  allMyProducts = my.length>0? my : data;
  document.getElementById('pCount').innerText=allMyProducts.length;
- // FIXED: Wallet here will be set after orders load, not from stock value
  document.getElementById('wallet').innerText="₦0 - loading...";
  let h="<div class='small' style='margin:8px'>My Products ("+allMyProducts.length+")</div>";
  if(allMyProducts.length==0) h+="<p class='small' style='padding:10px'>No products yet. Add your first product above!</p>";
@@ -216,22 +214,21 @@ async function loadOrders(){
  document.getElementById('salesWeek').innerText='₦'+Math.round(w).toLocaleString();
  document.getElementById('salesMonth').innerText='₦'+Math.round(m).toLocaleString();
  document.getElementById('oCount').innerText=allOrders.length;
- // FIXED WALLET = REAL EARNINGS
  document.getElementById('wallet').innerText='₦'+Math.round(totalEarnings).toLocaleString();
  document.getElementById('walletBig').innerText='₦'+Math.round(totalEarnings).toLocaleString();
- loadWallet(totalEarnings);
+ loadWallet();
 }
-function loadWallet(realEarnings=0){
+function loadWallet(){
  let stockValue=0; let items=0;
  allMyProducts.forEach(p=>{
    let st = p.stock_qty?? p.stock?? p.quantity?? 0;
    stockValue+= Number(p.price)*Number(st); items+=Number(st);
  });
- let platformFee = realEarnings / 0.9 * 0.1;
+ let realEarnings=0;
+ allOrders.forEach(o=>{ realEarnings += Number(o.total||o.total_amount||0)*0.9; });
+ // REMOVED platform fee and gross. Only show 90% earnings
  document.getElementById('walletBreak').innerHTML=`
-   <b>Real Earnings (90%): ₦${Math.round(realEarnings).toLocaleString()}</b><br>
-   Platform fee (10%): ₦${Math.round(platformFee).toLocaleString()}<br>
-   Gross Sales: ₦${Math.round(realEarnings + platformFee).toLocaleString()}<br><hr style='margin:8px 0'>
+   <b>Real Earnings (90%): ₦${Math.round(realEarnings).toLocaleString()}</b><br><hr style='margin:8px 0'>
    Stock Value (for restock): ₦${stockValue.toLocaleString()}<br>
    Items in stock: ${items}<br>
    <span style='font-size:10px'>Stock value is separate - not your earnings.</span>`;
@@ -251,7 +248,6 @@ async function editStock(id, oldStock){
   if(ns===null) return;
   ns = Number(ns);
   if(isNaN(ns) || ns<0) return alert('Invalid stock');
-  // FIXED: Update all stock columns
   const {error} = await supabaseClient.from('products').update({ stock: ns, stock_qty: ns, quantity: ns }).eq('id', id);
   if(error) alert('Error: '+error.message);
   else { alert('✅ Stock updated to '+ns); load(); }
