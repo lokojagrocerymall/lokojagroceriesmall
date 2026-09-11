@@ -23,6 +23,10 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 .view{display:none}.view.active-view{display:block}
 .btn-sm{padding:6px 10px;border-radius:8px;border:0;font-weight:700;font-size:11px;cursor:pointer;margin-bottom:4px;display:block;width:100%}
 .sales-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.status{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:800;text-transform:capitalize}
+.status-paid{background:#dbeafe;color:#1d4ed8}
+.status-on-the-way{background:#fef3c7;color:#92400e}
+.status-delivered{background:#dcfce7;color:#166534}
 </style>
 </head>
 <body>
@@ -194,6 +198,8 @@ async function loadOrdersCount(){
  let my = orders.filter(o=>!o.vendor_email || o.vendor_email.toLowerCase()===curUser.email.toLowerCase());
  document.getElementById('oCount').innerText=my.length;
 }
+
+// UPDATED: Shows status + "Mark as Delivered" button for customer only
 async function loadOrders(){
  const {data, error}=await supabaseClient.from('orders').select('*').order('created_at',{ascending:false}).limit(100);
  if(error){ document.getElementById('ordersList').innerHTML="No orders yet"; return; }
@@ -203,7 +209,24 @@ async function loadOrders(){
    let h=""; allOrders.forEach(o=>{
      let cust = o.customer_name || o.customer_phone || o.customer_email || '';
      let items = Array.isArray(o.items)? o.items.map(i=>i.name+' x'+i.qty).join(', ') : '';
-     h+=`<div class='card'><b>Order #${o.id}</b> - ₦${Number(o.total||o.total_amount||0).toLocaleString()} - <span style='color:green'>${o.status||'paid'}</span><br><span class='small'>${cust} • ${o.customer_phone||''}<br>${items}<br>📍 ${o.customer_address||''}<br>${new Date(o.created_at).toLocaleString()} • Ref: ${o.tx_ref||''}</span></div>`;
+     let status = o.status||'paid';
+     let statusClass = 'status-'+status.replace(' ','-');
+
+     // BUTTON LOGIC: Only show if status is "on the way" AND current user is the customer
+     let deliverBtn = '';
+     if(status === 'on the way' && o.customer_email === curUser.email){
+       deliverBtn = `<button onclick="markDelivered(${o.id})" style="background:#16a34a;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">✓ Mark as Delivered</button>`;
+     }
+
+     h+=`<div class='card'>
+       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+         <b>Order #${o.id}</b>
+         <span class="status ${statusClass}">${status}</span>
+       </div>
+       ₦${Number(o.total||o.total_amount||0).toLocaleString()}<br>
+       <span class='small'>${cust} • ${o.customer_phone||''}<br>${items}<br>📍 ${o.customer_address||''}<br>${new Date(o.created_at).toLocaleString()} • Ref: ${o.tx_ref||''}</span>
+       ${deliverBtn}
+     </div>`;
    });
    document.getElementById('ordersList').innerHTML=h;
  }
@@ -218,6 +241,18 @@ async function loadOrders(){
  document.getElementById('walletBig').innerText='₦'+Math.round(totalEarnings).toLocaleString();
  loadWallet();
 }
+
+// NEW FUNCTION: Customer clicks this
+async function markDelivered(orderId){
+  if(!confirm('Confirm you have received this order?')) return;
+  const {error} = await supabaseClient.from('orders').update({status:'delivered'}).eq('id', orderId);
+  if(error) alert('Error: '+error.message);
+  else {
+    alert('✅ Thank you! Order marked as Delivered');
+    loadOrders();
+  }
+}
+
 function loadWallet(){
  let stockValue=0; let items=0;
  allMyProducts.forEach(p=>{
@@ -226,7 +261,6 @@ function loadWallet(){
  });
  let realEarnings=0;
  allOrders.forEach(o=>{ realEarnings += Number(o.total||o.total_amount||0)*0.9; });
- // REMOVED platform fee and gross. Only show 90% earnings
  document.getElementById('walletBreak').innerHTML=`
    <b>Real Earnings (90%): ₦${Math.round(realEarnings).toLocaleString()}</b><br><hr style='margin:8px 0'>
    Stock Value (for restock): ₦${stockValue.toLocaleString()}<br>
