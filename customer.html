@@ -2,107 +2,89 @@
 <html>
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Orders - Lokoja Grocery Mall</title>
+<title>Sign Up - Lokoja Grocery Mall</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:12px}
-.card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:12px}
-.nav{display:flex;gap:8px;margin-bottom:12px}
-.nav a,.nav button{padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;border:0;cursor:pointer}
-.nav-home{background:#fff;color:#16a34a;border:1px solid #e5e7eb!important}
-.nav-logout{background:#fee2e2;color:#dc2626}
+*{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:16px}
+.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);max-width:500px;margin:auto}
+h1{color:#16a34a;text-align:center}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab{flex:1;padding:12px;border:2px solid #e5e7eb;border-radius:12px;text-align:center;cursor:pointer;font-weight:700;font-size:13px}
+.tab.active{background:#dcfce7;border-color:#16a34a;color:#16a34a}
+input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:12px}
 .btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
-.btn-delivered{background:#2563eb}
-.btn-failed{background:#dc2626}
-.small{font-size:12px;color:#6b7280}
-.status{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;text-transform:capitalize;float:right}
-.status-paid{background:#dbeafe;color:#1d4ed8}
-.status-on-the-way{background:#fef3c7;color:#92400e}
-.status-delivered{background:#dcfce7;color:#166534}
-.status-failed_delivery{background:#fee2e2;color:#dc2626}
-.countdown{font-size:12px;font-weight:700;color:#d97706;margin-top:8px}
+.hidden{display:none}
+.small{font-size:12px;color:#6b7280;margin-top:-8px;margin-bottom:12px}
 </style>
 </head>
 <body>
-<div class="nav">
-<a href="index.html" class="nav-home">🏠 Store / Home</a>
-<button class="nav-logout" onclick="logout()">Logout</button>
-</div>
-<div class="card"><b id="cName">Welcome...</b><div id="cEmail" class="small"></div></div>
+<div class="card">
+<h1>Join Lokoja Grocery Mall</h1>
+<p style="text-align:center;color:#6b7280">I want to join as</p>
 
-<div class="card"><h3>📦 My Orders</h3><div id="ordersList">Loading...</div></div>
+<div class="tabs">
+  <div class="tab active" onclick="setRole('customer')">🛒<br>Customer</div>
+  <div class="tab" onclick="setRole('vendor')">🏪<br>Vendor</div>
+  <div class="tab" onclick="setRole('agent')">🚚<br>Delivery Agent</div>
+</div>
+
+<input id="name" placeholder="Full Name">
+<input id="location" placeholder="Area in Lokoja e.g Ganaja, Felele">
+
+<input id="address" placeholder="Home/Shop Address">
+<input id="busstop" placeholder="Nearest Bus Stop / Landmark">
+<p class="small">This helps delivery riders find you fast</p>
+
+<input id="phone" placeholder="WhatsApp Number 080...">
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+
+<div id="bankFields" class="hidden">
+  <h4 style="margin:0 0 8px 0">Bank Details for Payment</h4>
+  <input id="bank" placeholder="Bank Name">
+  <input id="account" placeholder="Account Number">
+  <input id="accountName" placeholder="Account Name">
+</div>
+
+<button class="btn" onclick="signup()">Continue</button>
+<p style="text-align:center">Already have account? <a href="login.html">Login</a></p>
+</div>
 
 <script>
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let curUser=null; let allOrders=[];
+let currentRole = 'customer';
 
-function logout(){ localStorage.removeItem('lgm_user'); window.location.href='login.html'; }
-
-async function init(){
-  const saved = localStorage.getItem('lgm_user');
-  curUser = saved? JSON.parse(saved) : null;
-  if(!curUser){ location.href='login.html'; return; }
-  document.getElementById('cName').innerText="Welcome, "+curUser.name;
-  document.getElementById('cEmail').innerText=curUser.email;
-  loadOrders();
-}
-init();
-
-async function loadOrders(){
- const {data} = await supabaseClient.from('orders').select('*').order('created_at',{ascending:false});
- allOrders = data.filter(o=> (o.customer_email||'').toLowerCase()===curUser.email.toLowerCase());
- 
- if(allOrders.length===0){ document.getElementById('ordersList').innerHTML="<p class='small'>You have no orders yet.</p>"; return; }
- 
- let h=""; allOrders.forEach(o=>{
-   let status = o.status||'paid';
-   let actionBtn = ''; let countdown = '';
-   
-   if(status === 'on the way' && o.delivery_started_at){
-     let end = new Date(o.delivery_started_at).getTime() + (2 * 60 * 60 * 1000);
-     let left = end - new Date().getTime();
-     if(left > 0){
-       let hrs = Math.floor(left / 1000 / 60 / 60); let mins = Math.floor((left / 1000 / 60) % 60); let secs = Math.floor((left / 1000) % 60);
-       countdown = `<div class="countdown">⏰ Delivery arriving in: ${hrs}h ${mins}m ${secs}s</div>`;
-     }
-     actionBtn = `<button class="btn btn-delivered" onclick="markDelivered(${o.id}, '${o.vendor_email}')">✅ Mark as Delivered</button>
-                  <button class="btn btn-failed" style="margin-top:8px" onclick="reportFailed(${o.id})">❌ Report Not Delivered</button>`;
-   }
-   
-   if(status === 'delivered'){
-     actionBtn = `<div style="color:green;font-weight:700">✅ Delivered Successfully</div>`;
-   }
-   
-   h+=`<div class='card'>
-     <div><b>Order #${o.id}</b><span class="status status-${status}">${status.replace('_',' ')}</span></div>
-     <b style="font-size:18px;color:#16a34a">₦${Number(o.total||0).toLocaleString()}</b><br>
-     <span class='small'><b>Vendor:</b> ${o.vendor_email}<br>
-     <b>Address:</b> ${o.customer_address}<br>
-     <b>Ordered:</b> ${new Date(o.created_at).toLocaleString()}</span>
-     ${countdown}
-     <div style="margin-top:12px">${actionBtn}</div>
-   </div>`;
- });
- document.getElementById('ordersList').innerHTML=h;
+function setRole(role){
+  currentRole = role;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  event.target.closest('.tab').classList.add('active');
+  
+  document.getElementById('bankFields').classList.toggle('hidden', role==='customer');
+  document.getElementById('address').placeholder = role==='customer' ? 'Home Address' : 'Shop Address';
 }
 
-async function markDelivered(id, vendorEmail){
-  if(!confirm('Did you receive your order?')) return;
-  await supabaseClient.from('orders').update({status:'delivered'}).eq('id',id);
-  alert('Thank you! Vendor will receive payment now.');
-  loadOrders();
+async function signup(){
+  const user = {
+    name: name.value, 
+    location: location.value, 
+    address: address.value,
+    busstop: busstop.value, // NEW FIELD
+    phone: phone.value, 
+    email: email.value, 
+    password: password.value,
+    role: currentRole,
+    bank: bank.value, 
+    account: account.value, 
+    accountName: accountName.value
+  };
+  const {error} = await supabaseClient.from('users').insert(user);
+  if(error) return alert(error.message);
+  localStorage.setItem('lgm_user', JSON.stringify(user));
+  alert('Account Created!');
+  location.href = currentRole==='customer' ? 'customer.html' : 'vendor.html';
 }
-
-async function reportFailed(id){
-  if(!confirm('Report that order was not delivered?')) return;
-  await supabaseClient.from('orders').update({status:'failed_delivery'}).eq('id',id);
-  alert('Order marked as failed. Admin will review.');
-  loadOrders();
-}
-
-setInterval(loadOrders, 5000);
 </script>
 </body>
 </html>
