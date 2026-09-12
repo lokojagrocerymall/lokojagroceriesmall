@@ -156,7 +156,6 @@ function renderCart(){
   document.getElementById('cartTotal').innerText='₦'+total.toLocaleString();
 }
 
-// FIXED: Removed subtotal and delivery_fee from insert
 async function checkout(){
   if(cart.length===0) return alert('Cart is empty');
   const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
@@ -180,22 +179,71 @@ async function checkout(){
   }
 }
 
-// FIXED: Removed subtotal/delivery from display
 async function loadOrders(){
   const {data} = await supabaseClient.from('orders').select('*').eq('customer_email', user.email).order('created_at',{ascending:false});
   let html='';
   data?.forEach(o=>{
     let color = o.status==='delivered'? 'text-green-600' : o.status==='on the way'? 'text-orange-500' : o.status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
+
+    let timerHtml = '';
+    if(o.status === 'on the way' && o.delivery_deadline){
+      const deadline = new Date(o.delivery_deadline);
+      const now = new Date();
+      const diff = deadline - now;
+      if(diff > 0){
+        const h = Math.floor(diff / 1000 / 60 / 60);
+        const m = Math.floor(diff / 1000 / 60) % 60;
+        const s = Math.floor(diff / 1000) % 60;
+        timerHtml = `<div class="text-xs text-red-500 font-bold mt-1">⏰ Auto-fail in: ${h}h ${m}m ${s}s</div>`;
+      } else {
+        timerHtml = `<div class="text-xs text-red-600 font-bold mt-1">⏰ Time expired</div>`;
+      }
+    }
+
     html += `<div class="bg-white p-3 rounded-2xl shadow">
       <div class="flex justify-between"><b>Order #${o.id}</b><span class="${color} font-bold capitalize">${o.status.replace('_',' ')}</span></div>
       <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
-      ${o.status==='on the way'? '<div class="text-xs text-orange-500 mt-1">🚚 Your order is on the way. Please be available</div>' : ''}
-      <div class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString()}</div>
+
+      ${o.status==='on the way'? `
+        <div class="text-xs text-orange-500 mt-1">🚚 Your order is on the way. Please be available</div>
+        ${timerHtml}
+        <button onclick="markDelivered(${o.id})" class="w-full mt-2 bg-green-600 text-white py-2 rounded-full font-bold">
+          ✓ Mark Delivered
+        </button>
+      ` : ''}
+
+      <div class="text-xs text-gray-400 mt-2">${new Date(o.created_at).toLocaleString()}</div>
     </div>`;
   });
   document.getElementById('ordersList').innerHTML = html || 'No orders yet';
 }
 
+async function markDelivered(orderId) {
+  if(!confirm('Confirm you received this order?')) return;
+
+  const { error } = await supabaseClient
+   .from('orders')
+   .update({
+      status: 'delivered',
+      delivery_deadline: null
+    })
+   .eq('id', orderId);
+
+  if(error) {
+    alert('Error: ' + error.message);
+  } else {
+    alert('Thank you! Order marked delivered');
+    loadOrders();
+  }
+}
+
 function logout(){ localStorage.removeItem('lgm_user'); localStorage.removeItem('lgm_cart'); location.href='login.html'; }
 showTab('shop');
+
+// Auto-refresh timer every second
+setInterval(() => {
+  const ordersTab = document.getElementById('view-orders');
+  if(!ordersTab.classList.contains('hidden')) loadOrders();
+}, 1000);
+
 </script></body></html>
