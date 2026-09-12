@@ -28,7 +28,6 @@
     <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3">Loading products...</div>
   </div>
 
-  <!-- CART TAB WITH DELIVERY BREAKDOWN -->
   <div id="view-cart" class="view hidden">
     <div class="bg-white p-4 rounded-2xl shadow">
       <h3 class="font-bold mb-3">Your Cart</h3>
@@ -73,6 +72,21 @@ function showTab(t){
   if(t==='shop') loadProducts();
   if(t==='cart') renderCart();
   if(t==='orders') loadOrders();
+}
+
+// 2HR COUNTDOWN TIMER FOR CUSTOMER
+function formatCustomerCountdown(startTime){
+  if(!startTime) return '';
+  const end = new Date(startTime).getTime() + (2 * 60 * 60 * 1000); // 2 HOURS
+  const diff = end - new Date().getTime();
+  if(diff <= 0) return `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b class="text-red-600">⏰ Delivery window expired. Rider will call you</b></div>`;
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  return `<div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
+            <p class="text-xs text-gray-600">ESTIMATED DELIVERY WINDOW</p>
+            <b class="text-red-600">⏰ Arriving in: ${h}h ${m}m ${s}s</b>
+          </div>`;
 }
 
 async function loadProducts(){
@@ -147,7 +161,7 @@ function renderCart(){
     </div>`;
   });
 
-  const delivery = Math.round(subtotal * 0.05); // 5%
+  const delivery = Math.round(subtotal * 0.05);
   const total = subtotal + delivery;
 
   document.getElementById('cartList').innerHTML=html;
@@ -185,28 +199,13 @@ async function loadOrders(){
   data?.forEach(o=>{
     let color = o.status==='delivered'? 'text-green-600' : o.status==='on the way'? 'text-orange-500' : o.status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
 
-    let timerHtml = '';
-    if(o.status === 'on the way' && o.delivery_deadline){
-      const deadline = new Date(o.delivery_deadline);
-      const now = new Date();
-      const diff = deadline - now;
-      if(diff > 0){
-        const h = Math.floor(diff / 1000 / 60 / 60);
-        const m = Math.floor(diff / 1000 / 60) % 60;
-        const s = Math.floor(diff / 1000) % 60;
-        timerHtml = `<div class="text-xs text-red-500 font-bold mt-1">⏰ Auto-fail in: ${h}h ${m}m ${s}s</div>`;
-      } else {
-        timerHtml = `<div class="text-xs text-red-600 font-bold mt-1">⏰ Time expired</div>`;
-      }
-    }
-
     html += `<div class="bg-white p-3 rounded-2xl shadow">
       <div class="flex justify-between"><b>Order #${o.id}</b><span class="${color} font-bold capitalize">${o.status.replace('_',' ')}</span></div>
       <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
 
       ${o.status==='on the way'? `
+        ${formatCustomerCountdown(o.delivery_started_at)} // 2HR TIMER HERE
         <div class="text-xs text-orange-500 mt-1">🚚 Your order is on the way. Please be available</div>
-        ${timerHtml}
         <button onclick="markDelivered(${o.id})" class="w-full mt-2 bg-green-600 text-white py-2 rounded-full font-bold">
           ✓ Mark Delivered
         </button>
@@ -222,12 +221,12 @@ async function markDelivered(orderId) {
   if(!confirm('Confirm you received this order?')) return;
 
   const { error } = await supabaseClient
-   .from('orders')
-   .update({
+  .from('orders')
+  .update({
       status: 'delivered',
-      delivery_deadline: null
+      delivered_at: new Date().toISOString()
     })
-   .eq('id', orderId);
+  .eq('id', orderId);
 
   if(error) {
     alert('Error: ' + error.message);
