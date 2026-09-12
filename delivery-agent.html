@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delivery Dashboard</title><script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
+<body class="bg-gray-100">
+<header class="bg-white p-4 shadow flex justify-between items-center sticky top-0">
+  <b class="text-green-700">🚚 Delivery Dashboard</b>
+  <button onclick="logout()" class="text-red-500 font-bold">Logout</button>
+</header>
+<div class="p-4 max-w-2xl mx-auto">
+  <div class="bg-white p-3 rounded-xl mb-4">
+    <p class="text-sm">Welcome, <b id="name"></b></p>
+    <p class="text-xs text-gray-500">Check for new paid orders below</p>
+  </div>
+  
+  <h2 class="font-bold mb-3">Available Orders - Paid</h2>
+  <div id="orders">Loading...</div>
+</div>
+<script>
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let curUser = JSON.parse(localStorage.getItem('delivery_user')||'{}');
+if(!curUser.email){ location.href='delivery-login.html'; }
+
+document.getElementById('name').innerText = curUser.full_name || curUser.email;
+
+async function loadOrders(){
+  const { data:orders } = await supabaseClient.from('orders').select('*').eq('status','paid').order('created_at',{ascending:false});
+  if(!orders || orders.length===0){ document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No orders yet</p>'; return; }
+  document.getElementById('orders').innerHTML = orders.map(o=>`
+    <div class="bg-white p-4 rounded-xl shadow mb-3 border">
+      <div class="flex justify-between"><h3 class="font-bold">Order #${o.id}</h3><b>₦${Number(o.total).toLocaleString()}</b></div>
+      <p class="text-sm"><b>Customer:</b> ${o.customer_name}</p>
+      <p class="text-sm"><b>Address:</b> ${o.customer_address}</p>
+      <p class="text-sm"><b>Vendor:</b> ${o.vendor_email}</p>
+      <p class="text-xs text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</p>
+      <button onclick="pickup(${o.id})" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Pick Up & Start Delivery</button>
+    </div>
+  `).join('');
+}
+
+async function pickup(id){
+  await supabaseClient.from('orders').update({
+    status:'on the way', 
+    delivery_started_at:new Date().toISOString(),
+    delivery_agent_id: curUser.id
+  }).eq('id',id);
+  alert('Order picked up! 2hr countdown started. Go deliver now');
+  loadOrders();
+}
+function logout(){ localStorage.removeItem('delivery_user'); location.href='delivery-login.html'; }
+loadOrders(); setInterval(loadOrders, 5000);
+</script></body></html>
