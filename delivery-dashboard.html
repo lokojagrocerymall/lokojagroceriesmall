@@ -26,15 +26,22 @@ let curUser = JSON.parse(localStorage.getItem('delivery_user')||'{}');
 if(!curUser.email){ location.href='delivery-login.html'; }
 document.getElementById('name').innerText = curUser.full_name || curUser.email;
 
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 7200000ms = 2 HOURS. DO NOT CHANGE
+
 function formatCountdown(startTime){
   if(!startTime) return '';
-  const end = new Date(startTime).getTime() + (2 * 60 * 60 * 1000); // 2 HOURS CONFIRMED
+  const end = new Date(startTime).getTime() + TWO_HOURS_MS; // 2 HOURS
   const diff = end - new Date().getTime();
   if(diff <= 0) return '<span class="text-red-600 font-bold">TIME UP! CALL SUPPORT</span>';
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
   return `<span class="text-red-600 font-bold">${h}h ${m}m ${s}s</span>`;
+}
+
+function formatPickedUpTime(startTime){
+  if(!startTime) return '';
+  return new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
 }
 
 async function loadOrders(){
@@ -64,7 +71,8 @@ async function loadOrders(){
           <p class="text-sm"><b>Address:</b> ${addr}</p>
           <div class="bg-red-50 p-2 rounded-lg mt-2 text-center">
             <p class="text-xs text-gray-600">2 HOUR DELIVERY WINDOW</p>
-            <b>⏰ Time Left:</b> <span>${formatCountdown(o.delivery_started_at)}</span>
+            <p class="text-xs text-gray-500">Picked up at: ${formatPickedUpTime(o.delivery_started_at)}</p>
+            <b>⏰ Time Left:</b> ${formatCountdown(o.delivery_started_at)}
           </div>
           <a href="tel:${o.customer_phone}" class="mt-2 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
         </div>`;
@@ -72,14 +80,14 @@ async function loadOrders(){
     }).join('');
   }
 
-  // COMPLETED ORDERS - FIX: Show delivered orders for this agent OR if no agent was assigned
+  // COMPLETED ORDERS
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   
   const { data:completed } = await supabaseClient.from('orders')
     .select('*')
     .eq('status','delivered')
-    .or(`delivery_agent_id.eq.${curUser.id},delivery_agent_id.is.null`) // KEY FIX HERE
+    .or(`delivery_agent_id.eq.${curUser.id},delivery_agent_id.is.null`)
     .gte('delivered_at', sevenDaysAgo.toISOString())
     .order('delivered_at',{ascending:false});
     
@@ -87,7 +95,7 @@ async function loadOrders(){
   else {
     document.getElementById('completed').innerHTML = completed.map(o=>{
       const addr = o.address || o.customer_address || 'N/A';
-      const deliveredDate = new Date(o.delivered_at).toLocaleString(); // shows time too
+      const deliveredDate = new Date(o.delivered_at).toLocaleString();
       return `<div class="bg-white p-3 rounded-xl shadow mb-2 border border-gray-200 opacity-90">
         <div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div>
         <p class="text-xs"><b>Customer:</b> ${o.customer_name}</p>
@@ -109,5 +117,5 @@ async function pickup(id){
 }
 
 function logout(){ localStorage.removeItem('delivery_user'); location.href='delivery-login.html'; }
-loadOrders(); setInterval(loadOrders, 1000);
+loadOrders(); setInterval(loadOrders, 1000); // refresh every 1 second so timer counts down live
 </script></body></html>
