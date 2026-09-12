@@ -21,7 +21,12 @@
     <input name="landmark" placeholder="Nearest Bus Stop / Landmark" class="w-full border p-2 rounded">
     <input name="whatsapp" placeholder="WhatsApp Number" required class="w-full border p-2 rounded">
     <input name="email" type="email" placeholder="Email" required class="w-full border p-2 rounded">
-    <input name="password" type="password" placeholder="Password - At least 6 characters" required class="w-full border p-2 rounded">
+    
+    <div class="relative">
+      <input id="passwordInput" name="password" type="password" placeholder="Password - At least 6 characters" required class="w-full border p-2 rounded pr-10">
+      <button type="button" onclick="togglePassword()" class="absolute right-3 top-2.5">👁️</button>
+    </div>
+
     <input name="bank_name" placeholder="Bank Name" class="w-full border p-2 rounded">
     <input name="account_number" placeholder="Account Number" class="w-full border p-2 rounded">
     <input name="account_name" placeholder="Account Name" class="w-full border p-2 rounded">
@@ -29,20 +34,16 @@
     <!-- DELIVERY AGENT ONLY FIELDS -->
     <div id="deliveryFields" class="hidden space-y-3 border-t pt-3">
       <h3 class="font-bold text-green-700">Delivery Verification</h3>
-      
       <label class="text-sm font-bold">Passport Photograph</label>
       <input name="passport" type="file" accept="image/*" class="w-full">
-
       <label class="text-sm font-bold">NIN Slip / Card</label>
       <input name="nin" type="file" accept="image/*,.pdf" class="w-full">
 
       <h3 class="font-bold text-green-700 pt-2">Guarantor Information</h3>
       <input name="g_name" placeholder="Guarantor Full Name" class="w-full border p-2 rounded">
       <input name="g_address" placeholder="Guarantor House/Office Address" class="w-full border p-2 rounded">
-      
       <label class="text-sm font-bold">Guarantor Passport</label>
       <input name="g_passport" type="file" accept="image/*" class="w-full">
-
       <label class="text-sm font-bold">Guarantor NIN</label>
       <input name="g_nin" type="file" accept="image/*,.pdf" class="w-full">
 
@@ -67,6 +68,11 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentRole = 'customer';
 const deliveryFields = document.getElementById('deliveryFields');
 const submitBtn = document.getElementById('submitBtn');
+const passwordInput = document.getElementById('passwordInput');
+
+function togglePassword(){
+  passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+}
 
 function selectRole(role){
   currentRole = role;
@@ -86,17 +92,11 @@ function selectRole(role){
 }
 selectRole('customer');
 
-// Disable submit if "No" is selected for driver
 document.addEventListener('change', e=>{
-  if(e.target.name === 'is_driver_rider' && e.target.value === 'no'){
-    submitBtn.disabled = true;
-    submitBtn.innerText = 'Must be Driver & Rider';
-    submitBtn.classList.add('bg-gray-400');
-  }
-  if(e.target.name === 'is_driver_rider' && e.target.value === 'yes'){
-    submitBtn.disabled = false;
-    submitBtn.innerText = 'Continue';
-    submitBtn.classList.remove('bg-gray-400');
+  if(e.target.name === 'is_driver_rider'){
+    submitBtn.disabled = e.target.value === 'no';
+    submitBtn.innerText = e.target.value === 'no' ? 'Must be Driver & Rider' : 'Continue';
+    submitBtn.classList.toggle('bg-gray-400', e.target.value === 'no');
   }
 })
 
@@ -142,7 +142,7 @@ document.getElementById('signupForm').onsubmit = async (e)=>{
       account_number: fd.get('account_number'),
       account_name: fd.get('account_name'),
       role: currentRole,
-      approved: currentRole !== 'delivery', // Auto-approve customer/vendor. Delivery needs admin approval
+      status: currentRole === 'delivery' ? 'pending' : 'approved', // FIXED: use status instead of approved
       ...extraData
     }]);
 
