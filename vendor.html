@@ -105,6 +105,14 @@ const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let curUser=null; let allOrders=[]; let allProducts=[];
 
+// ROLE LOCK - ONLY VENDORS CAN ACCESS
+const saved = localStorage.getItem('lgm_user');
+curUser = saved? JSON.parse(saved) : null;
+if(!curUser || curUser.role!== 'vendor'){
+  alert('Access Denied. Please login as Vendor');
+  location.href='login.html';
+}
+
 function setTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
@@ -117,12 +125,9 @@ function setTab(name){
 function logout(){ localStorage.removeItem('lgm_user'); window.location.href='login.html'; }
 
 async function init(){
-  const saved = localStorage.getItem('lgm_user');
-  curUser = saved? JSON.parse(saved) : null;
-  if(!curUser){ location.href='login.html'; return; }
   document.getElementById('vName').innerText="Welcome, "+curUser.name;
   document.getElementById('vEmail').innerText=curUser.email;
-  document.getElementById('vBadge').innerText="✅ Approved Vendor • You keep 90%";
+  document.getElementById('vBadge').innerText=curUser.is_approved? "✅ Approved Vendor • You keep 90%" : "⏳ Pending Approval";
   document.getElementById('profName').value=curUser.name;
   document.getElementById('profEmail').value=curUser.email;
   loadProducts(); loadOrders(); loadWallet();
