@@ -72,7 +72,7 @@ let allUsers=[]; let allOrders=[]; let curTab='vendors'; let countdownInterval;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ location.href='login.html'; }
 
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 2 HOURS LOCKED
+const TWO_HOURS_MS = 3 * 60 * 60 * 1000; // 2 HOURS LOCKED
 
 async function loadAll(){
   const { data:users } = await supabaseClient.from('users').select('*').order('created_at',{ascending:false});
