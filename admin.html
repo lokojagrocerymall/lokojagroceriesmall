@@ -5,37 +5,59 @@
 <title>Admin Dashboard - Lokoja Grocery Mall</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>body{background:#f3f4f6;font-family:system-ui}</style>
+<style>
+body{background:#f3f4f6;font-family:system-ui}
+.tab-btn{white-space:nowrap}
+</style>
 </head>
 <body>
 <header class="bg-white p-4 flex justify-between items-center shadow sticky top-0 z-10">
-  <b>Admin Dashboard - Lokoja Grocery Mall</b>
+  <b class="text-green-700">Admin Dashboard - Lokoja Grocery Mall</b>
   <div class="flex gap-2">
-    <button onclick="location.href='index.html'" class="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm font-bold">Store</button>
+    <button onclick="location.href='/'" class="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm font-bold">Store</button>
     <button onclick="logout()" class="bg-gray-100 px-3 py-1.5 rounded-full text-sm">Logout</button>
   </div>
 </header>
 
-<div class="p-4 max-w-5xl mx-auto">
+<div class="p-4 max-w-6xl mx-auto">
+  <!-- STATS CARDS -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-    <div class="bg-white p-4 rounded-2xl shadow"><div class="text-xs text-gray-400">Total Vendors</div><div class="text-2xl font-black" id="totalV">0</div><div class="text-xs text-green-600" id="statV">0 Approved • 0 Pending</div></div>
-    <div class="bg-white p-4 rounded-2xl shadow"><div class="text-xs text-gray-400">Gross Sales</div><div class="text-2xl font-black" id="totalSales">₦0</div><div class="text-xs text-gray-400" id="orderCount">0 orders</div></div>
-    <div class="bg-white p-4 rounded-2xl shadow border-2 border-green-100"><div class="text-xs text-gray-400">Platform Income</div><div class="text-2xl font-black text-green-600" id="totalIncome">₦0</div><div class="text-[11px] text-green-700" id="incomeBreak">₦0 commission + ₦0 delivery</div></div>
-    <div class="bg-white p-4 rounded-2xl shadow"><div class="text-xs text-gray-400">Customers</div><div class="text-2xl font-black" id="totalCust">0</div><div class="text-xs text-gray-400">Unique buyers</div></div>
+    <div class="bg-white p-4 rounded-2xl shadow">
+      <div class="text-xs text-gray-400">Total Vendors</div>
+      <div class="text-2xl font-black" id="totalV">0</div>
+      <div class="text-xs text-green-600" id="statV">0 Approved • 0 Pending</div>
+    </div>
+    <div class="bg-white p-4 rounded-2xl shadow">
+      <div class="text-xs text-gray-400">Gross Sales</div>
+      <div class="text-2xl font-black" id="totalSales">₦0</div>
+      <div class="text-xs text-gray-400" id="orderCount">0 orders</div>
+    </div>
+    <div class="bg-white p-4 rounded-2xl shadow border-2 border-green-100">
+      <div class="text-xs text-gray-400">Platform Income</div>
+      <div class="text-2xl font-black text-green-600" id="totalIncome">₦0</div>
+      <div class="text-[11px] text-green-700" id="incomeBreak">₦0 commission + ₦0 delivery</div>
+    </div>
+    <div class="bg-white p-4 rounded-2xl shadow">
+      <div class="text-xs text-gray-400">Customers</div>
+      <div class="text-2xl font-black" id="totalCust">0</div>
+      <div class="text-xs text-gray-400">Unique buyers</div>
+    </div>
   </div>
 
+  <!-- CHART -->
   <div class="bg-white p-4 rounded-2xl shadow mb-4">
     <h3 class="font-black text-sm mb-2">📈 Daily Sales Last 7 Days</h3>
     <div id="chart" class="text-xs text-gray-400">Sales chart will appear after orders</div>
   </div>
 
+  <!-- TABS + LIST -->
   <div class="bg-white rounded-2xl shadow overflow-hidden">
     <div class="flex gap-4 p-4 border-b text-sm font-bold overflow-x-auto">
-      <button onclick="showTab('vendors')" id="tabV" class="text-green-600 border-b-2 border-green-600 pb-1">Vendors (<span id="cV">0</span>)</button>
-      <button onclick="showTab('pending')" id="tabP" class="text-gray-400">Pending (<span id="cP">0</span>)</button>
-      <button onclick="showTab('orders')" id="tabO" class="text-gray-400">Orders (<span id="cO">0</span>)</button>
-      <button onclick="showTab('customers')" id="tabC" class="text-gray-400">Customers</button>
-      <button onclick="showTab('delivery')" id="tabD" class="text-gray-400">Delivery Agents</button>
+      <button onclick="showTab('vendors')" id="tabV" class="tab-btn text-green-600 border-b-2 border-green-600 pb-1">Vendors (<span id="cV">0</span>)</button>
+      <button onclick="showTab('pending')" id="tabP" class="tab-btn text-gray-400">Pending (<span id="cP">0</span>)</button>
+      <button onclick="showTab('orders')" id="tabO" class="tab-btn text-gray-400">Orders (<span id="cO">0</span>)</button>
+      <button onclick="showTab('customers')" id="tabC" class="tab-btn text-gray-400">Customers</button>
+      <button onclick="showTab('delivery')" id="tabD" class="tab-btn text-gray-400">Delivery Agents</button>
     </div>
     <div id="list" class="p-4 text-sm">Loading...</div>
   </div>
@@ -72,15 +94,17 @@ async function loadAll(){
   document.getElementById('totalSales').innerText='₦'+Math.round(grossSales).toLocaleString();
   document.getElementById('totalIncome').innerText='₦'+Math.round(platformIncome).toLocaleString();
   document.getElementById('incomeBreak').innerText=`₦${Math.round(commission).toLocaleString()} commission + ₦${Math.round(totalDelivery).toLocaleString()} delivery`;
-  render(); renderChart();
+  render(); renderChart(); checkCountdowns();
 }
 
 function render(){
-  let list=[]; if(curTab==='vendors') list = allUsers.filter(u=>u.role==='vendor');
+  let list=[]; 
+  if(curTab==='vendors') list = allUsers.filter(u=>u.role==='vendor');
   if(curTab==='pending') list = allUsers.filter(u=>u.role==='vendor' && u.is_approved===false);
   if(curTab==='customers') list = allUsers.filter(u=>u.role==='customer');
-  if(curTab==='delivery') list = allUsers.filter(u=>u.role==='delivery');
+  if(curTab==='delivery') list = allUsers.filter(u=>u.role==='agent' || u.role==='delivery');
   if(curTab==='orders') list = allOrders;
+  
   if(list.length===0){ document.getElementById('list').innerHTML='<div class="text-center text-gray-400 py-8">No '+curTab+' yet</div>'; return; }
 
   let html='';
@@ -127,41 +151,65 @@ function render(){
   } else {
     list.forEach(u=>{
       html+=`<div class="border rounded-xl p-3 mb-3 flex justify-between items-center">
-        <div><div class="font-bold">${u.full_name||u.name||'No name'} <span class="text-xs ${u.is_approved===false?'text-orange-500':'text-green-600'}">${u.role==='vendor'? (u.is_approved===false?'(Pending)':'(Approved)') : ''}</span></div>
-        <div class="text-xs text-gray-500">${u.email} • ${u.phone||''}</div></div>
-        <div class="flex gap-2">${u.role==='vendor' && u.is_approved===false?`<button onclick="approve('${u.id}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
-        <button onclick="removeUser('${u.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs">Delete</button></div>
+        <div>
+          <div class="font-bold">${u.full_name||u.name||'No name'} 
+            <span class="text-xs ${u.is_approved===false?'text-orange-500':'text-green-600'}">${u.role==='vendor'? (u.is_approved===false?'(Pending)':'(Approved)') : ''}</span>
+          </div>
+          <div class="text-xs text-gray-500">${u.email} • ${u.phone||''} • ${u.location||''}</div>
+        </div>
+        <div class="flex gap-2">
+          ${u.role==='vendor' && u.is_approved===false?`<button onclick="approve('${u.id}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
+          <button onclick="removeUser('${u.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs">Delete</button>
+        </div>
       </div>`;
     });
   }
   document.getElementById('list').innerHTML=html;
 }
 
-function renderChart(){ /* same as before */
+function renderChart(){
   const now=new Date(); let days=[];
-  for(let i=6;i>=0;i--){ let d=new Date(now); d.setDate(d.getDate()-i);
+  for(let i=6;i>=0;i--){ 
+    let d=new Date(now); d.setDate(d.getDate()-i);
     let dayOrders = allOrders.filter(o=> new Date(o.created_at).toDateString()===d.toDateString());
     let dayGross = dayOrders.reduce((s,o)=> s + Number(o.total||0), 0);
     let dayPlatform = dayOrders.reduce((s,o)=> s + (Number(o.total||0)-Number(o.delivery_fee||0))*0.1 + Number(o.delivery_fee||0), 0);
-    days.push(`<div class="flex justify-between py-1 border-b border-gray-100"><span>${d.toLocaleDateString('en-NG',{weekday:'short'})}</span><b>Gross: ₦${Math.round(dayGross).toLocaleString()} | You: ₦${Math.round(dayPlatform).toLocaleString()}</b></div>`);
+    days.push(`<div class="flex justify-between py-1 border-b border-gray-100">
+      <span>${d.toLocaleDateString('en-NG',{weekday:'short'})}</span>
+      <b>Gross: ₦${Math.round(dayGross).toLocaleString()} | You: ₦${Math.round(dayPlatform).toLocaleString()}</b>
+    </div>`);
   }
   document.getElementById('chart').innerHTML = days.join('') || 'No sales yet';
 }
 
-function showTab(t){ curTab=t; document.querySelectorAll('[id^=tab]').forEach(b=>{b.classList.remove('text-green-600','border-b-2','border-green-600'); b.classList.add('text-gray-400')});
+function showTab(t){ 
+  curTab=t; 
+  document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('text-green-600','border-b-2','border-green-600'); b.classList.add('text-gray-400')});
   let map={vendors:'tabV',pending:'tabP',orders:'tabO',customers:'tabC',delivery:'tabD'};
-  let el=document.getElementById(map[t]); if(el){el.classList.add('text-green-600','border-b-2','border-green-600'); el.classList.remove('text-gray-400')} render();
+  let el=document.getElementById(map[t]); 
+  if(el){el.classList.add('text-green-600','border-b-2','border-green-600'); el.classList.remove('text-gray-400')} 
+  render(); 
 }
 
-async function approve(id){ const { error } = await supabaseClient.from('users').update({is_approved:true}).eq('id',id); if(error) alert(error.message); else { alert('Approved!'); loadAll(); } }
-async function removeUser(id){ if(!confirm('Delete user?')) return; await supabaseClient.from('users').delete().eq('id',id); loadAll(); }
+async function approve(id){ 
+  const { error } = await supabaseClient.from('users').update({is_approved:true}).eq('id',id); 
+  if(error) alert(error.message); else { alert('Vendor Approved!'); loadAll(); } 
+}
+async function removeUser(id){ 
+  if(!confirm('Delete this user?')) return; 
+  await supabaseClient.from('users').delete().eq('id',id); 
+  loadAll(); 
+}
 
 async function startDelivery(id, customerPhone){
-  const { error } = await supabaseClient.from('orders').update({ status: 'on the way', delivery_started_at: new Date().toISOString() }).eq('id',id);
+  const { error } = await supabaseClient.from('orders').update({ 
+    status: 'on the way', 
+    delivery_started_at: new Date().toISOString() 
+  }).eq('id',id);
   if(error) alert(error.message);
   else {
     alert('Order is On The Way. 2hr countdown started');
-    sendWhatsApp(customerPhone, id); // Send WhatsApp
+    sendWhatsApp(customerPhone, id);
     loadAll();
   }
 }
@@ -174,15 +222,22 @@ async function markFailed(id){
   }
 }
 
+function checkCountdowns(){
+  allOrders.filter(o=>o.status==='on the way' && o.delivery_started_at).forEach(o=>{
+    let start = new Date(o.delivery_started_at).getTime();
+    let end = start + (2 * 60 * 60 * 1000);
+    if(new Date().getTime() > end) markFailed(o.id);
+  });
+}
+
 function sendWhatsApp(phone, orderId){
-  // Opens WhatsApp with prefilled message. Replace 234 with your country code
   let msg = encodeURIComponent(`Hi! Your Lokoja Grocery Mall Order #${orderId} is On The Way. Delivery in 2 hours. Please be available.`);
   let url = `https://wa.me/234${phone.replace(/^0/,'')}/?text=${msg}`;
   window.open(url, '_blank');
 }
 
 function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
-loadAll(); setInterval(loadAll, 5000); // Refresh every 5s for countdown
+loadAll(); setInterval(loadAll, 5000); // Refresh every 5s
 </script>
 </body>
 </html>
