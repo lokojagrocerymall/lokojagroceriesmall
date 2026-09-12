@@ -26,16 +26,25 @@ if(!curUser.email){ location.href='delivery-login.html'; }
 document.getElementById('name').innerText = curUser.full_name || curUser.email;
 
 async function loadOrders(){
-  const { data:orders } = await supabaseClient.from('orders').select('*').eq('status','paid').order('created_at',{ascending:false});
+  // Show only paid orders that are NOT picked up yet
+  const { data:orders, error } = await supabaseClient.from('orders')
+    .select('*')
+    .eq('status','paid')
+    .is('delivery_agent_id', null) // only unassigned orders
+    .order('created_at',{ascending:false});
+  
+  if(error){ console.error(error); }
   if(!orders || orders.length===0){ document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No orders yet</p>'; return; }
+  
   document.getElementById('orders').innerHTML = orders.map(o=>`
     <div class="bg-white p-4 rounded-xl shadow mb-3 border">
-      <div class="flex justify-between"><h3 class="font-bold">Order #${o.id}</h3><b>₦${Number(o.total).toLocaleString()}</b></div>
+      <div class="flex justify-between"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
       <p class="text-sm"><b>Customer:</b> ${o.customer_name}</p>
-      <p class="text-sm"><b>Address:</b> ${o.customer_address}</p>
-      <p class="text-sm"><b>Vendor:</b> ${o.vendor_email}</p>
+      <p class="text-sm"><b>Phone:</b> ${o.customer_phone || 'N/A'}</p>
+      <p class="text-sm"><b>Address:</b> ${o.address || o.customer_address || 'N/A'}</p>
+      <p class="text-sm"><b>Vendor:</b> ${o.vendor_email || 'N/A'}</p>
       <p class="text-xs text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</p>
-      <button onclick="pickup(${o.id})" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Pick Up & Start Delivery</button>
+      <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Pick Up & Start Delivery</button>
     </div>
   `).join('');
 }
