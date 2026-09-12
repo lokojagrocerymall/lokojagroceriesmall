@@ -64,6 +64,8 @@ document.getElementById('role').innerText = user.role;
 let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
 let allProducts = [];
 
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 2 HOURS LOCKED
+
 function showTab(t){
   document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
   document.querySelectorAll('[id^=tab]').forEach(b=>{b.classList.remove('text-green-600','border-b-2','border-green-600'); b.classList.add('text-gray-400')});
@@ -74,17 +76,20 @@ function showTab(t){
   if(t==='orders') loadOrders();
 }
 
-// 2HR COUNTDOWN TIMER FOR CUSTOMER
+// 2HR COUNTDOWN TIMER FOR CUSTOMER - FIXED
 function formatCustomerCountdown(startTime){
   if(!startTime) return '';
-  const end = new Date(startTime).getTime() + (2 * 60 * 60 * 1000); // 2 HOURS
+  const end = new Date(startTime).getTime() + TWO_HOURS_MS; // 2 HOURS
   const diff = end - new Date().getTime();
   if(diff <= 0) return `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b class="text-red-600">⏰ Delivery window expired. Rider will call you</b></div>`;
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
+  const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+
   return `<div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
             <p class="text-xs text-gray-600">ESTIMATED DELIVERY WINDOW</p>
+            <p class="text-xs text-gray-500">Picked up at: ${pickedUpTime}</p>
             <b class="text-red-600">⏰ Arriving in: ${h}h ${m}m ${s}s</b>
           </div>`;
 }
@@ -204,7 +209,7 @@ async function loadOrders(){
       <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
 
       ${o.status==='on the way'? `
-        ${formatCustomerCountdown(o.delivery_started_at)} // 2HR TIMER HERE
+        ${formatCustomerCountdown(o.delivery_started_at)}
         <div class="text-xs text-orange-500 mt-1">🚚 Your order is on the way. Please be available</div>
         <button onclick="markDelivered(${o.id})" class="w-full mt-2 bg-green-600 text-white py-2 rounded-full font-bold">
           ✓ Mark Delivered
@@ -221,12 +226,12 @@ async function markDelivered(orderId) {
   if(!confirm('Confirm you received this order?')) return;
 
   const { error } = await supabaseClient
-  .from('orders')
-  .update({
+ .from('orders')
+ .update({
       status: 'delivered',
       delivered_at: new Date().toISOString()
     })
-  .eq('id', orderId);
+ .eq('id', orderId);
 
   if(error) {
     alert('Error: ' + error.message);
@@ -239,7 +244,7 @@ async function markDelivered(orderId) {
 function logout(){ localStorage.removeItem('lgm_user'); localStorage.removeItem('lgm_cart'); location.href='login.html'; }
 showTab('shop');
 
-// Auto-refresh timer every second
+// Auto-refresh timer every second - ONLY when orders tab is open
 setInterval(() => {
   const ordersTab = document.getElementById('view-orders');
   if(!ordersTab.classList.contains('hidden')) loadOrders();
