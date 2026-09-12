@@ -10,9 +10,7 @@
 <div class="p-4 max-w-2xl mx-auto">
   <div class="bg-white p-3 rounded-xl mb-4">
     <p class="text-sm">Welcome, <b id="name"></b></p>
-    <p class="text-xs text-gray-500">Check for new paid orders below</p>
   </div>
-  
   <h2 class="font-bold mb-3">My Active Deliveries</h2>
   <div id="orders">Loading...</div>
 </div>
@@ -22,83 +20,56 @@ const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let curUser = JSON.parse(localStorage.getItem('delivery_user')||'{}');
 if(!curUser.email){ location.href='delivery-login.html'; }
-
 document.getElementById('name').innerText = curUser.full_name || curUser.email;
 
 function formatCountdown(startTime){
-  if(!startTime) return '';
+  if(!startTime) return 'Start timer';
   const start = new Date(startTime).getTime();
-  const end = start + (2 * 60 * 60 * 1000); // 2 hours
-  const now = new Date().getTime();
-  const diff = end - now;
-  
+  const end = start + (2 * 60 * 60 * 1000);
+  const diff = end - new Date().getTime();
   if(diff <= 0) return '<span class="text-red-600 font-bold">TIME UP!</span>';
-  
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  
-  return `<span class="text-red-600 font-bold">${hours}h ${minutes}m ${seconds}s</span>`;
+  const h = Math.floor(diff / (1000 * 60 * 60));
+  const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const s = Math.floor((diff % (1000 * 60)) / 1000);
+  return `<span class="text-red-600 font-bold">${h}h ${m}m ${s}s</span>`;
 }
 
 async function loadOrders(){
-  const { data:orders, error } = await supabaseClient.from('orders')
-    .select('*')
-    .or(`status.eq.paid,and(status.eq.on the way,delivery_agent_id.eq.${curUser.id})`)
-    .order('created_at',{ascending:false});
-  
-  if(error){ console.error(error); return; }
-  if(!orders || orders.length===0){ document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No orders yet</p>'; return; }
-  
-  document.getElementById('orders').innerHTML = orders.map(o=>{
-    let button = '';
-    let timer = '';
+  try {
+    const { data:orders, error } = await supabaseClient.from('orders')
+      .select('*')
+      .eq('status','paid')
+      .order('created_at',{ascending:false});
     
-    if(o.status === 'paid'){
-      button = `<button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Pick Up & Start Delivery</button>`;
-    } else {
-      timer = `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b>⏰ Time Left:</b> <span id="timer-${o.id}">${formatCountdown(o.delivery_started_at)}</span></div>`;
-      button = `
-        <a href="tel:${o.customer_phone}" class="mt-2 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
-        <button onclick="delivered('${o.id}')" class="mt-2 w-full bg-purple-600 text-white py-2 rounded-lg font-bold">Mark Delivered</button>
-      `;
-    }
+    if(error) throw error;
+    if(!orders || orders.length===0){ document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No paid orders yet</p>'; return; }
     
-    return `
-      <div class="bg-white p-4 rounded-xl shadow mb-3 border ${o.status==='on the way' ? 'border-red-300' : 'border-green-200'}">
+    document.getElementById('orders').innerHTML = orders.map(o=>`
+      <div class="bg-white p-4 rounded-xl shadow mb-3 border border-green-200">
         <div class="flex justify-between"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
         <p class="text-sm"><b>Customer:</b> ${o.customer_name}</p>
         <p class="text-sm"><b>Phone:</b> ${o.customer_phone || 'N/A'}</p>
         <p class="text-sm"><b>Address:</b> ${o.address || o.customer_address || 'N/A'}</p>
-        <p class="text-xs text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</p>
-        <p class="text-xs font-bold mt-1 ${o.status==='on the way' ? 'text-red-600' : 'text-green-600'}">Status: ${o.status}</p>
-        ${timer}
-        ${button}
+        <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Pick Up & Start Delivery</button>
       </div>
-    `;
-  }).join('');
+    `).join('');
+  } catch(err) {
+    document.getElementById('orders').innerHTML = `<p class="text-red-500">Error: ${err.message}</p>`;
+    console.error(err);
+  }
 }
 
 async function pickup(id){
-  await supabaseClient.from('orders').update({
+  const {error} = await supabaseClient.from('orders').update({
     status:'on the way', 
     delivery_started_at:new Date().toISOString(),
     delivery_agent_id: curUser.id
   }).eq('id',id);
+  if(error){ alert('Error: '+error.message); return; }
   alert('Order picked up! 2hr countdown started');
   loadOrders();
 }
 
-async function delivered(id){
-  await supabaseClient.from('orders').update({
-    status:'delivered', 
-    delivered_at:new Date().toISOString()
-  }).eq('id',id);
-  alert('Order marked as Delivered!');
-  loadOrders();
-}
-
 function logout(){ localStorage.removeItem('delivery_user'); location.href='delivery-login.html'; }
-loadOrders(); 
-setInterval(loadOrders, 5000); // refresh every 5s to update timer
+loadOrders(); setInterval(loadOrders, 5000);
 </script></body></html>
