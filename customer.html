@@ -156,6 +156,7 @@ function renderCart(){
   document.getElementById('cartTotal').innerText='₦'+total.toLocaleString();
 }
 
+// FIXED: Removed subtotal and delivery_fee from insert
 async function checkout(){
   if(cart.length===0) return alert('Cart is empty');
   const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
@@ -169,8 +170,6 @@ async function checkout(){
     customer_phone: user.phone || '08000000',
     customer_address: 'Lokoja, Kogi State',
     vendor_email: vendor,
-    subtotal: subtotal,
-    delivery_fee: delivery,
     total: total,
     status: 'paid'
   });
@@ -181,6 +180,7 @@ async function checkout(){
   }
 }
 
+// FIXED: Removed subtotal/delivery from display
 async function loadOrders(){
   const {data} = await supabaseClient.from('orders').select('*').eq('customer_email', user.email).order('created_at',{ascending:false});
   let html='';
@@ -188,7 +188,6 @@ async function loadOrders(){
     let color = o.status==='delivered'? 'text-green-600' : o.status==='on the way'? 'text-orange-500' : o.status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
     html += `<div class="bg-white p-3 rounded-2xl shadow">
       <div class="flex justify-between"><b>Order #${o.id}</b><span class="${color} font-bold capitalize">${o.status.replace('_',' ')}</span></div>
-      <div class="text-sm">Subtotal: ₦${Number(o.subtotal||o.total).toLocaleString()} | Delivery: ₦${Number(o.delivery_fee||0).toLocaleString()}</div>
       <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
       ${o.status==='on the way'? '<div class="text-xs text-orange-500 mt-1">🚚 Your order is on the way. Please be available</div>' : ''}
       <div class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString()}</div>
