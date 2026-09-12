@@ -127,5 +127,41 @@ function addToCart(id,name,price,image){
 updateCart();
 loadProducts();
 </script>
+  <!-- DELIVERY LOGIN MODAL - SECRET -->
+<div id="deliveryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-sm mx-4">
+    <h1 class="text-2xl font-bold text-center text-green-700 mb-6">🚚 Delivery Login</h1>
+    <input id="d_email" type="email" placeholder="Email" class="w-full p-3 border rounded-lg mb-3">
+    <input id="d_password" type="password" placeholder="Password" class="w-full p-3 border rounded-lg mb-4">
+    <button onclick="deliveryLogin()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold">Login</button>
+    <button onclick="hideDeliveryLogin()" class="w-full mt-2 text-gray-600">Cancel</button>
+    <p id="d_error" class="text-red-500 text-sm mt-3 text-center"></p>
+  </div>
+</div>
+
+<script>
+function showDeliveryLogin(){ document.getElementById('deliveryModal').classList.remove('hidden'); }
+function hideDeliveryLogin(){ document.getElementById('deliveryModal').classList.add('hidden'); }
+
+async function deliveryLogin(){
+  const email=document.getElementById('d_email').value.trim().toLowerCase();
+  const password=document.getElementById('d_password').value.trim();
+  const { data:user, error } = await supabaseClient.from('delivery_users').select('*').eq('email',email).single();
+  
+  if(error || !user){ document.getElementById('d_error').innerText='Email not found'; return; }
+  if(user.password.trim() !== password){ document.getElementById('d_error').innerText='Wrong password'; return; }
+  
+  localStorage.setItem('delivery_user', JSON.stringify(user));
+  alert('Login Successful!');
+  location.href='delivery-dashboard.html'; 
+}
+
+// SECRET: Auto open login if URL has #delivery
+window.addEventListener('load', () => {
+  if(window.location.hash === '#delivery'){
+    showDeliveryLogin();
+  }
+});
+</script>
 </body>
 </html>
