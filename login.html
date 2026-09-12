@@ -8,8 +8,15 @@
 *{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:16px}
 .card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);max-width:400px;margin:auto}
 h1{color:#16a34a;text-align:center}
-input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:12px}
-.btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
+label{font-weight:600;font-size:14px;display:block;margin-bottom:4px}
+input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px}
+.password-wrap{position:relative;margin-bottom:12px}
+.password-wrap input{padding-right:40px}
+.eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none}
+.btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer;margin-top:8px}
+.btn2{background:#fff;color:#16a34a;border:2px solid #16a34a}
+.row{display:flex;justify-content:space-between;margin-top:8px;font-size:13px}
+.row a{color:#16a34a;text-decoration:none;font-weight:600}
 .small{font-size:13px;color:#6b7280;text-align:center;margin-top:12px}
 </style>
 </head>
@@ -18,10 +25,19 @@ input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin
 <h1>Login to Lokoja Grocery Mall</h1>
 
 <label>Email</label><input id="email" type="email">
-<label>Password</label><input id="password" type="password">
+
+<label>Password</label>
+<div class="password-wrap">
+  <input id="password" type="password" placeholder="Enter password">
+  <span class="eye" onclick="togglePass()">👁️</span>
+</div>
+
+<div class="row">
+  <a href="#" onclick="forgotPass()">Forgot Password?</a>
+</div>
 
 <button class="btn" onclick="login()">Login</button>
-<p class="small">Don't have account? <a href="signup.html">Sign Up</a></p>
+<button class="btn btn2" onclick="location.href='/signup.html'">Create Account</button>
 </div>
 
 <script>
@@ -29,23 +45,58 @@ const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// 1. VIEW/HIDE PASSWORD
+function togglePass(){
+  const p = document.getElementById('password');
+  const eye = document.querySelector('.eye');
+  if(p.type === 'password'){
+    p.type = 'text';
+    eye.innerText = '🙈';
+  } else {
+    p.type = 'password';
+    eye.innerText = '👁️';
+  }
+}
+
+// 2. FORGOT PASSWORD - Sends reset email
+async function forgotPass(){
+  const em = prompt("Enter your email to reset password:");
+  if(!em) return;
+  
+  const {error} = await supabaseClient.auth.resetPasswordForEmail(em, {
+    redirectTo: 'https://y-mall.vercel.app/reset.html'
+  });
+  
+  if(error) alert(error.message);
+  else alert('Password reset link sent to ' + em + '. Check your email.');
+}
+
 async function login(){
+  const btn = document.querySelector('.btn');
+  btn.innerText = 'Logging in...';
+  btn.disabled = true;
+
   const { data, error } = await supabaseClient.from('users')
     .select('*').eq('email', email.value).eq('password', password.value).single();
   
-  if(error || !data) return alert('Invalid email or password');
+  if(error || !data){ 
+    alert('Invalid email or password');
+    btn.innerText = 'Login';
+    btn.disabled = false;
+    return;
+  }
   
   localStorage.setItem('lgm_user', JSON.stringify(data));
   
-  // DIRECT ACCESS - No approval check
+  // DIRECT ACCESS
   if(data.role === 'customer'){
-    location.href = 'customer.html';
+    location.href = '/customer.html';
   } else if(data.role === 'vendor'){
-    location.href = 'vendor.html';
+    location.href = '/vendor.html';
   } else if(data.role === 'agent'){
-    location.href = 'agent.html';
+    location.href = '/agent.html';
   } else {
-    location.href = 'admin.html';
+    location.href = '/admin.html';
   }
 }
 </script>
