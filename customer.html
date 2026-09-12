@@ -56,9 +56,8 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const user = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!user.email || user.role!=='customer'){ location.href='login.html'; }
 
-// FIX FOR NAME: Check name, full_name, or get from email
 let displayName = user.name || user.full_name || user.email.split('@')[0];
-displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1); // Capitalize
+displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
 
 document.getElementById('name').innerText = displayName;
 document.getElementById('email').innerText = user.email;
@@ -98,19 +97,49 @@ function addToCart(id){
   const existing = cart.find(i=>i.id===id);
   if(existing) existing.qty++;
   else cart.push({...product, qty:1});
-  localStorage.setItem('lgm_cart', JSON.stringify(cart));
-  document.getElementById('cartCount').innerText = cart.reduce((s,i)=>s+i.qty,0);
+  saveCart();
   alert(product.name + ' added to cart');
 }
 
-function renderCart(){
+function saveCart(){
+  localStorage.setItem('lgm_cart', JSON.stringify(cart));
   document.getElementById('cartCount').innerText = cart.reduce((s,i)=>s+i.qty,0);
+}
+
+// NEW: EDIT CART FUNCTIONS
+function updateQty(id, change){
+  const item = cart.find(i=>i.id===id);
+  if(!item) return;
+  item.qty += change;
+  if(item.qty <= 0) cart = cart.filter(i=>i.id!==id);
+  saveCart();
+  renderCart();
+}
+
+function removeItem(id){
+  cart = cart.filter(i=>i.id!==id);
+  saveCart();
+  renderCart();
+}
+
+function renderCart(){
+  saveCart();
   if(cart.length===0){ document.getElementById('cartList').innerHTML='Cart is empty'; document.getElementById('cartTotal').innerText='₦0'; return; }
   let html=''; let total=0;
   cart.forEach(i=>{
     total += i.price * i.qty;
-    html += `<div class="flex justify-between py-2 border-b">
-      <div>${i.name} x${i.qty}</div><b>₦${(i.price*i.qty).toLocaleString()}</b>
+    html += `<div class="flex items-center justify-between py-3 border-b">
+      <div class="flex-1">
+        <div class="font-semibold text-sm">${i.name}</div>
+        <div class="text-green-600 font-bold">₦${Number(i.price).toLocaleString()}</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="updateQty(${i.id}, -1)" class="bg-gray-200 w-8 h-8 rounded-full font-bold">-</button>
+        <span class="font-bold w-6 text-center">${i.qty}</span>
+        <button onclick="updateQty(${i.id}, 1)" class="bg-gray-200 w-8 h-8 rounded-full font-bold">+</button>
+      </div>
+      <button onclick="removeItem(${i.id})" class="text-red-500 font-bold ml-2">✕</button>
+      <div class="font-bold ml-2">₦${(i.price*i.qty).toLocaleString()}</div>
     </div>`;
   });
   document.getElementById('cartList').innerHTML=html;
@@ -121,7 +150,6 @@ async function checkout(){
   if(cart.length===0) return alert('Cart is empty');
   const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
   const delivery = Math.round(total * 0.05);
-
   const vendor = allProducts[0]?.vendor_email || 'test@vendor.com';
 
   const { error } = await supabaseClient.from('orders').insert({
@@ -136,7 +164,7 @@ async function checkout(){
   });
   if(error) alert(error.message);
   else {
-    alert('Order Placed! Check Admin to mark "On The Way"');
+    alert('Order Placed! Now go to Admin to test "Mark On The Way"');
     cart=[]; localStorage.removeItem('lgm_cart'); showTab('orders');
   }
 }
