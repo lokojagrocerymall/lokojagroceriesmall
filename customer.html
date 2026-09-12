@@ -54,9 +54,13 @@ const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const user = JSON.parse(localStorage.getItem('lgm_user')||'{}');
-if(!user.email || user.role!=='customer'){ location.href='login.html'; } // ROLE LOCK
+if(!user.email || user.role!=='customer'){ location.href='login.html'; }
 
-document.getElementById('name').innerText = user.name || user.full_name || 'Customer';
+// FIX FOR NAME: Check name, full_name, or get from email
+let displayName = user.name || user.full_name || user.email.split('@')[0];
+displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1); // Capitalize
+
+document.getElementById('name').innerText = displayName;
 document.getElementById('email').innerText = user.email;
 document.getElementById('role').innerText = user.role;
 
@@ -79,7 +83,7 @@ async function loadProducts(){
   let html = '';
   allProducts.forEach(p=>{
     html += `<div class="bg-white p-3 rounded-2xl shadow">
-      <img src="${p.image_url || 'https://placehold.co/200x200'}" class="w-full h-32 object-cover rounded-lg mb-2">
+      <img src="${p.image_url || 'https://placehold.co/200x200/e5e7eb/6b7280?text=No+Img'}" class="w-full h-32 object-cover rounded-lg mb-2">
       <b class="text-sm">${p.name}</b>
       <div class="text-xs text-gray-500">${p.vendor_email}</div>
       <div class="font-bold text-green-600">₦${Number(p.price).toLocaleString()}</div>
@@ -116,13 +120,12 @@ function renderCart(){
 async function checkout(){
   if(cart.length===0) return alert('Cart is empty');
   const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
-  const delivery = Math.round(total * 0.05); // 5% delivery
+  const delivery = Math.round(total * 0.05);
 
-  // For testing: assign to first vendor
   const vendor = allProducts[0]?.vendor_email || 'test@vendor.com';
 
   const { error } = await supabaseClient.from('orders').insert({
-    customer_name: user.name || user.full_name,
+    customer_name: displayName,
     customer_email: user.email,
     customer_phone: user.phone || '08000000',
     customer_address: 'Lokoja, Kogi State',
@@ -133,7 +136,7 @@ async function checkout(){
   });
   if(error) alert(error.message);
   else {
-    alert('Order Placed! Admin/Vendor can now mark it "On The Way"');
+    alert('Order Placed! Check Admin to mark "On The Way"');
     cart=[]; localStorage.removeItem('lgm_cart'); showTab('orders');
   }
 }
@@ -154,5 +157,5 @@ async function loadOrders(){
 }
 
 function logout(){ localStorage.removeItem('lgm_user'); localStorage.removeItem('lgm_cart'); location.href='login.html'; }
-showTab('shop'); // Default tab
+showTab('shop');
 </script></body></html>
