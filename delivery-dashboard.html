@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Delivery Dashboard</title><script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script></head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
 <body class="bg-gray-100">
 <header class="bg-white p-4 shadow flex justify-between items-center sticky top-0">
   <b class="text-green-700">🚚 Delivery Dashboard</b>
@@ -16,7 +15,7 @@
   <h2 class="font-bold mb-3">My Active Deliveries</h2>
   <div id="orders" class="mb-6">Loading...</div>
 
-  <h2 class="font-bold mb-3 text-gray-600">Completed Deliveries</h2>
+  <h2 class="font-bold mb-3 text-gray-600">Completed Deliveries - Last 7 Days</h2>
   <div id="completed">Loading...</div>
 </div>
 <script>
@@ -27,18 +26,9 @@ let curUser = JSON.parse(localStorage.getItem('delivery_user')||'{}');
 if(!curUser.email){ location.href='delivery-login.html'; }
 document.getElementById('name').innerText = curUser.full_name || curUser.email;
 
-// ONESIGNAL PUSH NOTIFICATIONS SETUP
-window.OneSignalDeferred = window.OneSignalDeferred || [];
-OneSignalDeferred.push(async function(OneSignal) {
-  await OneSignal.init({
-    appId: "PASTE_YOUR_ONESIGNAL_APP_ID_HERE", // We will set this up next
-  });
-  await OneSignal.login(curUser.id); // Tag agent
-});
-
 function formatCountdown(startTime){
   if(!startTime) return '';
-  const end = new Date(startTime).getTime() + (2 * 60 * 60 * 1000); // CONFIRMED 2 HOURS
+  const end = new Date(startTime).getTime() + (2 * 60 * 60 * 1000); // 2 HOURS CONFIRMED
   const diff = end - new Date().getTime();
   if(diff <= 0) return '<span class="text-red-600 font-bold">TIME UP! CALL SUPPORT</span>';
   const h = Math.floor(diff / 3600000);
@@ -82,18 +72,23 @@ async function loadOrders(){
     }).join('');
   }
 
-  // COMPLETED ORDERS
+  // COMPLETED ORDERS - FIX: Show delivered orders for this agent OR if no agent was assigned
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
   const { data:completed } = await supabaseClient.from('orders')
-    .select('*').eq('status','delivered').eq('delivery_agent_id', curUser.id)
-    .gte('delivered_at', sevenDaysAgo.toISOString()).order('delivered_at',{ascending:false});
+    .select('*')
+    .eq('status','delivered')
+    .or(`delivery_agent_id.eq.${curUser.id},delivery_agent_id.is.null`) // KEY FIX HERE
+    .gte('delivered_at', sevenDaysAgo.toISOString())
+    .order('delivered_at',{ascending:false});
+    
   if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }
   else {
     document.getElementById('completed').innerHTML = completed.map(o=>{
       const addr = o.address || o.customer_address || 'N/A';
-      const deliveredDate = new Date(o.delivered_at).toLocaleDateString();
-      return `<div class="bg-white p-3 rounded-xl shadow mb-2 border-gray-200 opacity-80">
+      const deliveredDate = new Date(o.delivered_at).toLocaleString(); // shows time too
+      return `<div class="bg-white p-3 rounded-xl shadow mb-2 border border-gray-200 opacity-90">
         <div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div>
         <p class="text-xs"><b>Customer:</b> ${o.customer_name}</p>
         <p class="text-xs"><b>Address:</b> ${addr}</p>
@@ -106,7 +101,7 @@ async function loadOrders(){
 async function pickup(id){
   await supabaseClient.from('orders').update({
     status:'on the way', 
-    delivery_started_at:new Date().toISOString(), // THIS STARTS THE FULL 2HR TIMER
+    delivery_started_at:new Date().toISOString(), // STARTS FULL 2HR TIMER
     delivery_agent_id: curUser.id
   }).eq('id',id);
   alert('Order picked up! 2 Hour countdown started for multi-vendor run');
