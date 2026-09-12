@@ -57,7 +57,7 @@ body{background:#f3f4f6;font-family:system-ui}
       <button onclick="showTab('pending')" id="tabP" class="tab-btn text-gray-400">Pending (<span id="cP">0</span>)</button>
       <button onclick="showTab('orders')" id="tabO" class="tab-btn text-gray-400">Orders (<span id="cO">0</span>)</button>
       <button onclick="showTab('customers')" id="tabC" class="tab-btn text-gray-400">Customers</button>
-      <button onclick="showTab('delivery')" id="tabD" class="tab-btn text-gray-400">Delivery Agents</button>
+      <button onclick="showTab('delivery')" id="tabD" class="tab-btn text-gray-400">Delivery Agents (<span id="cD">0</span>)</button>
     </div>
     <div id="list" class="p-4 text-sm">Loading...</div>
   </div>
@@ -79,12 +79,18 @@ async function loadAll(){
   allOrders=orders||[];
 
   let vendors = allUsers.filter(u=>u.role==='vendor');
-  let pending = vendors.filter(v=>v.status==='pending'); // FIXED: use status not is_approved
+  let pending = vendors.filter(v=>v.status==='pending'); 
+  let delivery = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
+  let deliveryPending = delivery.filter(d=>d.status==='pending');
+  
   document.getElementById('totalV').innerText=vendors.length;
   document.getElementById('statV').innerText=(vendors.length-pending.length)+' Approved • '+pending.length+' Pending';
-  document.getElementById('totalCust').innerText=[...new Set(allOrders.map(o=>o.customer_email).filter(Boolean))].length; // FIXED: use email
-  document.getElementById('cV').innerText=vendors.length; document.getElementById('cP').innerText=pending.length;
-  document.getElementById('cO').innerText=allOrders.length; document.getElementById('orderCount').innerText=allOrders.length+' orders';
+  document.getElementById('totalCust').innerText=[...new Set(allOrders.map(o=>o.customer_email).filter(Boolean))].length;
+  document.getElementById('cV').innerText=vendors.length; 
+  document.getElementById('cP').innerText=pending.length + deliveryPending.length; // Add delivery pending too
+  document.getElementById('cO').innerText=allOrders.length; 
+  document.getElementById('cD').innerText=delivery.length;
+  document.getElementById('orderCount').innerText=allOrders.length+' orders';
 
   let grossSales = allOrders.reduce((s,o)=> s + Number(o.total||0), 0);
   let totalDelivery = allOrders.reduce((s,o)=> s + Number(o.delivery_fee||0), 0);
@@ -100,9 +106,9 @@ async function loadAll(){
 function render(){
   let list=[];
   if(curTab==='vendors') list = allUsers.filter(u=>u.role==='vendor');
-  if(curTab==='pending') list = allUsers.filter(u=>u.role==='vendor' && u.status==='pending'); // FIXED
+  if(curTab==='pending') list = [...allUsers.filter(u=>u.role==='vendor' && u.status==='pending'),...allUsers.filter(u=>u.role==='delivery' && u.status==='pending')];
   if(curTab==='customers') list = allUsers.filter(u=>u.role==='customer');
-  if(curTab==='delivery') list = allUsers.filter(u=>u.role==='agent' || u.role==='delivery');
+  if(curTab==='delivery') list = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
   if(curTab==='orders') list = allOrders;
 
   if(list.length===0){ document.getElementById('list').innerHTML='<div class="text-center text-gray-400 py-8">No '+curTab+' yet</div>'; return; }
@@ -110,24 +116,16 @@ function render(){
   let html='';
   if(curTab==='orders'){
     list.forEach(o=>{
-      let deliveryFee = Math.round(Number(o.total||0) * 0.05); // Calculate 5% if not in DB
+      let deliveryFee = Math.round(Number(o.total||0) * 0.05);
       let productTotal = Number(o.total||0) - deliveryFee;
       let vendorEarn = productTotal * 0.9;
       let platform = productTotal * 0.1 + deliveryFee;
       let status = o.status||'paid';
       let statusColor = status==='delivered'? 'text-green-600' : status==='on the way'? 'text-orange-500' : status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
-
       let adminBtn = ''; let countdown = '';
-      if(status === 'paid'){
-        adminBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_email}')" class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">Mark On The Way</button>`;
-      }
-      if(status === 'failed_delivery'){
-        adminBtn = `<button disabled class="bg-gray-300 text-gray-500 px-3 py-1 rounded-full text-xs font-bold">Delivery Failed</button>`;
-      }
-      if(status === 'on the way' && o.delivery_started_at){
-        countdown = `<div id="timer-${o.id}" class="text-xs mt-1 font-bold text-orange-600">⏰ Auto-fail in: calculating...</div>`;
-      }
-
+      if(status === 'paid'){ adminBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_email}')" class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">Mark On The Way</button>`; }
+      if(status === 'failed_delivery'){ adminBtn = `<button disabled class="bg-gray-300 text-gray-500 px-3 py-1 rounded-full text-xs font-bold">Delivery Failed</button>`; }
+      if(status === 'on the way' && o.delivery_started_at){ countdown = `<div id="timer-${o.id}" class="text-xs mt-1 font-bold text-orange-600">⏰ Auto-fail in: calculating...</div>`; }
       html+=`<div class="border rounded-xl p-3 mb-3">
         <div class="flex justify-between items-center">
           <div class="font-bold">Order #${o.id}</div>
@@ -140,14 +138,42 @@ function render(){
         ${countdown}<div class="mt-2">${adminBtn}</div>
       </div>`;
     });
+  } else if(curTab==='delivery'){
+    // NEW: DETAILED DELIVERY AGENT CARD
+    list.forEach(u=>{
+      let statusColor = u.status==='pending'? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+      let borderColor = u.status==='pending'? 'border-yellow-400' : 'border-green-400';
+      html+=`<div class="border-2 ${borderColor} rounded-xl p-3 mb-3">
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="font-bold text-base">${u.full_name||u.name||u.email} <span class="px-2 py-0.5 text-xs rounded-full ${statusColor}">${u.status}</span></div>
+            <div class="text-xs text-gray-500">${u.email} • ${u.whatsapp||''}</div>
+            <div class="text-xs text-gray-500">${u.location||''} • ${u.address||''}</div>
+            <div class="text-xs mt-1"><b>Driver/Rider:</b> ${u.is_driver_rider? 'Yes ✅' : 'No ❌'}</div>
+          </div>
+        </div>
+        ${u.g_full_name? `<div class="mt-2 p-2 bg-gray-50 rounded text-xs"><b>Guarantor:</b> ${u.g_full_name}<br><b>Address:</b> ${u.g_house_address}</div>` : ''}
+        <div class="flex gap-2 mt-2 flex-wrap text-xs">
+          ${u.passport_url? `<a href="${SUPABASE_URL}/storage/v1/object/public/delivery_docs/${u.passport_url}" target="_blank" class="text-blue-600 underline">Passport</a>` : ''}
+          ${u.nin_url? `<a href="${SUPABASE_URL}/storage/v1/object/public/delivery_docs/${u.nin_url}" target="_blank" class="text-blue-600 underline">NIN</a>` : ''}
+          ${u.g_passport_url? `<a href="${SUPABASE_URL}/storage/v1/object/public/delivery_docs/${u.g_passport_url}" target="_blank" class="text-blue-600 underline">G-Passport</a>` : ''}
+          ${u.g_nin_url? `<a href="${SUPABASE_URL}/storage/v1/object/public/delivery_docs/${u.g_nin_url}" target="_blank" class="text-blue-600 underline">G-NIN</a>` : ''}
+        </div>
+        <div class="flex gap-2 mt-3">
+          ${u.status==='pending'?`<button onclick="approveDelivery('${u.email}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
+          <button onclick="removeUser('${u.email}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs">Delete</button>
+        </div>
+      </div>`;
+    });
   } else {
+    // VENDORS + CUSTOMERS
     list.forEach(u=>{
       html+=`<div class="border rounded-xl p-3 mb-3 flex justify-between items-center">
         <div>
-          <div class="font-bold">${u.name||u.email}
+          <div class="font-bold">${u.full_name||u.name||u.email}
             <span class="text-xs ${u.status==='pending'?'text-orange-500':'text-green-600'}">${u.role==='vendor'? (u.status==='pending'?'(Pending)':'(Approved)') : ''}</span>
           </div>
-          <div class="text-xs text-gray-500">${u.email} • ${u.phone||''} • ${u.location||''}</div>
+          <div class="text-xs text-gray-500">${u.email} • ${u.whatsapp||u.phone||''} • ${u.location||''}</div>
         </div>
         <div class="flex gap-2">
           ${u.role==='vendor' && u.status==='pending'?`<button onclick="approve('${u.email}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
@@ -157,22 +183,20 @@ function render(){
     });
   }
   document.getElementById('list').innerHTML=html;
-  startAllTimers(); // Start timers after render
+  startAllTimers();
 }
 
+//... rest of your functions are same...
 function startAllTimers(){
   clearInterval(countdownInterval);
   countdownInterval = setInterval(()=>{
     allOrders.filter(o=>o.status==='on the way' && o.delivery_started_at).forEach(o=>{
       let start = new Date(o.delivery_started_at).getTime();
-      let end = start + (2 * 60 * 60 * 1000); // 2 hours
+      let end = start + (2 * 60 * 60 * 1000);
       let left = end - new Date().getTime();
       let el = document.getElementById(`timer-${o.id}`);
       if(!el) return;
-      if(left <= 0){
-        el.innerHTML = '⏰ Time up! Auto-failing...';
-        markFailed(o.id);
-      }
+      if(left <= 0){ el.innerHTML = '⏰ Time up! Auto-failing...'; markFailed(o.id); }
       else {
         let hrs = Math.floor(left / 1000 / 60 / 60);
         let mins = Math.floor((left / 1000 / 60) % 60);
@@ -207,11 +231,17 @@ function showTab(t){
   render();
 }
 
-async function approve(email){ // FIXED: use email
+async function approve(email){
   const { error } = await supabaseClient.from('users').update({status:'approved'}).eq('email',email);
   if(error) alert(error.message); else { alert('Vendor Approved!'); loadAll(); }
 }
-async function removeUser(email){ // FIXED: use email
+
+async function approveDelivery(email){ // NEW FUNCTION FOR DELIVERY
+  const { error } = await supabaseClient.from('users').update({status:'approved'}).eq('email',email);
+  if(error) alert(error.message); else { alert('Delivery Agent Approved!'); loadAll(); }
+}
+
+async function removeUser(email){
   if(!confirm('Delete this user?')) return;
   await supabaseClient.from('users').delete().eq('email',email);
   loadAll();
@@ -220,13 +250,9 @@ async function removeUser(email){ // FIXED: use email
 async function startDelivery(id, customerEmail){
   const { error } = await supabaseClient.from('orders').update({
     status: 'on the way',
-    delivery_started_at: new Date().toISOString() // FIXED: Save start time
+    delivery_started_at: new Date().toISOString()
   }).eq('id',id);
-  if(error) alert(error.message);
-  else {
-    alert('Order is On The Way. 2hr countdown started');
-    loadAll();
-  }
+  if(error) alert(error.message); else { alert('Order is On The Way. 2hr countdown started'); loadAll(); }
 }
 
 async function markFailed(id){
@@ -237,12 +263,9 @@ async function markFailed(id){
   }
 }
 
-function checkCountdowns(){
-  // This now runs in startAllTimers
-}
-
+function checkCountdowns(){}
 function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
-loadAll(); setInterval(loadAll, 10000); // Refresh every 10s
+loadAll(); setInterval(loadAll, 10000);
 </script>
 </body>
 </html>
