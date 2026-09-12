@@ -1,32 +1,158 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Account - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script></head>
+<title>My Account - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
 <body class="bg-gray-100">
-<header class="bg-white p-4 flex justify-between items-center shadow sticky top-0">
+<header class="bg-white p-4 flex justify-between items-center shadow sticky top-0 z-10">
   <b class="text-green-700">My Account</b>
   <div class="flex gap-2">
     <button onclick="location.href='/'" class="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm font-bold">Store</button>
     <button onclick="logout()" class="bg-red-500 text-white px-3 py-1.5 rounded-full text-sm">Logout</button>
   </div>
 </header>
-<div class="p-4 max-w-md mx-auto">
+
+<div class="p-4 max-w-4xl mx-auto">
   <div class="bg-white p-4 rounded-2xl shadow mb-3">
-    <h2 class="text-lg font-bold text-green-600">Hello, <span id="name">Your Name</span>!</h2>
+    <h2 class="text-lg font-bold text-green-600">Hello, <span id="name">Customer</span>!</h2>
     <p class="text-sm">Email: <span id="email"></span></p>
     <p class="text-sm">Role: <span id="role" class="font-bold"></span></p>
   </div>
-  <div class="bg-white p-4 rounded-2xl shadow">
-    <h3 class="font-bold text-green-600 mb-2">Quick Actions</h3>
-    <button onclick="location.href='/'" class="w-full bg-green-600 text-white py-2 rounded-full mb-2">🛒 Start Shopping</button>
-    <button onclick="alert('Cart page coming soon')" class="w-full bg-orange-500 text-white py-2 rounded-full mb-2">🛍️ View Cart</button>
-    <button onclick="alert('Orders page coming soon')" class="w-full bg-blue-500 text-white py-2 rounded-full">📦 My Orders</button>
+
+  <!-- TABS -->
+  <div class="flex gap-4 mb-3 bg-white p-3 rounded-2xl shadow text-sm font-bold overflow-x-auto">
+    <button onclick="showTab('shop')" id="tabShop" class="text-green-600 border-b-2 border-green-600 pb-1">🛒 Shop</button>
+    <button onclick="showTab('cart')" id="tabCart" class="text-gray-400">🛍️ Cart (<span id="cartCount">0</span>)</button>
+    <button onclick="showTab('orders')" id="tabOrders" class="text-gray-400">📦 My Orders</button>
+  </div>
+
+  <!-- SHOP TAB -->
+  <div id="view-shop" class="view">
+    <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3">Loading products...</div>
+  </div>
+
+  <!-- CART TAB -->
+  <div id="view-cart" class="view hidden">
+    <div class="bg-white p-4 rounded-2xl shadow">
+      <h3 class="font-bold mb-3">Your Cart</h3>
+      <div id="cartList">Cart is empty</div>
+      <div class="border-t pt-3 mt-3">
+        <div class="flex justify-between font-bold text-lg">Total: <span id="cartTotal">₦0</span></div>
+        <button onclick="checkout()" class="w-full bg-green-600 text-white py-3 rounded-full font-bold mt-3">Place Order</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORDERS TAB -->
+  <div id="view-orders" class="view hidden">
+    <div id="ordersList" class="space-y-3">Loading orders...</div>
   </div>
 </div>
+
 <script>
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const user = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!user.email || user.role!=='customer'){ location.href='login.html'; } // ROLE LOCK
-document.getElementById('name').innerText = user.name || user.full_name;
+
+document.getElementById('name').innerText = user.name || user.full_name || 'Customer';
 document.getElementById('email').innerText = user.email;
 document.getElementById('role').innerText = user.role;
-function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
+
+let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
+let allProducts = [];
+
+function showTab(t){
+  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  document.querySelectorAll('[id^=tab]').forEach(b=>{b.classList.remove('text-green-600','border-b-2','border-green-600'); b.classList.add('text-gray-400')});
+  document.getElementById('view-'+t).classList.remove('hidden');
+  document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('text-green-600','border-b-2','border-green-600');
+  if(t==='shop') loadProducts();
+  if(t==='cart') renderCart();
+  if(t==='orders') loadOrders();
+}
+
+async function loadProducts(){
+  const {data} = await supabaseClient.from('products').select('*');
+  allProducts = data||[];
+  let html = '';
+  allProducts.forEach(p=>{
+    html += `<div class="bg-white p-3 rounded-2xl shadow">
+      <img src="${p.image_url || 'https://placehold.co/200x200'}" class="w-full h-32 object-cover rounded-lg mb-2">
+      <b class="text-sm">${p.name}</b>
+      <div class="text-xs text-gray-500">${p.vendor_email}</div>
+      <div class="font-bold text-green-600">₦${Number(p.price).toLocaleString()}</div>
+      <button onclick="addToCart(${p.id})" class="w-full bg-orange-500 text-white py-1.5 rounded-full text-xs mt-2">Add to Cart</button>
+    </div>`;
+  });
+  document.getElementById('productGrid').innerHTML = html || 'No products yet';
+}
+
+function addToCart(id){
+  const product = allProducts.find(p=>p.id===id);
+  const existing = cart.find(i=>i.id===id);
+  if(existing) existing.qty++;
+  else cart.push({...product, qty:1});
+  localStorage.setItem('lgm_cart', JSON.stringify(cart));
+  document.getElementById('cartCount').innerText = cart.reduce((s,i)=>s+i.qty,0);
+  alert(product.name + ' added to cart');
+}
+
+function renderCart(){
+  document.getElementById('cartCount').innerText = cart.reduce((s,i)=>s+i.qty,0);
+  if(cart.length===0){ document.getElementById('cartList').innerHTML='Cart is empty'; document.getElementById('cartTotal').innerText='₦0'; return; }
+  let html=''; let total=0;
+  cart.forEach(i=>{
+    total += i.price * i.qty;
+    html += `<div class="flex justify-between py-2 border-b">
+      <div>${i.name} x${i.qty}</div><b>₦${(i.price*i.qty).toLocaleString()}</b>
+    </div>`;
+  });
+  document.getElementById('cartList').innerHTML=html;
+  document.getElementById('cartTotal').innerText='₦'+total.toLocaleString();
+}
+
+async function checkout(){
+  if(cart.length===0) return alert('Cart is empty');
+  const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const delivery = Math.round(total * 0.05); // 5% delivery
+
+  // For testing: assign to first vendor
+  const vendor = allProducts[0]?.vendor_email || 'test@vendor.com';
+
+  const { error } = await supabaseClient.from('orders').insert({
+    customer_name: user.name || user.full_name,
+    customer_email: user.email,
+    customer_phone: user.phone || '08000000',
+    customer_address: 'Lokoja, Kogi State',
+    vendor_email: vendor,
+    total: total + delivery,
+    delivery_fee: delivery,
+    status: 'paid'
+  });
+  if(error) alert(error.message);
+  else {
+    alert('Order Placed! Admin/Vendor can now mark it "On The Way"');
+    cart=[]; localStorage.removeItem('lgm_cart'); showTab('orders');
+  }
+}
+
+async function loadOrders(){
+  const {data} = await supabaseClient.from('orders').select('*').eq('customer_email', user.email).order('created_at',{ascending:false});
+  let html='';
+  data?.forEach(o=>{
+    let color = o.status==='delivered'? 'text-green-600' : o.status==='on the way'? 'text-orange-500' : o.status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
+    html += `<div class="bg-white p-3 rounded-2xl shadow">
+      <div class="flex justify-between"><b>Order #${o.id}</b><span class="${color} font-bold capitalize">${o.status.replace('_',' ')}</span></div>
+      <div class="text-sm">₦${Number(o.total).toLocaleString()} • ${o.vendor_email}</div>
+      ${o.status==='on the way'? '<div class="text-xs text-orange-500 mt-1">🚚 Your order is on the way. Please be available</div>' : ''}
+      <div class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString()}</div>
+    </div>`;
+  });
+  document.getElementById('ordersList').innerHTML = html || 'No orders yet';
+}
+
+function logout(){ localStorage.removeItem('lgm_user'); localStorage.removeItem('lgm_cart'); location.href='login.html'; }
+showTab('shop'); // Default tab
 </script></body></html>
