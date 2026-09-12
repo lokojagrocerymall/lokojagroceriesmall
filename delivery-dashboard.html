@@ -26,7 +26,7 @@ let curUser = JSON.parse(localStorage.getItem('delivery_user')||'{}');
 if(!curUser.email){ location.href='delivery-login.html'; }
 document.getElementById('name').innerText = curUser.full_name || curUser.email;
 
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 7200000ms = 2 HOURS. DO NOT CHANGE
+const TWO_HOURS_MS = 3 * 60 * 60 * 1000; // 7200000ms = 2 HOURS. DO NOT CHANGE
 
 function formatCountdown(startTime){
   if(!startTime) return '';
