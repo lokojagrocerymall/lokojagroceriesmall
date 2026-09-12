@@ -18,31 +18,30 @@
     <p class="text-sm">Role: <span id="role" class="font-bold"></span></p>
   </div>
 
-  <!-- TABS -->
   <div class="flex gap-4 mb-3 bg-white p-3 rounded-2xl shadow text-sm font-bold overflow-x-auto">
     <button onclick="showTab('shop')" id="tabShop" class="text-green-600 border-b-2 border-green-600 pb-1">🛒 Shop</button>
     <button onclick="showTab('cart')" id="tabCart" class="text-gray-400">🛍️ Cart (<span id="cartCount">0</span>)</button>
     <button onclick="showTab('orders')" id="tabOrders" class="text-gray-400">📦 My Orders</button>
   </div>
 
-  <!-- SHOP TAB -->
   <div id="view-shop" class="view">
     <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3">Loading products...</div>
   </div>
 
-  <!-- CART TAB -->
+  <!-- CART TAB WITH DELIVERY BREAKDOWN -->
   <div id="view-cart" class="view hidden">
     <div class="bg-white p-4 rounded-2xl shadow">
       <h3 class="font-bold mb-3">Your Cart</h3>
       <div id="cartList">Cart is empty</div>
-      <div class="border-t pt-3 mt-3">
-        <div class="flex justify-between font-bold text-lg">Total: <span id="cartTotal">₦0</span></div>
+      <div class="border-t pt-3 mt-3 space-y-2">
+        <div class="flex justify-between text-sm"><span>Subtotal</span><span id="subTotal">₦0</span></div>
+        <div class="flex justify-between text-sm text-gray-600"><span>Delivery Fee 5%</span><span id="deliveryFee">₦0</span></div>
+        <div class="flex justify-between font-bold text-lg border-t pt-2"><span>Total</span><span id="cartTotal">₦0</span></div>
         <button onclick="checkout()" class="w-full bg-green-600 text-white py-3 rounded-full font-bold mt-3">Place Order</button>
       </div>
     </div>
   </div>
 
-  <!-- ORDERS TAB -->
   <div id="view-orders" class="view hidden">
     <div id="ordersList" class="space-y-3">Loading orders...</div>
   </div>
@@ -106,7 +105,6 @@ function saveCart(){
   document.getElementById('cartCount').innerText = cart.reduce((s,i)=>s+i.qty,0);
 }
 
-// NEW: EDIT CART FUNCTIONS
 function updateQty(id, change){
   const item = cart.find(i=>i.id===id);
   if(!item) return;
@@ -124,10 +122,16 @@ function removeItem(id){
 
 function renderCart(){
   saveCart();
-  if(cart.length===0){ document.getElementById('cartList').innerHTML='Cart is empty'; document.getElementById('cartTotal').innerText='₦0'; return; }
-  let html=''; let total=0;
+  if(cart.length===0){
+    document.getElementById('cartList').innerHTML='Cart is empty';
+    document.getElementById('subTotal').innerText='₦0';
+    document.getElementById('deliveryFee').innerText='₦0';
+    document.getElementById('cartTotal').innerText='₦0';
+    return;
+  }
+  let html=''; let subtotal=0;
   cart.forEach(i=>{
-    total += i.price * i.qty;
+    subtotal += i.price * i.qty;
     html += `<div class="flex items-center justify-between py-3 border-b">
       <div class="flex-1">
         <div class="font-semibold text-sm">${i.name}</div>
@@ -142,14 +146,21 @@ function renderCart(){
       <div class="font-bold ml-2">₦${(i.price*i.qty).toLocaleString()}</div>
     </div>`;
   });
+
+  const delivery = Math.round(subtotal * 0.05); // 5%
+  const total = subtotal + delivery;
+
   document.getElementById('cartList').innerHTML=html;
+  document.getElementById('subTotal').innerText='₦'+subtotal.toLocaleString();
+  document.getElementById('deliveryFee').innerText='₦'+delivery.toLocaleString();
   document.getElementById('cartTotal').innerText='₦'+total.toLocaleString();
 }
 
 async function checkout(){
   if(cart.length===0) return alert('Cart is empty');
-  const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
-  const delivery = Math.round(total * 0.05);
+  const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const delivery = Math.round(subtotal * 0.05);
+  const total = subtotal + delivery;
   const vendor = allProducts[0]?.vendor_email || 'test@vendor.com';
 
   const { error } = await supabaseClient.from('orders').insert({
@@ -158,13 +169,14 @@ async function checkout(){
     customer_phone: user.phone || '08000000',
     customer_address: 'Lokoja, Kogi State',
     vendor_email: vendor,
-    total: total + delivery,
+    subtotal: subtotal,
     delivery_fee: delivery,
+    total: total,
     status: 'paid'
   });
   if(error) alert(error.message);
   else {
-    alert('Order Placed! Now go to Admin to test "Mark On The Way"');
+    alert(`Order Placed! Total: ₦${total.toLocaleString()}`);
     cart=[]; localStorage.removeItem('lgm_cart'); showTab('orders');
   }
 }
@@ -176,7 +188,8 @@ async function loadOrders(){
     let color = o.status==='delivered'? 'text-green-600' : o.status==='on the way'? 'text-orange-500' : o.status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
     html += `<div class="bg-white p-3 rounded-2xl shadow">
       <div class="flex justify-between"><b>Order #${o.id}</b><span class="${color} font-bold capitalize">${o.status.replace('_',' ')}</span></div>
-      <div class="text-sm">₦${Number(o.total).toLocaleString()} • ${o.vendor_email}</div>
+      <div class="text-sm">Subtotal: ₦${Number(o.subtotal||o.total).toLocaleString()} | Delivery: ₦${Number(o.delivery_fee||0).toLocaleString()}</div>
+      <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
       ${o.status==='on the way'? '<div class="text-xs text-orange-500 mt-1">🚚 Your order is on the way. Please be available</div>' : ''}
       <div class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString()}</div>
     </div>`;
