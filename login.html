@@ -1,60 +1,52 @@
 <!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html>
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Login - Lokoja Grocery Mall</title>
-<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>body{background:#f5f5f5;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}</style>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:16px}
+.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);max-width:400px;margin:auto}
+h1{color:#16a34a;text-align:center}
+input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:12px}
+.btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
+.small{font-size:13px;color:#6b7280;text-align:center;margin-top:12px}
+</style>
 </head>
 <body>
-<div class="bg-white p-6 rounded-2xl shadow w-full max-w-sm">
-<h2 class="text-green-600 font-black text-xl text-center mb-4">Login to Lokoja Grocery Mall</h2>
-<label class="font-bold text-sm">Email</label>
-<input id="email" type="email" placeholder="Enter email" class="w-full p-3 border rounded-xl mt-1 mb-3 text-sm">
-<label class="font-bold text-sm">Password</label>
-<div class="relative"><input id="password" type="password" placeholder="Enter password" class="w-full p-3 border rounded-xl mt-1 mb-1 text-sm"><span onclick="document.getElementById('password').type = document.getElementById('password').type==='password'?'text':'password'" class="absolute right-3 top-3.5 cursor-pointer">👁️</span></div>
-<p class="text-right text-xs text-gray-400 mb-4">Forgot password?</p>
-<button id="loginBtn" onclick="login()" class="w-full bg-green-600 text-white py-3 rounded-xl font-black">Login</button>
-<p class="text-center text-sm mt-3">Don't have account? <a href="signup.html" class="text-green-600 font-bold">Sign Up</a></p>
-<p id="msg" class="text-center text-xs mt-2"></p>
+<div class="card">
+<h1>Login to Lokoja Grocery Mall</h1>
+
+<label>Email</label><input id="email" type="email">
+<label>Password</label><input id="password" type="password">
+
+<button class="btn" onclick="login()">Login</button>
+<p class="small">Don't have account? <a href="signup.html">Sign Up</a></p>
 </div>
 
 <script>
-// NEW LGM-PRODUCTION KEYS - FIXED
-const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function login(){
-  const btn=document.getElementById('loginBtn');
-  const email=document.getElementById('email').value.trim().toLowerCase();
-  const password=document.getElementById('password').value.trim();
-  const msg=document.getElementById('msg');
-  if(!email||!password){msg.innerText="❌ Fill email and password";return;}
-  btn.disabled=true; btn.innerText="Checking..."; msg.innerText="";
-
-  const { data, error } = await supabaseClient.from('users').select('*').eq('email', email).eq('password', password).limit(1);
-
-  if(error){ btn.disabled=false; btn.innerText="Login"; msg.innerText="❌ "+error.message; return; }
-  if(!data || data.length===0){
-    btn.disabled=false; btn.innerText="Login";
-    msg.innerText="❌ Wrong email or password. Please Sign Up again.";
-    return;
+  const { data, error } = await supabaseClient.from('users')
+    .select('*').eq('email', email.value).eq('password', password.value).single();
+  
+  if(error || !data) return alert('Invalid email or password');
+  
+  localStorage.setItem('lgm_user', JSON.stringify(data));
+  
+  // DIRECT ACCESS - No approval check
+  if(data.role === 'customer'){
+    location.href = 'customer.html';
+  } else if(data.role === 'vendor'){
+    location.href = 'vendor.html';
+  } else if(data.role === 'agent'){
+    location.href = 'agent.html';
+  } else {
+    location.href = 'admin.html';
   }
-  const user=data[0];
-  if(user.is_approved===false){
-    btn.disabled=false; btn.innerText="Login";
-    msg.innerText="⏳ PENDING approval. Admin will approve soon.";
-    return;
-  }
-  localStorage.setItem('lgm_user', JSON.stringify(user));
-  msg.innerText="✅ Login successful!";
-  setTimeout(()=>{
-    if(user.role==='admin') window.location.href='admin.html';
-    else if(user.role==='customer') window.location.href='customer.html';
-    else if(user.role==='delivery') window.location.href='delivery-agent.html';
-    else window.location.href='vendor.html';
-  }, 800);
 }
 </script>
 </body>
