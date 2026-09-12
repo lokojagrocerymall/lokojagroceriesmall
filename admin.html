@@ -72,6 +72,8 @@ let allUsers=[]; let allOrders=[]; let curTab='vendors'; let countdownInterval;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ location.href='login.html'; }
 
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 2 HOURS LOCKED
+
 async function loadAll(){
   const { data:users } = await supabaseClient.from('users').select('*').order('created_at',{ascending:false});
   allUsers=users||[];
@@ -79,16 +81,16 @@ async function loadAll(){
   allOrders=orders||[];
 
   let vendors = allUsers.filter(u=>u.role==='vendor');
-  let pending = vendors.filter(v=>v.status==='pending'); 
+  let pending = vendors.filter(v=>v.status==='pending');
   let delivery = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
   let deliveryPending = delivery.filter(d=>d.status==='pending');
-  
+
   document.getElementById('totalV').innerText=vendors.length;
   document.getElementById('statV').innerText=(vendors.length-pending.length)+' Approved • '+pending.length+' Pending';
   document.getElementById('totalCust').innerText=[...new Set(allOrders.map(o=>o.customer_email).filter(Boolean))].length;
-  document.getElementById('cV').innerText=vendors.length; 
-  document.getElementById('cP').innerText=pending.length + deliveryPending.length; // Add delivery pending too
-  document.getElementById('cO').innerText=allOrders.length; 
+  document.getElementById('cV').innerText=vendors.length;
+  document.getElementById('cP').innerText=pending.length + deliveryPending.length;
+  document.getElementById('cO').innerText=allOrders.length;
   document.getElementById('cD').innerText=delivery.length;
   document.getElementById('orderCount').innerText=allOrders.length+' orders';
 
@@ -101,6 +103,18 @@ async function loadAll(){
   document.getElementById('totalIncome').innerText='₦'+Math.round(platformIncome).toLocaleString();
   document.getElementById('incomeBreak').innerText=`₦${Math.round(commission).toLocaleString()} commission + ₦${Math.round(totalDelivery).toLocaleString()} delivery`;
   render(); renderChart(); checkCountdowns();
+}
+
+function formatAdminCountdown(startTime){
+  if(!startTime) return '';
+  const end = new Date(startTime).getTime() + TWO_HOURS_MS; // 2 HOURS
+  const diff = end - new Date().getTime();
+  if(diff <= 0) return `⏰ Time up! Auto-failing...`;
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+  return `⏰ Auto-fail in: ${h}h ${m}m ${s}s <span class="text-gray-400">(Picked up: ${pickedUpTime})</span>`;
 }
 
 function render(){
@@ -125,7 +139,7 @@ function render(){
       let adminBtn = ''; let countdown = '';
       if(status === 'paid'){ adminBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_email}')" class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">Mark On The Way</button>`; }
       if(status === 'failed_delivery'){ adminBtn = `<button disabled class="bg-gray-300 text-gray-500 px-3 py-1 rounded-full text-xs font-bold">Delivery Failed</button>`; }
-      if(status === 'on the way' && o.delivery_started_at){ countdown = `<div id="timer-${o.id}" class="text-xs mt-1 font-bold text-orange-600">⏰ Auto-fail in: calculating...</div>`; }
+      if(status === 'on the way' && o.delivery_started_at){ countdown = `<div id="timer-${o.id}" class="text-xs mt-1 font-bold text-orange-600">${formatAdminCountdown(o.delivery_started_at)}</div>`; }
       html+=`<div class="border rounded-xl p-3 mb-3">
         <div class="flex justify-between items-center">
           <div class="font-bold">Order #${o.id}</div>
@@ -139,7 +153,6 @@ function render(){
       </div>`;
     });
   } else if(curTab==='delivery'){
-    // NEW: DETAILED DELIVERY AGENT CARD
     list.forEach(u=>{
       let statusColor = u.status==='pending'? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
       let borderColor = u.status==='pending'? 'border-yellow-400' : 'border-green-400';
@@ -166,7 +179,6 @@ function render(){
       </div>`;
     });
   } else {
-    // VENDORS + CUSTOMERS
     list.forEach(u=>{
       html+=`<div class="border rounded-xl p-3 mb-3 flex justify-between items-center">
         <div>
@@ -186,25 +198,24 @@ function render(){
   startAllTimers();
 }
 
-//... rest of your functions are same...
+// UPDATED TIMER LOGIC
 function startAllTimers(){
   clearInterval(countdownInterval);
   countdownInterval = setInterval(()=>{
     allOrders.filter(o=>o.status==='on the way' && o.delivery_started_at).forEach(o=>{
-      let start = new Date(o.delivery_started_at).getTime();
-      let end = start + (2 * 60 * 60 * 1000);
-      let left = end - new Date().getTime();
       let el = document.getElementById(`timer-${o.id}`);
       if(!el) return;
-      if(left <= 0){ el.innerHTML = '⏰ Time up! Auto-failing...'; markFailed(o.id); }
+      let end = new Date(o.delivery_started_at).getTime() + TWO_HOURS_MS;
+      let left = end - new Date().getTime();
+      if(left <= 0){
+        el.innerHTML = '⏰ Time up! Auto-failing...';
+        markFailed(o.id);
+      }
       else {
-        let hrs = Math.floor(left / 1000 / 60 / 60);
-        let mins = Math.floor((left / 1000 / 60) % 60);
-        let secs = Math.floor((left / 1000) % 60);
-        el.innerHTML = `⏰ Auto-fail in: ${hrs}h ${mins}m ${secs}s`;
+        el.innerHTML = formatAdminCountdown(o.delivery_started_at);
       }
     });
-  }, 1000);
+  }, 1000); // UPDATE EVERY 1 SECOND
 }
 
 function renderChart(){
@@ -236,7 +247,7 @@ async function approve(email){
   if(error) alert(error.message); else { alert('Vendor Approved!'); loadAll(); }
 }
 
-async function approveDelivery(email){ // NEW FUNCTION FOR DELIVERY
+async function approveDelivery(email){
   const { error } = await supabaseClient.from('users').update({status:'approved'}).eq('email',email);
   if(error) alert(error.message); else { alert('Delivery Agent Approved!'); loadAll(); }
 }
