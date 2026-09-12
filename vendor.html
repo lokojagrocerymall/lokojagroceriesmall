@@ -113,6 +113,8 @@ if(!curUser || curUser.role!== 'vendor'){
   location.href='login.html';
 }
 
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 2 HOURS LOCKED
+
 function setTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
@@ -123,6 +125,22 @@ function setTab(name){
   if(name==='wallet') loadWallet();
 }
 function logout(){ localStorage.removeItem('lgm_user'); window.location.href='login.html'; }
+
+// NEW TIMER FUNCTION FOR VENDOR
+function formatVendorCountdown(startTime){
+  if(!startTime) return '';
+  const end = new Date(startTime).getTime() + TWO_HOURS_MS; // 2 HOURS
+  const diff = end - new Date().getTime();
+  if(diff <= 0) return `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#dc2626">❌ TIME UP - FAILED</div>`;
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+  return `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#d97706">
+            ⏰ Auto-Fail in: ${h}h ${m}m ${s}s<br>
+            <span style="font-size:11px;color:#6b7280">Picked up at: ${pickedUpTime}</span>
+          </div>`;
+}
 
 async function init(){
   document.getElementById('vName').innerText="Welcome, "+curUser.name;
@@ -195,12 +213,11 @@ async function loadOrders(){
      vendorBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_phone}')" style="background:#2563eb;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">🚚 Start Delivery - 2hr Timer</button>`;
    }
    if(status === 'on the way' && o.delivery_started_at){
-     let end = new Date(o.delivery_started_at).getTime() + (2 * 60 * 60 * 1000);
+     let end = new Date(o.delivery_started_at).getTime() + TWO_HOURS_MS;
      let left = end - new Date().getTime();
      if(left <= 0){ markFailed(o.id); }
      else {
-       let hrs = Math.floor(left / 1000 / 60 / 60); let mins = Math.floor((left / 1000 / 60) % 60); let secs = Math.floor((left / 1000) % 60);
-       countdown = `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#d97706">⏰ Auto-Fail in: ${hrs}h ${mins}m ${secs}s</div>`;
+       countdown = formatVendorCountdown(o.delivery_started_at); // USE NEW FUNCTION
      }
    }
    if(status === 'failed_delivery'){
@@ -263,7 +280,7 @@ async function requestWithdrawal(){
 }
 
 function saveProfile(){ alert('Profile Updated!') }
-setInterval(loadOrders, 5000);
+setInterval(loadOrders, 1000); // REFRESH EVERY 1 SECOND FOR LIVE TIMER
 </script>
 </body>
 </html>
