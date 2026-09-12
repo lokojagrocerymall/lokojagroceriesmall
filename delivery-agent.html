@@ -1,21 +1,29 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agent Dashboard - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script></head>
+<title>Agent Dashboard - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
 <body class="bg-gray-100">
 <header class="bg-white p-4 flex justify-between items-center shadow sticky top-0">
-  <b class="text-green-700">Delivery Agent Dashboard</b>
+  <b class="text-green-700">🚚 Delivery Agent Dashboard</b>
   <button onclick="logout()" class="bg-red-500 text-white px-4 py-1.5 rounded-full text-sm">Logout</button>
 </header>
 <div class="p-4 max-w-4xl mx-auto">
   <div class="bg-white p-4 rounded-2xl shadow mb-4">
     <h2 id="welcome" class="text-lg font-bold text-green-700"></h2>
-    <p>View and update delivery orders assigned to you</p>
+    <p class="text-sm text-gray-500">View and update delivery orders assigned to you</p>
+    <div class="bg-blue-50 p-2 rounded-lg mt-3 text-center">
+      <div class="text-xs text-gray-500">Active Deliveries</div>
+      <div class="text-2xl font-bold text-blue-600" id="activeCount">0</div>
+    </div>
   </div>
+
   <div class="bg-white p-4 rounded-2xl shadow">
-    <h3 class="font-bold mb-3">🚚 Orders On The Way</h3>
+    <h3 class="font-bold mb-3">📦 Orders To Deliver</h3>
     <div id="ordersList">Loading...</div>
   </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
@@ -23,20 +31,87 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const user = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!user.email || (user.role!=='agent' && user.role!=='delivery')){ location.href='login.html'; }
-document.getElementById('welcome').innerText = 'Welcome, ' + (user.name||user.full_name);
+document.getElementById('welcome').innerText = 'Welcome, ' + (user.name||user.full_name||user.email.split('@')[0]);
 
 async function loadOrders(){
-  const { data:orders } = await supabaseClient.from('orders').select('*').eq('status','on the way').order('created_at',{ascending:false});
-  if(!orders || orders.length===0){ document.getElementById('ordersList').innerHTML = '<p class="text-gray-400">No active deliveries</p>'; return; }
+  // Get both paid and on the way orders
+  const { data:orders } = await supabaseClient
+   .from('orders')
+   .select('*')
+   .in('status',['paid','on the way'])
+   .order('created_at',{ascending:true});
+
+  document.getElementById('activeCount').innerText = orders?.length || 0;
+
+  if(!orders || orders.length===0){
+    document.getElementById('ordersList').innerHTML = '<p class="text-gray-400 text-center">No active deliveries</p>';
+    return;
+  }
+
   let html = '';
   orders.forEach(o=>{
-    html += `<div class="border rounded-xl p-3 mb-2">
-      <b>Order #${o.id}</b> - ₦${Number(o.total||0).toLocaleString()}
-      <div class="text-xs">${o.customer_name} - ${o.customer_phone} - ${o.customer_address}</div>
+    let button = '';
+    let timerHtml = '';
+    let bg = 'bg-white';
+
+    if(o.status === 'paid'){
+      bg = 'bg-orange-50 border-orange-300';
+      button = `<button onclick="markOnTheWay(${o.id})" class="w-full mt-2 bg-orange-500 text-white py-2 rounded-full font-bold">📦 Pick Up & Start Delivery</button>`;
+    }
+
+    if(o.status === 'on the way' && o.delivery_deadline){
+      bg = 'bg-red-50 border-red-300';
+      const deadline = new Date(o.delivery_deadline);
+      const now = new Date();
+      const diff = deadline - now;
+      if(diff > 0){
+        const h = Math.floor(diff / 1000 / 60 / 60);
+        const m = Math.floor(diff / 1000 / 60) % 60;
+        const s = Math.floor(diff / 1000) % 60;
+        timerHtml = `<div class="text-xs text-red-600 font-bold mt-1">⏰ Deliver before: ${h}h ${m}m ${s}s</div>`;
+      } else {
+        timerHtml = `<div class="text-xs text-red-600 font-bold mt-1">⚠️ DELIVERY TIME EXPIRED!</div>`;
+      }
+    }
+
+    html += `<div class="border ${bg} rounded-xl p-3 mb-2">
+      <div class="flex justify-between">
+        <b>Order #${o.id}</b>
+        <span class="text-xs bg-gray-200 px-2 py-1 rounded-full capitalize">${o.status.replace('_',' ')}</span>
+      </div>
+      <div class="font-bold text-green-700">₦${Number(o.total||0).toLocaleString()}</div>
+      <div class="text-xs mt-1"><b>Customer:</b> ${o.customer_name} - ${o.customer_phone}</div>
+      <div class="text-xs"><b>Address:</b> ${o.customer_address}</div>
+      <div class="text-xs"><b>Vendor:</b> ${o.vendor_email}</div>
+      ${timerHtml}
+      ${button}
     </div>`;
   });
   document.getElementById('ordersList').innerHTML = html;
 }
+
+async function markOnTheWay(orderId) {
+  if(!confirm('Have you picked up this order from the vendor? 2hr timer will start.')) return;
+
+  const deadline = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+
+  const { error } = await supabaseClient
+   .from('orders')
+   .update({
+      status: 'on the way',
+      delivery_deadline: deadline,
+      delivery_agent: user.email
+    })
+   .eq('id', orderId);
+
+  if(error) alert('Error: ' + error.message);
+  else {
+    alert('Order marked On The Way!');
+    loadOrders();
+  }
+}
+
 function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
 loadOrders();
+setInterval(loadOrders, 1000); // live timer countdown
 </script></body></html>
