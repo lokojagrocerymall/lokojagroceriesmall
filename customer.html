@@ -64,7 +64,7 @@ document.getElementById('role').innerText = user.role;
 let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
 let allProducts = [];
 
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 2 HOURS LOCKED
+const TWO_HOURS_MS = 3 * 60 * 60 * 1000; // 2 HOURS LOCKED
 
 function showTab(t){
   document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
@@ -82,9 +82,9 @@ function formatCustomerCountdown(startTime){
   const end = new Date(startTime).getTime() + TWO_HOURS_MS; // 2 HOURS
   const diff = end - new Date().getTime();
   if(diff <= 0) return `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b class="text-red-600">⏰ Delivery window expired. Rider will call you</b></div>`;
-  const h = Math.floor(diff / 7200000);
-  const m = Math.floor((diff % 7200000) / 120000);
-  const s = Math.floor((diff % 120000) / 2000);
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
   const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
 
   return `<div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
