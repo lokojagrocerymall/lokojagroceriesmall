@@ -1,117 +1,114 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agent Dashboard - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script>
+<title>Delivery Agent Signup - LGM</title><script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
 <body class="bg-gray-100">
-<header class="bg-white p-4 flex justify-between items-center shadow sticky top-0">
-  <b class="text-green-700">🚚 Delivery Agent Dashboard</b>
-  <button onclick="logout()" class="bg-red-500 text-white px-4 py-1.5 rounded-full text-sm">Logout</button>
-</header>
-<div class="p-4 max-w-4xl mx-auto">
-  <div class="bg-white p-4 rounded-2xl shadow mb-4">
-    <h2 id="welcome" class="text-lg font-bold text-green-700"></h2>
-    <p class="text-sm text-gray-500">View and update delivery orders assigned to you</p>
-    <div class="bg-blue-50 p-2 rounded-lg mt-3 text-center">
-      <div class="text-xs text-gray-500">Active Deliveries</div>
-      <div class="text-2xl font-bold text-blue-600" id="activeCount">0</div>
-    </div>
-  </div>
+<header class="bg-green-700 p-4 text-center"><b class="text-white text-lg">🚚 Delivery Agent Application</b></header>
 
-  <div class="bg-white p-4 rounded-2xl shadow">
-    <h3 class="font-bold mb-3">📦 Orders To Deliver</h3>
-    <div id="ordersList">Loading...</div>
-  </div>
+<div class="p-4 max-w-2xl mx-auto">
+  <form id="agentForm" class="bg-white p-4 rounded-2xl shadow space-y-4">
+    <h3 class="font-bold text-lg text-green-700">1. Personal Information</h3>
+    <input name="full_name" placeholder="Full Name - Must match NIN" required class="w-full border p-2 rounded">
+    <input name="house_address" placeholder="House Address" required class="w-full border p-2 rounded">
+    <input name="whatsapp" placeholder="WhatsApp Number" required class="w-full border p-2 rounded">
+    <input name="email" type="email" placeholder="Email Address" required class="w-full border p-2 rounded">
+    <input name="password" type="password" placeholder="Create Password" required class="w-full border p-2 rounded">
+
+    <label class="text-sm font-bold">Passport Photograph</label>
+    <input name="passport" type="file" accept="image/*" required class="w-full">
+
+    <label class="text-sm font-bold">NIN Slip / Card - Upload Image or PDF</label>
+    <input name="nin" type="file" accept="image/*,.pdf" required class="w-full">
+
+    <h3 class="font-bold text-lg text-green-700 pt-2">2. Guarantor Information</h3>
+    <input name="g_name" placeholder="Guarantor Full Name - Must match NIN" required class="w-full border p-2 rounded">
+    <input name="g_address" placeholder="Guarantor House/Office Address" required class="w-full border p-2 rounded">
+    
+    <label class="text-sm font-bold">Guarantor Passport Photograph</label>
+    <input name="g_passport" type="file" accept="image/*" required class="w-full">
+
+    <label class="text-sm font-bold">Guarantor NIN Slip / Card</label>
+    <input name="g_nin" type="file" accept="image/*,.pdf" required class="w-full">
+
+    <h3 class="font-bold text-lg text-green-700 pt-2">3. Vehicle Requirement</h3>
+    <div class="flex gap-4">
+      <label><input type="radio" name="is_driver_rider" value="yes" required> Yes, I am a Driver & Rider</label>
+      <label><input type="radio" name="is_driver_rider" value="no"> No</label>
+    </div>
+
+    <button id="submitBtn" type="submit" class="w-full bg-green-700 text-white py-3 rounded-full font-bold disabled:bg-gray-400">Submit Application</button>
+    <p id="msg" class="text-center text-sm"></p>
+  </form>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const user = JSON.parse(localStorage.getItem('lgm_user')||'{}');
-if(!user.email || (user.role!=='agent' && user.role!=='delivery')){ location.href='login.html'; }
-document.getElementById('welcome').innerText = 'Welcome, ' + (user.name||user.full_name||user.email.split('@')[0]);
+const form = document.getElementById('agentForm');
+const submitBtn = document.getElementById('submitBtn');
 
-async function loadOrders(){
-  // Get both paid and on the way orders
-  const { data:orders } = await supabaseClient
-   .from('orders')
-   .select('*')
-   .in('status',['paid','on the way'])
-   .order('created_at',{ascending:true});
+// Disable submit if "No" is selected
+form.is_driver_rider.forEach(radio => {
+  radio.addEventListener('change', () => {
+    submitBtn.disabled = radio.value === 'no';
+    if(radio.value === 'no') document.getElementById('msg').innerText = 'You must be a Driver and Rider to apply';
+    else document.getElementById('msg').innerText = '';
+  })
+})
 
-  document.getElementById('activeCount').innerText = orders?.length || 0;
+form.onsubmit = async (e) => {
+  e.preventDefault();
+  submitBtn.disabled = true;
+  submitBtn.innerText = 'Submitting...';
+  const fd = new FormData(form);
 
-  if(!orders || orders.length===0){
-    document.getElementById('ordersList').innerHTML = '<p class="text-gray-400 text-center">No active deliveries</p>';
-    return;
+  // 1. BASIC NAME CHECK - We can't read NIN PDF automatically from frontend
+  // So we do manual admin approval. But we save the name for admin to compare
+  const fullName = fd.get('full_name').toLowerCase().trim();
+  const gName = fd.get('g_name').toLowerCase().trim();
+
+  // 2. UPLOAD FILES TO STORAGE
+  const uploadFile = async (file, folder) => {
+    const fileName = `${Date.now()}_${file.name}`;
+    const { data, error } = await supabaseClient.storage.from('delivery_docs').upload(`${folder}/${fileName}`, file);
+    if(error) throw error;
+    return data.path;
   }
 
-  let html = '';
-  orders.forEach(o=>{
-    let button = '';
-    let timerHtml = '';
-    let bg = 'bg-white';
+  try{
+    const passportPath = await uploadFile(fd.get('passport'), 'passports');
+    const ninPath = await uploadFile(fd.get('nin'), 'nin');
+    const gPassportPath = await uploadFile(fd.get('g_passport'), 'guarantor_passports');
+    const gNinPath = await uploadFile(fd.get('g_nin'), 'guarantor_nin');
 
-    if(o.status === 'paid'){
-      bg = 'bg-orange-50 border-orange-300';
-      button = `<button onclick="markOnTheWay(${o.id})" class="w-full mt-2 bg-orange-500 text-white py-2 rounded-full font-bold">📦 Pick Up & Start Delivery</button>`;
-    }
+    // 3. INSERT INTO delivery_agents TABLE
+    const { error } = await supabaseClient.from('delivery_agents').insert([{
+      full_name: fd.get('full_name'),
+      house_address: fd.get('house_address'),
+      whatsapp: fd.get('whatsapp'),
+      email: fd.get('email'),
+      password: fd.get('password'), // NOTE: In production hash this
+      passport_url: passportPath,
+      nin_url: ninPath,
+      g_full_name: fd.get('g_name'),
+      g_house_address: fd.get('g_address'),
+      g_passport_url: gPassportPath,
+      g_nin_url: gNinPath,
+      is_driver_rider: true,
+      status: 'pending' // Admin must approve
+    }]);
 
-    if(o.status === 'on the way' && o.delivery_deadline){
-      bg = 'bg-red-50 border-red-300';
-      const deadline = new Date(o.delivery_deadline);
-      const now = new Date();
-      const diff = deadline - now;
-      if(diff > 0){
-        const h = Math.floor(diff / 1000 / 60 / 60);
-        const m = Math.floor(diff / 1000 / 60) % 60;
-        const s = Math.floor(diff / 1000) % 60;
-        timerHtml = `<div class="text-xs text-red-600 font-bold mt-1">⏰ Deliver before: ${h}h ${m}m ${s}s</div>`;
-      } else {
-        timerHtml = `<div class="text-xs text-red-600 font-bold mt-1">⚠️ DELIVERY TIME EXPIRED!</div>`;
-      }
-    }
+    if(error) throw error;
+    
+    document.getElementById('msg').innerHTML = '✅ Application Submitted! Admin will verify your NIN and contact you.';
+    form.reset();
 
-    html += `<div class="border ${bg} rounded-xl p-3 mb-2">
-      <div class="flex justify-between">
-        <b>Order #${o.id}</b>
-        <span class="text-xs bg-gray-200 px-2 py-1 rounded-full capitalize">${o.status.replace('_',' ')}</span>
-      </div>
-      <div class="font-bold text-green-700">₦${Number(o.total||0).toLocaleString()}</div>
-      <div class="text-xs mt-1"><b>Customer:</b> ${o.customer_name} - ${o.customer_phone}</div>
-      <div class="text-xs"><b>Address:</b> ${o.customer_address}</div>
-      <div class="text-xs"><b>Vendor:</b> ${o.vendor_email}</div>
-      ${timerHtml}
-      ${button}
-    </div>`;
-  });
-  document.getElementById('ordersList').innerHTML = html;
-}
-
-async function markOnTheWay(orderId) {
-  if(!confirm('Have you picked up this order from the vendor? 2hr timer will start.')) return;
-
-  const deadline = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-
-  const { error } = await supabaseClient
-   .from('orders')
-   .update({
-      status: 'on the way',
-      delivery_deadline: deadline,
-      delivery_agent: user.email
-    })
-   .eq('id', orderId);
-
-  if(error) alert('Error: ' + error.message);
-  else {
-    alert('Order marked On The Way!');
-    loadOrders();
+  }catch(err){
+    document.getElementById('msg').innerText = 'Error: ' + err.message;
   }
+  submitBtn.disabled = false;
+  submitBtn.innerText = 'Submit Application';
 }
-
-function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
-loadOrders();
-setInterval(loadOrders, 1000); // live timer countdown
 </script></body></html>
