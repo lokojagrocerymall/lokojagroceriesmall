@@ -113,7 +113,7 @@ if(!curUser || curUser.role!== 'vendor'){
   location.href='login.html';
 }
 
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 2 HOURS LOCKED
+const TWO_HOURS_MS = 3 * 60 * 60 * 1000; // 2 HOURS LOCKED
 
 function setTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
