@@ -9,7 +9,7 @@
   <form id="agentForm" class="bg-white p-4 rounded-2xl shadow space-y-4">
     <h3 class="font-bold text-lg text-green-700">1. Personal Information</h3>
     <input name="full_name" placeholder="Full Name - Must match NIN" required class="w-full border p-2 rounded">
-    <input name="house_address" placeholder="House Address" required class="w-full border p-2 rounded">
+    <input name="address" placeholder="House Address" required class="w-full border p-2 rounded"> <!-- changed name -->
     <input name="whatsapp" placeholder="WhatsApp Number" required class="w-full border p-2 rounded">
     <input name="email" type="email" placeholder="Email Address" required class="w-full border p-2 rounded">
     <input name="password" type="password" placeholder="Create Password" required class="w-full border p-2 rounded">
@@ -32,8 +32,8 @@
 
     <h3 class="font-bold text-lg text-green-700 pt-2">3. Vehicle Requirement</h3>
     <div class="flex gap-4">
-      <label><input type="radio" name="is_driver_rider" value="yes" required> Yes, I am a Driver & Rider</label>
-      <label><input type="radio" name="is_driver_rider" value="no"> No</label>
+      <label><input type="radio" name="is_driver_rider" value="true" required> Yes, I am a Driver & Rider</label>
+      <label><input type="radio" name="is_driver_rider" value="false"> No</label>
     </div>
 
     <button id="submitBtn" type="submit" class="w-full bg-green-700 text-white py-3 rounded-full font-bold disabled:bg-gray-400">Submit Application</button>
@@ -52,9 +52,13 @@ const submitBtn = document.getElementById('submitBtn');
 // Disable submit if "No" is selected
 form.is_driver_rider.forEach(radio => {
   radio.addEventListener('change', () => {
-    submitBtn.disabled = radio.value === 'no';
-    if(radio.value === 'no') document.getElementById('msg').innerText = 'You must be a Driver and Rider to apply';
-    else document.getElementById('msg').innerText = '';
+    if(radio.value === 'false' && radio.checked){
+      submitBtn.disabled = true;
+      document.getElementById('msg').innerText = 'You must be a Driver and Rider to apply';
+    } else {
+      submitBtn.disabled = false;
+      document.getElementById('msg').innerText = '';
+    }
   })
 })
 
@@ -64,40 +68,36 @@ form.onsubmit = async (e) => {
   submitBtn.innerText = 'Submitting...';
   const fd = new FormData(form);
 
-  // 1. BASIC NAME CHECK - We can't read NIN PDF automatically from frontend
-  // So we do manual admin approval. But we save the name for admin to compare
-  const fullName = fd.get('full_name').toLowerCase().trim();
-  const gName = fd.get('g_name').toLowerCase().trim();
-
-  // 2. UPLOAD FILES TO STORAGE
-  const uploadFile = async (file, folder) => {
+  // 1. UPLOAD FILES TO STORAGE - All in one bucket, no folders
+  const uploadFile = async (file) => {
     const fileName = `${Date.now()}_${file.name}`;
-    const { data, error } = await supabaseClient.storage.from('delivery_docs').upload(`${folder}/${fileName}`, file);
+    const { data, error } = await supabaseClient.storage.from('delivery_docs').upload(fileName, file);
     if(error) throw error;
-    return data.path;
+    return fileName;
   }
 
   try{
-    const passportPath = await uploadFile(fd.get('passport'), 'passports');
-    const ninPath = await uploadFile(fd.get('nin'), 'nin');
-    const gPassportPath = await uploadFile(fd.get('g_passport'), 'guarantor_passports');
-    const gNinPath = await uploadFile(fd.get('g_nin'), 'guarantor_nin');
+    const passportPath = await uploadFile(fd.get('passport'));
+    const ninPath = await uploadFile(fd.get('nin'));
+    const gPassportPath = await uploadFile(fd.get('g_passport'));
+    const gNinPath = await uploadFile(fd.get('g_nin'));
 
-    // 3. INSERT INTO delivery_agents TABLE
-    const { error } = await supabaseClient.from('delivery_agents').insert([{
+    // 2. INSERT INTO users TABLE - NOT delivery_agents
+    const { error } = await supabaseClient.from('users').insert([{
+      role: 'delivery', // KEY: so admin and login can find it
+      status: 'pending', // KEY: so admin can approve
       full_name: fd.get('full_name'),
-      house_address: fd.get('house_address'),
+      address: fd.get('address'),
       whatsapp: fd.get('whatsapp'),
       email: fd.get('email'),
-      password: fd.get('password'), // NOTE: In production hash this
+      password: fd.get('password'), // NOTE: Hash this later in production
       passport_url: passportPath,
       nin_url: ninPath,
       g_full_name: fd.get('g_name'),
       g_house_address: fd.get('g_address'),
       g_passport_url: gPassportPath,
       g_nin_url: gNinPath,
-      is_driver_rider: true,
-      status: 'pending' // Admin must approve
+      is_driver_rider: fd.get('is_driver_rider') === 'true'
     }]);
 
     if(error) throw error;
