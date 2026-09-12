@@ -16,12 +16,23 @@ const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function login(){
-  const email=document.getElementById('email').value;
-  const password=document.getElementById('password').value;
+  const email=document.getElementById('email').value.trim().toLowerCase();
+  const password=document.getElementById('password').value.trim();
   const { data:user, error } = await supabaseClient.from('delivery_users').select('*').eq('email',email).single();
-  if(error || !user || user.password !== password){ document.getElementById('error').innerText='Invalid login'; return; }
+  
+  console.log(user) // for debugging
+  
+  if(error || !user){ 
+    document.getElementById('error').innerText='Email not found'; 
+    return; 
+  }
+  if(user.password.trim() !== password){ 
+    document.getElementById('error').innerText='Wrong password'; 
+    return; 
+  }
+  
   localStorage.setItem('delivery_user', JSON.stringify(user));
-  alert('Login Successful! Role: delivery');
+  alert('Login Successful!');
   location.href='delivery-dashboard.html';
 }
 </script></body></html>
