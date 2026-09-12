@@ -1,55 +1,32 @@
 <!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Customer Dashboard - Lokoja Grocery Mall</title>
-<style>
-*{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:16px}
-.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:16px}
-h1{color:#16a34a;margin:0}
-h2{color:#16a34a;font-size:18px;margin:0 0 12px 0}
-.btn{background:#ef4444;color:#fff;padding:10px 16px;border:0;border-radius:10px;cursor:pointer;font-weight:700}
-.btn-shop{background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;width:100%;font-weight:800;cursor:pointer}
-</style>
-</head>
-<body>
-
-<div class="header">
-  <h1>Lokoja Grocery Mall</h1>
-  <button class="btn" onclick="logout()">Logout</button>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Account - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-gray-100">
+<header class="bg-white p-4 flex justify-between items-center shadow sticky top-0">
+  <b class="text-green-700">My Account</b>
+  <div class="flex gap-2">
+    <button onclick="location.href='/'" class="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm font-bold">Store</button>
+    <button onclick="logout()" class="bg-red-500 text-white px-3 py-1.5 rounded-full text-sm">Logout</button>
+  </div>
+</header>
+<div class="p-4 max-w-md mx-auto">
+  <div class="bg-white p-4 rounded-2xl shadow mb-3">
+    <h2 class="text-lg font-bold text-green-600">Hello, <span id="name">Your Name</span>!</h2>
+    <p class="text-sm">Email: <span id="email"></span></p>
+    <p class="text-sm">Role: <span id="role" class="font-bold"></span></p>
+  </div>
+  <div class="bg-white p-4 rounded-2xl shadow">
+    <h3 class="font-bold text-green-600 mb-2">Quick Actions</h3>
+    <button onclick="location.href='/'" class="w-full bg-green-600 text-white py-2 rounded-full mb-2">🛒 Start Shopping</button>
+    <button onclick="alert('Cart page coming soon')" class="w-full bg-orange-500 text-white py-2 rounded-full mb-2">🛍️ View Cart</button>
+    <button onclick="alert('Orders page coming soon')" class="w-full bg-blue-500 text-white py-2 rounded-full">📦 My Orders</button>
+  </div>
 </div>
-
-<div class="card">
-  <h2 id="welcome">Welcome!</h2>
-  <p id="userInfo"></p>
-</div>
-
-<div class="card">
-  <h2>Quick Actions</h2>
-  <button class="btn-shop" onclick="location.href='/browse.html'">🛒 Start Shopping</button>
-  <button class="btn-shop" style="background:#f59e0b;margin-top:10px" onclick="location.href='/cart.html'">🛍️ View Cart</button>
-  <button class="btn-shop" style="background:#3b82f6;margin-top:10px" onclick="location.href='/orders.html'">📦 My Orders</button>
-</div>
-
 <script>
-// Check if user is logged in
-const user = JSON.parse(localStorage.getItem('lgm_user'));
-if(!user){ 
-  location.href = '/login.html'; 
-}
-
-// Show user info
-document.getElementById('welcome').innerText = 'Hello, ' + user.name + '!';
-document.getElementById('userInfo').innerHTML = 
-  '<b>Email:</b> ' + user.email + '<br>' +
-  '<b>Role:</b> ' + user.role + '<br>' +
-  '<b>Location:</b> ' + user.location;
-
-function logout(){
-  localStorage.removeItem('lgm_user');
-  location.href = '/login.html';
-}
-</script>
-</body>
-</html>
+const user = JSON.parse(localStorage.getItem('lgm_user')||'{}');
+if(!user.email || user.role!=='customer'){ location.href='login.html'; } // ROLE LOCK
+document.getElementById('name').innerText = user.name || user.full_name;
+document.getElementById('email').innerText = user.email;
+document.getElementById('role').innerText = user.role;
+function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
+</script></body></html>
