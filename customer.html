@@ -2,95 +2,53 @@
 <html>
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign Up - Lokoja Grocery Mall</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>Customer Dashboard - Lokoja Grocery Mall</title>
 <style>
 *{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:16px}
-.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);max-width:500px;margin:auto}
-h1{color:#16a34a;text-align:center}
-.tabs{display:flex;gap:8px;margin-bottom:16px}
-.tab{flex:1;padding:12px;border:2px solid #e5e7eb;border-radius:12px;text-align:center;cursor:pointer;font-weight:700;font-size:13px}
-.tab.active{background:#dcfce7;border-color:#16a34a;color:#16a34a}
-input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:12px}
-label{font-weight:600;font-size:14px;display:block;margin-bottom:4px}
-.btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
-.hidden{display:none}
-.small{font-size:12px;color:#6b7280;margin-top:-8px;margin-bottom:12px}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:16px}
+h1{color:#16a34a;margin:0}
+h2{color:#16a34a;font-size:18px;margin:0 0 12px 0}
+.btn{background:#ef4444;color:#fff;padding:10px 16px;border:0;border-radius:10px;cursor:pointer;font-weight:700}
+.btn-shop{background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;width:100%;font-weight:800;cursor:pointer}
 </style>
 </head>
 <body>
+
+<div class="header">
+  <h1>Lokoja Grocery Mall</h1>
+  <button class="btn" onclick="logout()">Logout</button>
+</div>
+
 <div class="card">
-<h1>Join Lokoja Grocery Mall</h1>
-<p style="text-align:center;color:#6b7280">I want to join as</p>
-
-<div class="tabs">
-  <div class="tab active" id="tab-customer" onclick="setRole('customer')">🛒<br>Customer</div>
-  <div class="tab" id="tab-vendor" onclick="setRole('vendor')">🏪<br>Vendor</div>
-  <div class="tab" id="tab-agent" onclick="setRole('agent')">🚚<br>Delivery Agent</div>
+  <h2 id="welcome">Welcome!</h2>
+  <p id="userInfo"></p>
 </div>
 
-<label>Full Name</label><input id="name" placeholder="Full Name">
-<label>Location in Lokoja</label>
-<select id="location">
-  <option>Ganaja</option><option>Felele</option><option>Zango</option><option>Adankolo</option>
-</select>
-
-<label id="addressLabel">Home Address</label><input id="address" placeholder="Home Address">
-
-<label>Nearest Bus Stop / Landmark</label><input id="busstop" placeholder="e.g B243 Junction, NNPC">
-<p class="small">This helps delivery riders find you fast</p>
-
-<label>WhatsApp Number</label><input id="phone" placeholder="080...">
-<label>Email</label><input id="email" placeholder="Email">
-<label>Password</label><input id="password" type="password" placeholder="At least 6 characters">
-
-<div id="bankFields" class="hidden">
-  <h4 style="margin:16px 0 8px 0">Bank Details for Payment</h4>
-  <label>Bank Name</label><input id="bank" placeholder="Bank Name">
-  <label>Account Number</label><input id="account" placeholder="Account Number">
-  <label>Account Name</label><input id="accountName" placeholder="Account Name">
-</div>
-
-<button class="btn" onclick="signup()">Continue</button>
-<p style="text-align:center">Already have account? <a href="login.html">Login</a></p>
+<div class="card">
+  <h2>Quick Actions</h2>
+  <button class="btn-shop" onclick="location.href='/browse.html'">🛒 Start Shopping</button>
+  <button class="btn-shop" style="background:#f59e0b;margin-top:10px" onclick="location.href='/cart.html'">🛍️ View Cart</button>
+  <button class="btn-shop" style="background:#3b82f6;margin-top:10px" onclick="location.href='/orders.html'">📦 My Orders</button>
 </div>
 
 <script>
-const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let currentRole = 'customer';
-
-function setRole(role){
-  currentRole = role;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-'+role).classList.add('active');
-  
-  const showBank = role!=='customer';
-  document.getElementById('bankFields').classList.toggle('hidden', !showBank);
-  document.getElementById('addressLabel').innerText = role==='customer' ? 'Home Address' : 'Shop Address';
-  document.getElementById('address').placeholder = role==='customer' ? 'Home Address' : 'Shop Address';
+// Check if user is logged in
+const user = JSON.parse(localStorage.getItem('lgm_user'));
+if(!user){ 
+  location.href = '/login.html'; 
 }
 
-async function signup(){
-  const user = {
-    name: name.value, 
-    location: location.value, 
-    address: address.value,
-    busstop: busstop.value,
-    phone: phone.value, 
-    email: email.value, 
-    password: password.value,
-    role: currentRole,
-    bank: bank.value, 
-    account: account.value, 
-    accountname: accountName.value
-  };
-  const {error} = await supabaseClient.from('users').insert(user);
-  if(error) return alert(error.message);
-  localStorage.setItem('lgm_user', JSON.stringify(user));
-  alert('Account Created!');
-  location.href = currentRole==='customer' ? 'customer.html' : 'vendor.html';
+// Show user info
+document.getElementById('welcome').innerText = 'Hello, ' + user.name + '!';
+document.getElementById('userInfo').innerHTML = 
+  '<b>Email:</b> ' + user.email + '<br>' +
+  '<b>Role:</b> ' + user.role + '<br>' +
+  '<b>Location:</b> ' + user.location;
+
+function logout(){
+  localStorage.removeItem('lgm_user');
+  location.href = '/login.html';
 }
 </script>
 </body>
