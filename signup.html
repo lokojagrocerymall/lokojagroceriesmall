@@ -1,97 +1,159 @@
 <!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign Up - Lokoja Grocery Mall</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-*{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:16px}
-.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);max-width:500px;margin:auto}
-h1{color:#16a34a;text-align:center}
-.tabs{display:flex;gap:8px;margin-bottom:16px}
-.tab{flex:1;padding:12px;border:2px solid #e5e7eb;border-radius:12px;text-align:center;cursor:pointer;font-weight:700;font-size:13px}
-.tab.active{background:#dcfce7;border-color:#16a34a;color:#16a34a}
-input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:12px}
-label{font-weight:600;font-size:14px;display:block;margin-bottom:4px}
-.btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
-.hidden{display:none}
-.small{font-size:12px;color:#6b7280;margin-top:-8px;margin-bottom:12px}
-</style>
-</head>
-<body>
-<div class="card">
-<h1>Join Lokoja Grocery Mall</h1>
-<p style="text-align:center;color:#6b7280">I want to join as</p>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Join Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+<div class="bg-white w-full max-w-md p-6 rounded-2xl shadow">
+  <h1 class="text-2xl font-bold text-green-600 text-center">Join Lokoja Grocery Mall</h1>
+  <p class="text-center text-gray-500 mb-4">I want to join as</p>
 
-<div class="tabs">
-  <div class="tab active" id="tab-customer" onclick="setRole('customer')">🛒<br>Customer</div>
-  <div class="tab" id="tab-vendor" onclick="setRole('vendor')">🏪<br>Vendor</div>
-  <div class="tab" id="tab-agent" onclick="setRole('agent')">🚚<br>Delivery Agent</div>
-</div>
+  <div class="flex gap-2 mb-4">
+    <button type="button" onclick="selectRole('customer')" id="btn-customer" class="flex-1 p-2 border rounded-lg">🛒 Customer</button>
+    <button type="button" onclick="selectRole('vendor')" id="btn-vendor" class="flex-1 p-2 border rounded-lg">🏪 Vendor</button>
+    <button type="button" onclick="selectRole('delivery')" id="btn-delivery" class="flex-1 p-2 border rounded-lg">🚚 Delivery Agent</button>
+  </div>
 
-<label>Full Name</label><input id="name" placeholder="Full Name">
-<label>Location in Lokoja</label>
-<select id="location">
-  <option>Ganaja</option><option>Felele</option><option>Zango</option><option>Adankolo</option>
-</select>
+  <form id="signupForm" class="space-y-3">
+    <input name="role" type="hidden" value="customer">
+    <input name="full_name" placeholder="Full Name" required class="w-full border p-2 rounded">
+    <input name="location" placeholder="Location in Lokoja" class="w-full border p-2 rounded">
+    <input name="address" placeholder="Shop/House Address" required class="w-full border p-2 rounded">
+    <input name="landmark" placeholder="Nearest Bus Stop / Landmark" class="w-full border p-2 rounded">
+    <input name="whatsapp" placeholder="WhatsApp Number" required class="w-full border p-2 rounded">
+    <input name="email" type="email" placeholder="Email" required class="w-full border p-2 rounded">
+    <input name="password" type="password" placeholder="Password - At least 6 characters" required class="w-full border p-2 rounded">
+    <input name="bank_name" placeholder="Bank Name" class="w-full border p-2 rounded">
+    <input name="account_number" placeholder="Account Number" class="w-full border p-2 rounded">
+    <input name="account_name" placeholder="Account Name" class="w-full border p-2 rounded">
 
-<label id="addressLabel">Home Address</label><input id="address" placeholder="Home Address">
+    <!-- DELIVERY AGENT ONLY FIELDS -->
+    <div id="deliveryFields" class="hidden space-y-3 border-t pt-3">
+      <h3 class="font-bold text-green-700">Delivery Verification</h3>
+      
+      <label class="text-sm font-bold">Passport Photograph</label>
+      <input name="passport" type="file" accept="image/*" class="w-full">
 
-<label>Nearest Bus Stop / Landmark</label><input id="busstop" placeholder="e.g B243 Junction, NNPC">
-<p class="small">This helps delivery riders find you fast</p>
+      <label class="text-sm font-bold">NIN Slip / Card</label>
+      <input name="nin" type="file" accept="image/*,.pdf" class="w-full">
 
-<label>WhatsApp Number</label><input id="phone" placeholder="080...">
-<label>Email</label><input id="email" placeholder="Email">
-<label>Password</label><input id="password" type="password" placeholder="At least 6 characters">
+      <h3 class="font-bold text-green-700 pt-2">Guarantor Information</h3>
+      <input name="g_name" placeholder="Guarantor Full Name" class="w-full border p-2 rounded">
+      <input name="g_address" placeholder="Guarantor House/Office Address" class="w-full border p-2 rounded">
+      
+      <label class="text-sm font-bold">Guarantor Passport</label>
+      <input name="g_passport" type="file" accept="image/*" class="w-full">
 
-<div id="bankFields" class="hidden">
-  <h4 style="margin:16px 0 8px 0">Bank Details for Payment</h4>
-  <label>Bank Name</label><input id="bank" placeholder="Bank Name">
-  <label>Account Number</label><input id="account" placeholder="Account Number">
-  <label>Account Name</label><input id="accountName" placeholder="Account Name">
-</div>
+      <label class="text-sm font-bold">Guarantor NIN</label>
+      <input name="g_nin" type="file" accept="image/*,.pdf" class="w-full">
 
-<button class="btn" onclick="signup()">Continue</button>
-<p style="text-align:center">Already have account? <a href="login.html">Login</a></p>
+      <h3 class="font-bold text-green-700 pt-2">Vehicle</h3>
+      <div class="flex gap-4">
+        <label><input type="radio" name="is_driver_rider" value="yes"> Yes, I am Driver & Rider</label>
+        <label><input type="radio" name="is_driver_rider" value="no"> No</label>
+      </div>
+    </div>
+
+    <button id="submitBtn" type="submit" class="w-full bg-green-600 text-white py-3 rounded-full font-bold">Continue</button>
+    <p id="msg" class="text-center text-sm"></p>
+  </form>
+  <p class="text-center text-sm mt-3">Already have account? <a href="login.html" class="text-purple-600">Login</a></p>
 </div>
 
 <script>
-const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 let currentRole = 'customer';
+const deliveryFields = document.getElementById('deliveryFields');
+const submitBtn = document.getElementById('submitBtn');
 
-function setRole(role){
+function selectRole(role){
   currentRole = role;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-'+role).classList.add('active');
+  document.querySelector('input[name="role"]').value = role;
+  ['customer','vendor','delivery'].forEach(r=>{
+    document.getElementById('btn-'+r).classList.remove('bg-green-100','border-green-600');
+  })
+  document.getElementById('btn-'+role).classList.add('bg-green-100','border-green-600');
   
-  const showBank = role!=='customer';
-  document.getElementById('bankFields').classList.toggle('hidden', !showBank);
-  document.getElementById('addressLabel').innerText = role==='customer' ? 'Home Address' : 'Shop Address';
-  document.getElementById('address').placeholder = role==='customer' ? 'Home Address' : 'Shop Address';
+  if(role === 'delivery'){
+    deliveryFields.classList.remove('hidden');
+    deliveryFields.querySelectorAll('input').forEach(i=>i.required=true);
+  } else {
+    deliveryFields.classList.add('hidden');
+    deliveryFields.querySelectorAll('input').forEach(i=>i.required=false);
+  }
 }
+selectRole('customer');
 
-async function signup(){
-  const user = {
-    name: name.value, 
-    location: location.value, 
-    address: address.value,
-    busstop: busstop.value,
-    phone: phone.value, 
-    email: email.value, 
-    password: password.value,
-    role: currentRole,
-    bank: bank.value, 
-    account: account.value, 
-    accountname: accountName.value
-  };
-  const {error} = await supabaseClient.from('users').insert(user);
-  if(error) return alert(error.message);
-  localStorage.setItem('lgm_user', JSON.stringify(user));
-  alert('Account Created!');
-  location.href = currentRole==='customer' ? 'customer.html' : 'vendor.html';
+// Disable submit if "No" is selected for driver
+document.addEventListener('change', e=>{
+  if(e.target.name === 'is_driver_rider' && e.target.value === 'no'){
+    submitBtn.disabled = true;
+    submitBtn.innerText = 'Must be Driver & Rider';
+    submitBtn.classList.add('bg-gray-400');
+  }
+  if(e.target.name === 'is_driver_rider' && e.target.value === 'yes'){
+    submitBtn.disabled = false;
+    submitBtn.innerText = 'Continue';
+    submitBtn.classList.remove('bg-gray-400');
+  }
+})
+
+document.getElementById('signupForm').onsubmit = async (e)=>{
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  submitBtn.disabled = true;
+  submitBtn.innerText = 'Submitting...';
+
+  const upload = async (file, folder) => {
+    if(!file || file.size === 0) return null;
+    const path = `${folder}/${Date.now()}_${file.name}`;
+    await supabaseClient.storage.from('delivery_docs').upload(path, file);
+    return path;
+  }
+
+  try{
+    let extraData = {};
+    if(currentRole === 'delivery'){
+      const passport = await upload(fd.get('passport'), 'passports');
+      const nin = await upload(fd.get('nin'), 'nin');
+      const g_passport = await upload(fd.get('g_passport'), 'guarantor_passports');
+      const g_nin = await upload(fd.get('g_nin'), 'guarantor_nin');
+      
+      extraData = {
+        passport_url: passport, nin_url: nin,
+        g_full_name: fd.get('g_name'), g_house_address: fd.get('g_address'),
+        g_passport_url: g_passport, g_nin_url: g_nin,
+        is_driver_rider: fd.get('is_driver_rider') === 'yes',
+        status: 'pending'
+      }
+    }
+
+    const { error } = await supabaseClient.from('users').insert([{
+      full_name: fd.get('full_name'),
+      email: fd.get('email'),
+      password: fd.get('password'),
+      whatsapp: fd.get('whatsapp'),
+      address: fd.get('address'),
+      location: fd.get('location'),
+      landmark: fd.get('landmark'),
+      bank_name: fd.get('bank_name'),
+      account_number: fd.get('account_number'),
+      account_name: fd.get('account_name'),
+      role: currentRole,
+      approved: currentRole !== 'delivery', // Auto-approve customer/vendor. Delivery needs admin approval
+      ...extraData
+    }]);
+
+    if(error) throw error;
+    document.getElementById('msg').innerText = currentRole==='delivery' 
+      ? '✅ Application submitted! Admin will verify your NIN and contact you.'
+      : '✅ Account created! You can login now.';
+    e.target.reset();
+
+  }catch(err){ alert('Error: ' + err.message) }
+  submitBtn.disabled = false;
+  submitBtn.innerText = 'Continue';
 }
-</script>
-</body>
-</html>
+</script></body></html>
