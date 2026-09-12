@@ -79,31 +79,12 @@ function showTab(t){
 // 2HR COUNTDOWN TIMER FOR CUSTOMER - FIXED
 function formatCustomerCountdown(startTime){
   if(!startTime) return '';
-  const end = new Date(startTime).getTime() + TWO_HOURS_MS; // <-- MUST USE THE CONSTANT
-  const diff = end - new Date().getTime();
-  
-  if(diff <= 0) return `<div class="bg-red-100 p-3 rounded-lg mt-2 text-center">
-    <b class="text-red-600">⏰ Delivery window expired. Please contact support</b>
-  </div>`;
-  
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
-  const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
-  
-  return `<div class="bg-orange-50 p-3 rounded-lg mt-2 text-center">
-    <p class="text-xs text-gray-600 font-bold">ESTIMATED DELIVERY WINDOW</p>
-    <p class="text-xs text-gray-500">Picked up at: ${pickedUpTime}</p>
-    <b class="text-red-600 text-lg">⏰ Arriving in: ${h}h ${m}m ${s}s</b>
-  </div>`;
-    }
-  if(!startTime) return '';
   const end = new Date(startTime).getTime() + TWO_HOURS_MS; // 2 HOURS
   const diff = end - new Date().getTime();
   if(diff <= 0) return `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b class="text-red-600">⏰ Delivery window expired. Rider will call you</b></div>`;
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
+  const h = Math.floor(diff / 7200000);
+  const m = Math.floor((diff % 7200000) / 120000);
+  const s = Math.floor((diff % 120000) / 2000);
   const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
 
   return `<div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
