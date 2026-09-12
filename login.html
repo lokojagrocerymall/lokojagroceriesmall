@@ -12,12 +12,8 @@ label{font-weight:600;font-size:14px;display:block;margin-bottom:4px}
 input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px}
 .password-wrap{position:relative;margin-bottom:12px}
 .password-wrap input{padding-right:40px}
-.eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none}
+.eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px}
 .btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer;margin-top:8px}
-.btn2{background:#fff;color:#16a34a;border:2px solid #16a34a}
-.row{display:flex;justify-content:space-between;margin-top:8px;font-size:13px}
-.row a{color:#16a34a;text-decoration:none;font-weight:600}
-.small{font-size:13px;color:#6b7280;text-align:center;margin-top:12px}
 </style>
 </head>
 <body>
@@ -25,19 +21,13 @@ input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px}
 <h1>Login to Lokoja Grocery Mall</h1>
 
 <label>Email</label><input id="email" type="email">
-
 <label>Password</label>
 <div class="password-wrap">
-  <input id="password" type="password" placeholder="Enter password">
+  <input id="password" type="password">
   <span class="eye" onclick="togglePass()">👁️</span>
 </div>
 
-<div class="row">
-  <a href="#" onclick="forgotPass()">Forgot Password?</a>
-</div>
-
 <button class="btn" onclick="login()">Login</button>
-<button class="btn btn2" onclick="location.href='/signup.html'">Create Account</button>
 </div>
 
 <script>
@@ -45,58 +35,36 @@ const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// 1. VIEW/HIDE PASSWORD
 function togglePass(){
   const p = document.getElementById('password');
-  const eye = document.querySelector('.eye');
-  if(p.type === 'password'){
-    p.type = 'text';
-    eye.innerText = '🙈';
-  } else {
-    p.type = 'password';
-    eye.innerText = '👁️';
-  }
-}
-
-// 2. FORGOT PASSWORD - Sends reset email
-async function forgotPass(){
-  const em = prompt("Enter your email to reset password:");
-  if(!em) return;
-  
-  const {error} = await supabaseClient.auth.resetPasswordForEmail(em, {
-    redirectTo: 'https://y-mall.vercel.app/reset.html'
-  });
-  
-  if(error) alert(error.message);
-  else alert('Password reset link sent to ' + em + '. Check your email.');
+  p.type = p.type === 'password'? 'text' : 'password';
 }
 
 async function login(){
-  const btn = document.querySelector('.btn');
-  btn.innerText = 'Logging in...';
-  btn.disabled = true;
+  console.log("Trying to login:", email.value);
+  alert("Trying to login: " + email.value); // debug
 
   const { data, error } = await supabaseClient.from('users')
-    .select('*').eq('email', email.value).eq('password', password.value).single();
+   .select('*').eq('email', email.value).eq('password', password.value);
   
-  if(error || !data){ 
-    alert('Invalid email or password');
-    btn.innerText = 'Login';
-    btn.disabled = false;
-    return;
-  }
+  console.log("Supabase response:", data, error);
   
-  localStorage.setItem('lgm_user', JSON.stringify(data));
+  if(error) return alert('DB Error: ' + error.message);
+  if(!data || data.length === 0) return alert('Invalid email or password. Check Supabase users table');
   
-  // DIRECT ACCESS
-  if(data.role === 'customer'){
-    location.href = '/customer.html';
-  } else if(data.role === 'vendor'){
-    location.href = '/vendor.html';
-  } else if(data.role === 'agent'){
-    location.href = '/agent.html';
+  const user = data[0];
+  localStorage.setItem('lgm_user', JSON.stringify(user));
+  alert('Login Successful! Role: ' + user.role);
+  
+  // FORCE REDIRECT WITH FULL URL
+  if(user.role === 'customer'){
+    window.location.replace('https://y-mall.vercel.app/customer.html');
+  } else if(user.role === 'vendor'){
+    window.location.replace('https://y-mall.vercel.app/vendor.html');
+  } else if(user.role === 'agent'){
+    window.location.replace('https://y-mall.vercel.app/agent.html');
   } else {
-    location.href = '/admin.html';
+    window.location.replace('https://y-mall.vercel.app/admin.html');
   }
 }
 </script>
