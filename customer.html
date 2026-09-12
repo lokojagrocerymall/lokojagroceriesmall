@@ -63,8 +63,9 @@ document.getElementById('role').innerText = user.role;
 
 let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
 let allProducts = [];
+let tempRating = {}; // for stars
 
-const TWO_HOURS_MS = 3 * 60 * 60 * 1000; // 2 HOURS LOCKED
+const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // 3 HOURS LOCKED - FIXED NAME
 
 function showTab(t){
   document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
@@ -76,10 +77,10 @@ function showTab(t){
   if(t==='orders') loadOrders();
 }
 
-// 2HR COUNTDOWN TIMER FOR CUSTOMER - FIXED
+// 3HR COUNTDOWN TIMER FOR CUSTOMER
 function formatCustomerCountdown(startTime){
   if(!startTime) return '';
-  const end = new Date(startTime).getTime() + TWO_HOURS_MS; // 2 HOURS
+  const end = new Date(startTime).getTime() + THREE_HOURS_MS;
   const diff = end - new Date().getTime();
   if(diff <= 0) return `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b class="text-red-600">⏰ Delivery window expired. Rider will call you</b></div>`;
   const h = Math.floor(diff / 3600000);
@@ -88,10 +89,35 @@ function formatCustomerCountdown(startTime){
   const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
 
   return `<div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
-            <p class="text-xs text-gray-600">ESTIMATED DELIVERY WINDOW</p>
+            <p class="text-xs text-gray-600 font-bold">3 HOUR DELIVERY WINDOW</p>
             <p class="text-xs text-gray-500">Picked up at: ${pickedUpTime}</p>
             <b class="text-red-600">⏰ Arriving in: ${h}h ${m}m ${s}s</b>
           </div>`;
+}
+
+// RATING BUILDER
+function buildRatingUI(o){
+  if(o.status!== 'delivered') return '';
+
+  if(o.customer_rating){
+    return `<div class="mt-2 p-2 bg-green-50 rounded-lg text-center">
+      <p class="text-xs font-bold text-green-700">Thank you! You rated: ${'⭐'.repeat(o.customer_rating)}</p>
+      ${o.customer_review? `<p class="text-xs text-gray-600 mt-1 italic">"${o.customer_review}"</p>` : ''}
+    </div>`;
+  } else {
+    return `<div class="mt-2 p-3 bg-yellow-50 rounded-lg border-yellow-200">
+      <p class="text-xs font-bold mb-2 text-center">Rate your delivery experience</p>
+      <div class="flex justify-center gap-1 text-3xl" id="stars-${o.id}">
+        <span data-rate="1" class="cursor-pointer text-gray-300 hover:text-yellow-400">☆</span>
+        <span data-rate="2" class="cursor-pointer text-gray-300 hover:text-yellow-400">☆</span>
+        <span data-rate="3" class="cursor-pointer text-gray-300 hover:text-yellow-400">☆</span>
+        <span data-rate="4" class="cursor-pointer text-gray-300 hover:text-yellow-400">☆</span>
+        <span data-rate="5" class="cursor-pointer text-gray-300 hover:text-yellow-400">☆</span>
+      </div>
+      <textarea id="review-${o.id}" placeholder="Tell us about the rider..." class="w-full text-xs mt-2 p-2 border rounded"></textarea>
+      <button onclick="submitRating(${o.id})" class="bg-green-600 text-white w-full mt-2 py-1.5 rounded-full text-xs font-bold">Submit Rating</button>
+    </div>`;
+  }
 }
 
 async function loadProducts(){
@@ -216,35 +242,59 @@ async function loadOrders(){
         </button>
       ` : ''}
 
+      ${buildRatingUI(o)} // <-- RATING SHOWS HERE
+
       <div class="text-xs text-gray-400 mt-2">${new Date(o.created_at).toLocaleString()}</div>
     </div>`;
   });
   document.getElementById('ordersList').innerHTML = html || 'No orders yet';
+  attachStarEvents();
 }
 
 async function markDelivered(orderId) {
   if(!confirm('Confirm you received this order?')) return;
-
-  const { error } = await supabaseClient
- .from('orders')
- .update({
+  const { error } = await supabaseClient.from('orders').update({
       status: 'delivered',
       delivered_at: new Date().toISOString()
-    })
- .eq('id', orderId);
+    }).eq('id', orderId);
+  if(error) { alert('Error: ' + error.message); }
+  else { alert('Thank you! Order marked delivered. Please rate us below 👇'); loadOrders(); }
+}
 
-  if(error) {
-    alert('Error: ' + error.message);
-  } else {
-    alert('Thank you! Order marked delivered');
-    loadOrders();
-  }
+// STAR RATING LOGIC
+function attachStarEvents(){
+  document.querySelectorAll('[id^=stars-]').forEach(starBox=>{
+    starBox.onclick = (e)=>{
+      if(e.target.tagName!== 'SPAN') return;
+      const id = starBox.id.split('-')[1];
+      const rating = parseInt(e.target.dataset.rate);
+      tempRating[id] = rating;
+      [...starBox.children].forEach((star, i)=>{
+        star.innerText = i < rating? '★' : '☆';
+        star.className = i < rating? 'cursor-pointer text-yellow-500' : 'cursor-pointer text-gray-300';
+      });
+    }
+  });
+}
+
+async function submitRating(id){
+  const rating = tempRating[id];
+  const review = document.getElementById(`review-${id}`).value;
+  if(!rating){ alert('Please tap stars to rate'); return; }
+
+  const { error } = await supabaseClient.from('orders').update({
+    customer_rating: rating,
+    customer_review: review
+  }).eq('id', id);
+
+  if(error) alert(error.message);
+  else { alert('Thank you for your feedback! 🙏'); loadOrders(); }
 }
 
 function logout(){ localStorage.removeItem('lgm_user'); localStorage.removeItem('lgm_cart'); location.href='login.html'; }
 showTab('shop');
 
-// Auto-refresh timer every second - ONLY when orders tab is open
+// Auto-refresh timer every second
 setInterval(() => {
   const ordersTab = document.getElementById('view-orders');
   if(!ordersTab.classList.contains('hidden')) loadOrders();
