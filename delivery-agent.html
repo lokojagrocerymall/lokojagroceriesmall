@@ -1,11 +1,42 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Delivery - LGM</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{font-family:system-ui;background:#f8fafc;margin:0;padding:12px} .card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}</style></head><body>
-<div class="card"><b id="dName">Delivery Agent</b><div id="dEmail" style="font-size:12px;color:#666"></div><div style="font-size:12px;color:green">✅ You earn 5% per delivery</div></div>
-<div class="card"><h3>Available Orders</h3><div id="orders">Loading...</div></div>
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Dashboard - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-gray-100">
+<header class="bg-white p-4 flex justify-between items-center shadow sticky top-0">
+  <b class="text-green-700">Delivery Agent Dashboard</b>
+  <button onclick="logout()" class="bg-red-500 text-white px-4 py-1.5 rounded-full text-sm">Logout</button>
+</header>
+<div class="p-4 max-w-4xl mx-auto">
+  <div class="bg-white p-4 rounded-2xl shadow mb-4">
+    <h2 id="welcome" class="text-lg font-bold text-green-700"></h2>
+    <p>View and update delivery orders assigned to you</p>
+  </div>
+  <div class="bg-white p-4 rounded-2xl shadow">
+    <h3 class="font-bold mb-3">🚚 Orders On The Way</h3>
+    <div id="ordersList">Loading...</div>
+  </div>
+</div>
 <script>
-const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let cur=JSON.parse(localStorage.getItem('lgm_user')||'{}'); if(!cur.email){location.href='login.html';}
-document.getElementById('dName').innerText=cur.name||cur.email;document.getElementById('dEmail').innerText=cur.email;
-async function load(){const{data}=await supabaseClient.from('orders').select('*').order('created_at',{ascending:false}).limit(20);let h='';if(!data||data.length==0)h='<p style="font-size:12px;color:#888">No orders yet</p>';else data.forEach(o=>{h+=`<div class="card" style="border:1px solid #e5e7eb"><b>Order #${o.id}</b><br><span style="font-size:12px">₦${o.total_amount||0} • ${o.status||'pending'}</span><br><button onclick="accept(${o.id})" style="background:#16a34a;color:#fff;border:0;padding:8px 12px;border-radius:8px;margin-top:6px">Accept Delivery</button></div>`});document.getElementById('orders').innerHTML=h;}
-async function accept(id){await supabaseClient.from('orders').update({status:'out_for_delivery', delivery_agent_email:cur.email}).eq('id',id);alert('✅ Accepted! Customer will be notified');load();}
-load();
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const user = JSON.parse(localStorage.getItem('lgm_user')||'{}');
+if(!user.email || (user.role!=='agent' && user.role!=='delivery')){ location.href='login.html'; }
+document.getElementById('welcome').innerText = 'Welcome, ' + (user.name||user.full_name);
+
+async function loadOrders(){
+  const { data:orders } = await supabaseClient.from('orders').select('*').eq('status','on the way').order('created_at',{ascending:false});
+  if(!orders || orders.length===0){ document.getElementById('ordersList').innerHTML = '<p class="text-gray-400">No active deliveries</p>'; return; }
+  let html = '';
+  orders.forEach(o=>{
+    html += `<div class="border rounded-xl p-3 mb-2">
+      <b>Order #${o.id}</b> - ₦${Number(o.total||0).toLocaleString()}
+      <div class="text-xs">${o.customer_name} - ${o.customer_phone} - ${o.customer_address}</div>
+    </div>`;
+  });
+  document.getElementById('ordersList').innerHTML = html;
+}
+function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
+loadOrders();
 </script></body></html>
