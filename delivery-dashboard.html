@@ -32,14 +32,13 @@ document.getElementById('name').innerText = curUser.full_name || curUser.email;
 document.getElementById('email').innerText = curUser.email;
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // 3 HOURS
-
 let isCalling = false;
 
 function formatCountdown(startTime){
   if(!startTime) return '';
   const end = new Date(startTime).getTime() + THREE_HOURS_MS;
   const diff = end - new Date().getTime();
-  if(diff <= 0) return '<span class="text-red-600 font-bold">TIME UP! CALL SUPPORT</span>';
+  if(diff <= 0) return '<span class="text-red-600 font-bold">TIME UP! CALL ADMIN</span>';
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
@@ -63,7 +62,7 @@ async function loadRiderStats(){
   const avg = ratings.length > 0 ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : 0;
   
   document.getElementById('riderStats').innerHTML = `
-    <div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border-yellow-200">
+    <div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border border-yellow-200">
       <p class="text-xs text-gray-600">Your Performance</p>
       <p class="text-3xl font-bold text-yellow-600">${avg}⭐</p>
       <p class="text-xs text-gray-500">${ratings.length} Customer Reviews</p>
@@ -74,7 +73,7 @@ async function loadRiderStats(){
 async function loadOrders(){
   await loadRiderStats();
 
-  // FIXED: Split query to avoid .or() bug
+  // ACTIVE ORDERS: Show all "paid" + "on the way" assigned to me
   const { data:paidOrders } = await supabaseClient.from('orders').select('*').eq('status','paid').order('created_at',{ascending:false});
   const { data:myActive } = await supabaseClient.from('orders').select('*').eq('status','on the way').eq('delivery_agent_email', curUser.email).order('created_at',{ascending:false});
   
@@ -90,13 +89,11 @@ async function loadOrders(){
         return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-green-400">
           <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
           
-          <!-- FULL CUSTOMER INFO FOR RIDER -->
           <div class="mt-2 p-2 bg-gray-50 rounded-lg">
             <p class="text-sm font-bold">👤 ${o.customer_name}</p>
             <p class="text-xs">📧 ${o.customer_email}</p>
             <p class="text-xs">📱 WhatsApp: ${o.customer_whatsapp || o.customer_phone}</p>
             <p class="text-xs">📞 Phone: ${o.customer_phone}</p>
-            <p class="text-xs">📍 ${o.customer_location || ''}</p>
             <p class="text-xs">🏠 ${addr}</p>
             ${o.customer_landmark? `<p class="text-xs">📍 Landmark: ${o.customer_landmark}</p>` : ''}
           </div>
@@ -106,13 +103,11 @@ async function loadOrders(){
         return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-orange-400">
           <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
           
-          <!-- FULL CUSTOMER INFO FOR RIDER -->
           <div class="mt-2 p-2 bg-gray-50 rounded-lg">
             <p class="text-sm font-bold">👤 ${o.customer_name}</p>
             <p class="text-xs">📧 ${o.customer_email}</p>
             <p class="text-xs">📱 WhatsApp: ${o.customer_whatsapp || o.customer_phone}</p>
             <p class="text-xs">📞 Phone: ${o.customer_phone}</p>
-            <p class="text-xs">📍 ${o.customer_location || ''}</p>
             <p class="text-xs">🏠 ${addr}</p>
             ${o.customer_landmark? `<p class="text-xs">📍 Landmark: ${o.customer_landmark}</p>` : ''}
           </div>
@@ -123,10 +118,12 @@ async function loadOrders(){
             <b>⏰ Time Left:</b> ${formatCountdown(o.delivery_started_at)}
           </div>
           <a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-2 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
-          <div class="flex gap-2">
-            <button onclick="markDelivered('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Mark Delivered</button>
-            <button onclick="cancelPickup('${o.id}')" class="mt-2 w-full bg-red-100 text-red-600 py-2 rounded-lg font-bold">Cancel</button>
+          
+          <!-- RIDER CAN ONLY NOTIFY, NOT MARK DELIVERED -->
+          <div class="mt-2 p-2 bg-blue-50 rounded-lg text-center">
+            <p class="text-xs text-blue-700 font-bold">Waiting for Customer to Confirm Delivery</p>
           </div>
+          <button onclick="cancelPickup('${o.id}')" class="mt-2 w-full bg-red-100 text-red-600 py-2 rounded-lg font-bold">Cancel Delivery</button>
         </div>`;
       }
     }).join('');
@@ -164,11 +161,11 @@ async function pickup(id){
   const { error } = await supabaseClient.from('orders').update({
     status:'on the way', 
     delivery_started_at:new Date().toISOString(),
-    delivery_agent_email: curUser.email, // KEY FOR ADMIN TO TRACK
+    delivery_agent_email: curUser.email,
     delivery_agent_id: curUser.id
   }).eq('id',id);
   if(error) alert('ERROR: '+error.message); else {
-    alert('Order picked up! Check Admin now');
+    alert('Order picked up! 3 Hour countdown started');
     loadOrders();
   }
 }
@@ -181,15 +178,6 @@ async function cancelPickup(id){
     delivery_agent_email: null,
     delivery_agent_id: null
   }).eq('id',id);
-  loadOrders();
-}
-
-async function markDelivered(id){
-  await supabaseClient.from('orders').update({
-    status:'delivered',
-    delivered_at: new Date().toISOString()
-  }).eq('id',id);
-  alert('Order marked as delivered!');
   loadOrders();
 }
 
