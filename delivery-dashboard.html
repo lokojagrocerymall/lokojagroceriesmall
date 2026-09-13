@@ -5,7 +5,7 @@
 <body class="bg-gray-100">
 <header class="bg-white p-4 shadow flex justify-between items-center sticky top-0 z-10">
   <b class="text-green-700">🚚 Delivery Dashboard</b>
-  <button onclick="logout()" class="text-red-500 font-bold">Logout</button>
+  <button onclick="localStorage.removeItem('lgm_user'); location.href='index.html';" class="bg-red-500 text-white px-3 py-1 rounded">Logout</button>
 </header>
 <div class="p-4 max-w-2xl mx-auto">
   <div class="bg-white p-3 rounded-xl mb-4">
