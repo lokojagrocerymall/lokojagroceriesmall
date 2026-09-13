@@ -25,7 +25,7 @@ async function login(){
   const password = document.getElementById('password').value;
   document.getElementById('error').innerText = "Checking...";
 
-  // ONLY use Supabase Auth to check password
+  // 1. ONLY use Supabase Auth to check password
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   
   if(error){ 
@@ -33,11 +33,21 @@ async function login(){
     return; 
   }
   
-  // Get user role
-  const { data: profile } = await supabase.from('users').select('*').eq('id', data.user.id).single();
+  // 2. FIXED: Get user role using auth_user_id instead of id
+  const { data: profile, error: profileError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('auth_user_id', data.user.id) // <-- THIS WAS THE BUG
+    .single();
+  
+  if(profileError){
+    document.getElementById('error').innerText = "Profile not found. Contact admin.";
+    return;
+  }
+  
   localStorage.setItem('lgm_user', JSON.stringify(profile));
   
-  // Go to correct dashboard
+  // 3. Go to correct dashboard
   if(profile.role === 'admin') window.location = 'admin-dashboard.html';
   else if(profile.role === 'vendor') window.location = 'vendor-dashboard.html';
   else if(profile.role === 'delivery' || profile.role === 'agent') window.location = 'delivery-dashboard.html';
