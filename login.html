@@ -12,46 +12,48 @@
   <input id="email" type="email" placeholder="Email" class="w-full border p-3 rounded-lg mb-3">
   <input id="password" type="password" placeholder="Password" class="w-full border p-3 rounded-lg mb-4">
   <button onclick="login()" class="w-full bg-green-600 text-white py-3 rounded-full font-bold">Login</button>
-  <p id="error" class="text-red-500 text-sm mt-3 text-center"></p>
+  <p id="error" class="text-red-500 text-sm mt-3 text-center break-words"></p>
 </div>
 
 <script>
+console.log("JS Loaded");
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let supabase;
+try {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  document.getElementById('error').innerText = "Supabase Loaded OK";
+} catch(e) {
+  document.getElementById('error').innerText = "Supabase Load Error: " + e.message;
+}
 
 async function login(){
+  document.getElementById('error').innerText = "Button clicked. Checking...";
   const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;
-  document.getElementById('error').innerText = "Checking...";
 
-  // 1. ONLY use Supabase Auth to check password
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  
-  if(error){ 
-    document.getElementById('error').innerText = error.message; 
-    return; 
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if(error) throw error;
+    document.getElementById('error').innerText = "Step 1 OK. Auth ID: " + data.user.id.substring(0,8);
+    
+    const { data: profile, error: profileError } = await supabase.from('users').select('*').eq('auth_user_id', data.user.id).single();
+    if(profileError) throw profileError;
+    
+    document.getElementById('error').innerText = "Step 2 OK. Role: " + profile.role + ". Redirecting...";
+    localStorage.setItem('lgm_user', JSON.stringify(profile));
+    
+    setTimeout(() => {
+      if(profile.role === 'admin') window.location = 'admin-dashboard.html';
+      else if(profile.role === 'vendor') window.location = 'vendor-dashboard.html';
+      else if(profile.role === 'delivery' || profile.role === 'agent') window.location = 'delivery-dashboard.html';
+      else window.location = 'customer-dashboard.html';
+    }, 1000);
+
+  } catch(err) {
+    document.getElementById('error').innerText = "FAILED: " + err.message;
   }
-  
-  // 2. FIXED: Get user role using auth_user_id instead of id
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('auth_user_id', data.user.id) // <-- THIS WAS THE BUG
-    .single();
-  
-  if(profileError){
-    document.getElementById('error').innerText = "Profile not found. Contact admin.";
-    return;
-  }
-  
-  localStorage.setItem('lgm_user', JSON.stringify(profile));
-  
-  // 3. Go to correct dashboard
-  if(profile.role === 'admin') window.location = 'admin-dashboard.html';
-  else if(profile.role === 'vendor') window.location = 'vendor-dashboard.html';
-  else if(profile.role === 'delivery' || profile.role === 'agent') window.location = 'delivery-dashboard.html';
-  else window.location = 'customer-dashboard.html';
 }
 </script>
 </body></html>
