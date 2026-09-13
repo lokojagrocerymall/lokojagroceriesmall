@@ -26,13 +26,17 @@
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let curUser = JSON.parse(localStorage.getItem('delivery_user')||'{}');
-if(!curUser.email){ location.href='delivery-login.html'; }
+
+let curUser = JSON.parse(localStorage.getItem('delivery_user')||'null');
+if(!curUser || !curUser.email){ 
+  location.href='delivery-login.html'; 
+}
 document.getElementById('name').innerText = curUser.full_name || curUser.email;
 document.getElementById('email').innerText = curUser.email;
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // 3 HOURS
 let isCalling = false;
+let ordersCache = [];
 
 function formatCountdown(startTime){
   if(!startTime) return '';
@@ -52,85 +56,87 @@ function formatPickedUpTime(startTime){
 
 // LOAD RIDER RATING STATS
 async function loadRiderStats(){
-  const {data} = await supabaseClient.from('orders')
-    .select('customer_rating')
-    .eq('delivery_agent_email', curUser.email)
-    .eq('status', 'delivered')
-    .not('customer_rating', 'is', null);
-  
-  const ratings = data?.map(d=>d.customer_rating) || [];
-  const avg = ratings.length > 0 ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '0';
-  
-  document.getElementById('riderStats').innerHTML = `
-    <div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border border-yellow-200">
-      <p class="text-xs text-gray-600">Your Performance</p>
-      <p class="text-3xl font-bold text-yellow-600">${avg}⭐</p>
-      <p class="text-xs text-gray-500">${ratings.length} Customer Reviews</p>
-    </div>
-  `;
+  try{
+    const {data} = await supabaseClient.from('orders')
+      .select('customer_rating')
+      .eq('delivery_agent_email', curUser.email)
+      .eq('status', 'delivered')
+      .not('customer_rating', 'is', null);
+    
+    const ratings = data?.map(d=>d.customer_rating) || [];
+    const avg = ratings.length > 0 ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '0';
+    
+    document.getElementById('riderStats').innerHTML = `
+      <div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border border-yellow-200">
+        <p class="text-xs text-gray-600">Your Performance</p>
+        <p class="text-3xl font-bold text-yellow-600">${avg}⭐</p>
+        <p class="text-xs text-gray-500">${ratings.length} Customer Reviews</p>
+      </div>
+    `;
+  }catch(e){ console.log(e) }
 }
 
-async function loadOrders(){
-  await loadRiderStats();
-
-  // FIX 1: Prevent duplicates with Map
+async function fetchOrders(){
   const { data:paidOrders } = await supabaseClient.from('orders').select('*').eq('status','paid').order('created_at',{ascending:false});
   const { data:myActive } = await supabaseClient.from('orders').select('*').eq('status','on the way').eq('delivery_agent_email', curUser.email).order('created_at',{ascending:false});
   
   const orderMap = new Map();
   [...(paidOrders||[]), ...(myActive||[])].forEach(o => orderMap.set(o.id, o));
-  const orders = Array.from(orderMap.values());
+  ordersCache = Array.from(orderMap.values());
+}
 
-  if(!orders || orders.length===0){ 
+function renderOrders(){
+  if(!ordersCache || ordersCache.length===0){ 
     document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No active orders</p>'; 
+    return;
   }
-  else {
-    document.getElementById('orders').innerHTML = orders.map(o=>{
-      const addr = o.customer_address || o.address || 'N/A';
-      if(o.status === 'paid'){
-        return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-green-400">
-          <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
-          
-          <div class="mt-2 p-2 bg-gray-50 rounded-lg">
-            <p class="text-sm font-bold">👤 ${o.customer_name}</p>
-            <p class="text-xs">📧 ${o.customer_email}</p>
-            <p class="text-xs">📱 WhatsApp: ${o.customer_whatsapp || o.customer_phone}</p>
-            <p class="text-xs">📞 Phone: ${o.customer_phone}</p>
-            <p class="text-xs">🏠 ${addr}</p>
-            ${o.customer_landmark? `<p class="text-xs">📍 Landmark: ${o.customer_landmark}</p>` : ''}
-          </div>
-          <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Pick Up & Start 3HR Delivery</button>
-        </div>`;
-      } else {
-        return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-orange-400" id="order-${o.id}">
-          <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
-          
-          <div class="mt-2 p-2 bg-gray-50 rounded-lg">
-            <p class="text-sm font-bold">👤 ${o.customer_name}</p>
-            <p class="text-xs">📧 ${o.customer_email}</p>
-            <p class="text-xs">📱 WhatsApp: ${o.customer_whatsapp || o.customer_phone}</p>
-            <p class="text-xs">📞 Phone: ${o.customer_phone}</p>
-            <p class="text-xs">🏠 ${addr}</p>
-            ${o.customer_landmark? `<p class="text-xs">📍 Landmark: ${o.customer_landmark}</p>` : ''}
-          </div>
+  
+  document.getElementById('orders').innerHTML = ordersCache.map(o=>{
+    const addr = o.customer_address || o.address || 'N/A';
+    if(o.status === 'paid'){
+      return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-green-400">
+        <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
+        
+        <div class="mt-2 p-2 bg-gray-50 rounded-lg">
+          <p class="text-sm font-bold">👤 ${o.customer_name}</p>
+          <p class="text-xs">📧 ${o.customer_email}</p>
+          <p class="text-xs">📱 WhatsApp: ${o.customer_whatsapp || o.customer_phone}</p>
+          <p class="text-xs">📞 Phone: ${o.customer_phone}</p>
+          <p class="text-xs">🏠 ${addr}</p>
+          ${o.customer_landmark? `<p class="text-xs">📍 Landmark: ${o.customer_landmark}</p>` : ''}
+        </div>
+        <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Pick Up & Start 3HR Delivery</button>
+      </div>`;
+    } else {
+      return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-orange-400" id="order-${o.id}">
+        <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
+        
+        <div class="mt-2 p-2 bg-gray-50 rounded-lg">
+          <p class="text-sm font-bold">👤 ${o.customer_name}</p>
+          <p class="text-xs">📧 ${o.customer_email}</p>
+          <p class="text-xs">📱 WhatsApp: ${o.customer_whatsapp || o.customer_phone}</p>
+          <p class="text-xs">📞 Phone: ${o.customer_phone}</p>
+          <p class="text-xs">🏠 ${addr}</p>
+          ${o.customer_landmark? `<p class="text-xs">📍 Landmark: ${o.customer_landmark}</p>` : ''}
+        </div>
 
-          <div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
-            <p class="text-xs text-gray-600 font-bold">3 HOUR DELIVERY WINDOW</p>
-            <p class="text-xs text-gray-500">Picked up at: ${formatPickedUpTime(o.delivery_started_at)}</p>
-            <b>⏰ Time Left:</b> <span class="countdown" data-start="${o.delivery_started_at}">${formatCountdown(o.delivery_started_at)}</span>
-          </div>
-          <a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-2 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
-          
-          <div class="mt-2 p-2 bg-blue-50 rounded-lg text-center border border-blue-200">
-            <p class="text-xs text-blue-700 font-bold">Waiting for Customer to Confirm Delivery</p>
-          </div>
-          <button onclick="cancelPickup('${o.id}')" class="mt-2 w-full bg-red-100 text-red-600 py-2 rounded-lg font-bold">Cancel Delivery</button>
-        </div>`;
-      }
-    }).join('');
-  }
+        <div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
+          <p class="text-xs text-gray-600 font-bold">3 HOUR DELIVERY WINDOW</p>
+          <p class="text-xs text-gray-500">Picked up at: ${formatPickedUpTime(o.delivery_started_at)}</p>
+          <b>⏰ Time Left:</b> <span class="countdown" data-start="${o.delivery_started_at}">${formatCountdown(o.delivery_started_at)}</span>
+        </div>
+        <a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-2 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
+        
+        <!-- RIDER HAS NO CONFIRM OR CANCEL BUTTON -->
+        <div class="mt-2 p-2 bg-blue-50 rounded-lg text-center border border-blue-200">
+          <p class="text-xs text-blue-700 font-bold">Waiting for Customer to Confirm Delivery</p>
+        </div>
+      </div>`;
+    }
+  }).join('');
+}
 
-  // COMPLETED ORDERS
+async function loadCompleted(){
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   
@@ -158,6 +164,13 @@ async function loadOrders(){
   }
 }
 
+async function loadOrders(){
+  await loadRiderStats();
+  await fetchOrders();
+  renderOrders();
+  await loadCompleted();
+}
+
 async function pickup(id){
   const { error } = await supabaseClient.from('orders').update({
     status:'on the way', 
@@ -171,26 +184,20 @@ async function pickup(id){
   }
 }
 
-async function cancelPickup(id){
-  if(!confirm('Cancel this delivery?')) return;
-  await supabaseClient.from('orders').update({
-    status:'paid', 
-    delivery_started_at:null,
-    delivery_agent_email: null,
-    delivery_agent_id: null
-  }).eq('id',id);
-  loadOrders();
-}
+// REMOVED cancelPickup FUNCTION
 
 function logout(){ localStorage.removeItem('delivery_user'); location.href='delivery-login.html'; }
 
 loadOrders(); 
 
-// FIX 2: Update countdown every 1 second instead of 5s
+// Update timer every 1s, refresh data every 10s
 setInterval(()=>{ 
   document.querySelectorAll('.countdown').forEach(el => {
     el.innerHTML = formatCountdown(el.dataset.start);
   });
-  if(!isCalling) loadOrders(); 
 }, 1000);
+
+setInterval(()=>{ 
+  if(!isCalling) fetchOrders().then(renderOrders).then(loadCompleted);
+}, 10000);
 </script></body></html>
