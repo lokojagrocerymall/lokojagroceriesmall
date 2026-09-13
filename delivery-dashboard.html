@@ -59,7 +59,7 @@ async function loadRiderStats(){
     .not('customer_rating', 'is', null);
   
   const ratings = data?.map(d=>d.customer_rating) || [];
-  const avg = ratings.length > 0 ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : 0;
+  const avg = ratings.length > 0 ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '0';
   
   document.getElementById('riderStats').innerHTML = `
     <div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border border-yellow-200">
@@ -119,8 +119,8 @@ async function loadOrders(){
           </div>
           <a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-2 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
           
-          <!-- RIDER CAN ONLY NOTIFY, NOT MARK DELIVERED -->
-          <div class="mt-2 p-2 bg-blue-50 rounded-lg text-center">
+          <!-- REMOVED MARK DELIVERED -->
+          <div class="mt-2 p-2 bg-blue-50 rounded-lg text-center border-blue-200">
             <p class="text-xs text-blue-700 font-bold">Waiting for Customer to Confirm Delivery</p>
           </div>
           <button onclick="cancelPickup('${o.id}')" class="mt-2 w-full bg-red-100 text-red-600 py-2 rounded-lg font-bold">Cancel Delivery</button>
