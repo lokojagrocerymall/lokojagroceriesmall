@@ -18,30 +18,7 @@
     <p class="text-sm">Role: <span id="role" class="font-bold"></span></p>
   </div>
 
-  <!-- CHANGE 1: DELIVERY PROFILE CARD FOR CUSTOMER -->
-  <div id="profileCard" class="bg-white p-4 rounded-2xl shadow mb-3 hidden">
-    <div class="flex justify-between items-center mb-3">
-      <h3 class="font-bold text-green-600">🚚 Delivery Profile</h3>
-      <button onclick="toggleEditProfile()" id="editBtn" class="text-sm text-purple-600 font-bold">Edit</button>
-    </div>
-    <form onsubmit="updateProfile(event)" id="profileForm">
-      <div class="space-y-3">
-        <div>
-          <label class="text-sm font-semibold text-gray-700">Delivery Address</label>
-          <input id="profileAddress" type="text" required disabled class="w-full p-3 border rounded-lg mt-1 bg-gray-100">
-        </div>
-        <div>
-          <label class="text-sm font-semibold text-gray-700">WhatsApp Number</label>
-          <input id="profilePhone" type="tel" required disabled class="w-full p-3 border rounded-lg mt-1 bg-gray-100">
-        </div>
-        <div>
-          <label class="text-sm font-semibold text-gray-700">Nearest Bus Stop / Landmark</label>
-          <input id="profileLandmark" type="text" required disabled class="w-full p-3 border rounded-lg mt-1 bg-gray-100">
-        </div>
-      </div>
-      <button type="submit" id="saveBtn" class="w-full bg-green-600 text-white py-3 rounded-full font-bold mt-3 hidden">Save Changes</button>
-    </form>
-  </div>
+  <!-- REMOVED: Delivery Profile Card -->
 
   <div class="flex gap-4 mb-3 bg-white p-3 rounded-2xl shadow text-sm font-bold overflow-x-auto">
     <button onclick="showTab('shop')" id="tabShop" class="text-green-600 border-b-2 border-green-600 pb-1">🛒 Shop</button>
@@ -53,17 +30,36 @@
     <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3">Loading products...</div>
   </div>
 
+  <!-- CHANGE 1: CART NOW HAS DELIVERY FORM -->
   <div id="view-cart" class="view hidden">
-    <div class="bg-white p-4 rounded-2xl shadow">
+    <form onsubmit="checkout(event)" class="bg-white p-4 rounded-2xl shadow">
       <h3 class="font-bold mb-3">Your Cart</h3>
       <div id="cartList">Cart is empty</div>
+
+      <!-- DELIVERY DETAILS - FILL EVERY TIME -->
+      <div id="deliveryForm" class="border-t pt-3 mt-3 space-y-3 hidden">
+        <h4 class="font-bold text-green-600">🚚 Delivery Details</h4>
+        <div>
+          <label class="text-sm font-semibold text-gray-700">Delivery Address</label>
+          <input id="checkoutAddress" type="text" placeholder="House No, Street, Area" required class="w-full p-3 border rounded-lg mt-1">
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-gray-700">WhatsApp Number</label>
+          <input id="checkoutPhone" type="tel" placeholder="080..." required class="w-full p-3 border rounded-lg mt-1">
+        </div>
+        <div>
+          <label class="text-sm font-semibold text-gray-700">Nearest Bus Stop / Landmark</label>
+          <input id="checkoutLandmark" type="text" placeholder="e.g. Zenith Bank Junction" required class="w-full p-3 border rounded-lg mt-1">
+        </div>
+      </div>
+
       <div class="border-t pt-3 mt-3 space-y-2">
         <div class="flex justify-between text-sm"><span>Subtotal</span><span id="subTotal">₦0</span></div>
         <div class="flex justify-between text-sm text-gray-600"><span>Delivery Fee 5%</span><span id="deliveryFee">₦0</span></div>
         <div class="flex justify-between font-bold text-lg border-t pt-2"><span>Total</span><span id="cartTotal">₦0</span></div>
-        <button onclick="checkout()" class="w-full bg-green-600 text-white py-3 rounded-full font-bold mt-3">Place Order</button>
+        <button type="submit" id="placeOrderBtn" class="w-full bg-green-600 text-white py-3 rounded-full font-bold mt-3 hidden">Place Order</button>
       </div>
-    </div>
+    </form>
   </div>
 
   <div id="view-orders" class="view hidden">
@@ -90,52 +86,11 @@ let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
 let allProducts = [];
 let tempRating = {};
 let isUserInteracting = false;
-let isEditing = false;
 
 const THREE_HOURS_MS = 4 * 60 * 60 * 1000;
 
-window.onload = async () => {
-  // CHANGE 2: LOAD PROFILE DATA
-  const { data: profile } = await supabaseClient.from('users').select('address, phone, landmark').eq('email', user.email).single();
-  if(profile){
-    document.getElementById('profileAddress').value = profile.address || '';
-    document.getElementById('profilePhone').value = profile.phone || '';
-    document.getElementById('profileLandmark').value = profile.landmark || '';
-  }
-  document.getElementById('profileCard').classList.remove('hidden'); // Show for customer
-
+window.onload = () => {
   showTab('shop');
-}
-
-function toggleEditProfile(){
-  isEditing =!isEditing;
-  ['profileAddress','profilePhone','profileLandmark'].forEach(id=>{
-    document.getElementById(id).disabled =!isEditing;
-    document.getElementById(id).classList.toggle('bg-gray-100',!isEditing);
-  });
-  document.getElementById('saveBtn').classList.toggle('hidden',!isEditing);
-  document.getElementById('editBtn').innerText = isEditing? 'Cancel' : 'Edit';
-}
-
-// CHANGE 3: UPDATE PROFILE FUNCTION
-async function updateProfile(e){
-  e.preventDefault();
-  const { error } = await supabaseClient.from('users').update({
-    address: document.getElementById('profileAddress').value,
-    phone: document.getElementById('profilePhone').value,
-    landmark: document.getElementById('profileLandmark').value
-  }).eq('email', user.email);
-
-  if(error) alert(error.message);
-  else {
-    alert('Delivery Profile Updated! ✅');
-    toggleEditProfile();
-    // Update localStorage too
-    user.address = document.getElementById('profileAddress').value;
-    user.phone = document.getElementById('profilePhone').value;
-    user.landmark = document.getElementById('profileLandmark').value;
-    localStorage.setItem('lgm_user', JSON.stringify(user));
-  }
 }
 
 function showTab(t){
@@ -229,6 +184,7 @@ function removeItem(id){
   renderCart();
 }
 
+// CHANGE 2: SHOW DELIVERY FORM WHEN CART HAS ITEMS
 function renderCart(){
   saveCart();
   if(cart.length===0){
@@ -236,6 +192,8 @@ function renderCart(){
     document.getElementById('subTotal').innerText='₦0';
     document.getElementById('deliveryFee').innerText='₦0';
     document.getElementById('cartTotal').innerText='₦0';
+    document.getElementById('deliveryForm').classList.add('hidden');
+    document.getElementById('placeOrderBtn').classList.add('hidden');
     return;
   }
   let html=''; let subtotal=0;
@@ -247,11 +205,11 @@ function renderCart(){
         <div class="text-green-600 font-bold">₦${Number(i.price).toLocaleString()}</div>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="updateQty(${i.id}, -1)" class="bg-gray-200 w-8 h-8 rounded-full font-bold">-</button>
+        <button type="button" onclick="updateQty(${i.id}, -1)" class="bg-gray-200 w-8 h-8 rounded-full font-bold">-</button>
         <span class="font-bold w-6 text-center">${i.qty}</span>
-        <button onclick="updateQty(${i.id}, 1)" class="bg-gray-200 w-8 h-8 rounded-full font-bold">+</button>
+        <button type="button" onclick="updateQty(${i.id}, 1)" class="bg-gray-200 w-8 h-8 rounded-full font-bold">+</button>
       </div>
-      <button onclick="removeItem(${i.id})" class="text-red-500 font-bold ml-2">✕</button>
+      <button type="button" onclick="removeItem(${i.id})" class="text-red-500 font-bold ml-2">✕</button>
       <div class="font-bold ml-2">₦${(i.price*i.qty).toLocaleString()}</div>
     </div>`;
   });
@@ -263,10 +221,19 @@ function renderCart(){
   document.getElementById('subTotal').innerText='₦'+subtotal.toLocaleString();
   document.getElementById('deliveryFee').innerText='₦'+delivery.toLocaleString();
   document.getElementById('cartTotal').innerText='₦'+total.toLocaleString();
+  document.getElementById('deliveryForm').classList.remove('hidden'); // SHOW FORM
+  document.getElementById('placeOrderBtn').classList.remove('hidden'); // SHOW BUTTON
 }
 
-async function checkout(){
+// CHANGE 3: CHECKOUT NOW TAKES FORM DATA
+async function checkout(e){
+  e.preventDefault();
   if(cart.length===0) return alert('Cart is empty');
+
+  const checkoutAddress = document.getElementById('checkoutAddress').value;
+  const checkoutPhone = document.getElementById('checkoutPhone').value;
+  const checkoutLandmark = document.getElementById('checkoutLandmark').value;
+
   const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
   const delivery = Math.round(subtotal * 0.05);
   const total = subtotal + delivery;
@@ -275,8 +242,8 @@ async function checkout(){
   const { error } = await supabaseClient.from('orders').insert({
     customer_name: displayName,
     customer_email: user.email,
-    customer_phone: user.phone || document.getElementById('profilePhone').value,
-    customer_address: user.address || document.getElementById('profileAddress').value,
+    customer_phone: checkoutPhone, // FROM FORM
+    customer_address: checkoutAddress + ' | Landmark: ' + checkoutLandmark, // FROM FORM
     vendor_email: vendor,
     total: total,
     status: 'paid'
@@ -284,7 +251,11 @@ async function checkout(){
   if(error) alert(error.message);
   else {
     alert(`Order Placed! Total: ₦${total.toLocaleString()}`);
-    cart=[]; localStorage.removeItem('lgm_cart'); showTab('orders');
+    cart=[]; localStorage.removeItem('lgm_cart');
+    document.getElementById('checkoutAddress').value = '';
+    document.getElementById('checkoutPhone').value = '';
+    document.getElementById('checkoutLandmark').value = '';
+    showTab('orders');
   }
 }
 
@@ -296,6 +267,7 @@ async function loadOrders(){
     html += `<div class="bg-white p-3 rounded-2xl shadow">
       <div class="flex justify-between"><b>Order #${o.id}</b><span class="${color} font-bold capitalize">${o.status.replace('_',' ')}</span></div>
       <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
+      <div class="text-xs text-gray-500 mt-1">📍 ${o.customer_address}</div>
       ${o.status==='on the way'? `
         ${formatCustomerCountdown(o.delivery_started_at)}
         <div class="text-xs text-orange-500 mt-1">🚚 Your order is on the way. Please be available</div>
