@@ -16,14 +16,14 @@
     <button type="button" onclick="selectRole('vendor')" id="btnVendor" class="flex-1 p-2 rounded-lg border-2 border-gray-200">
       🏪<br><b>Vendor</b>
     </button>
-    <button type="button" onclick="selectRole('delivery_agent')" id="btnAgent" class="flex-1 p-2 rounded-lg border-2 border-gray-200">
+    <button type="button" onclick="selectRole('delivery_agent')" id="btnDeliveryAgent" class="flex-1 p-2 rounded-lg border-2 border-gray-200">
       🚚<br><b>Delivery<br>Agent</b>
     </button>
   </div>
 
   <form onsubmit="signup(event)" class="space-y-3">
     <input id="fullName" type="text" placeholder="Full Name" required class="w-full p-3 border rounded-lg">
-    
+
     <select id="location" required class="w-full p-3 border rounded-lg bg-white">
       <option value="">Select Location in Lokoja</option>
     </select>
@@ -32,7 +32,7 @@
     <div id="addressField">
       <input id="address" type="text" placeholder="Shop/House Address" required class="w-full p-3 border rounded-lg">
     </div>
-    
+
     <input id="landmark" type="text" placeholder="Nearest Bus Stop / Landmark" required class="w-full p-3 border rounded-lg">
     <input id="phone" type="tel" placeholder="WhatsApp Number" required class="w-full p-3 border rounded-lg">
     <input id="email" type="email" placeholder="Email" required class="w-full p-3 border rounded-lg">
@@ -44,9 +44,9 @@
       <input id="accountName" type="text" placeholder="Account Name" class="w-full p-3 border rounded-lg">
     </div>
 
-    <!-- 1. DELIVERY AGENT ONLY SECTION -->
+    <!-- DELIVERY AGENT ONLY SECTION -->
     <div id="deliveryFields" class="hidden space-y-4">
-      
+
       <h3 class="font-bold text-green-600 mt-2">Delivery Verification</h3>
       <div>
         <label class="text-sm font-semibold">Passport Photograph</label>
@@ -108,11 +108,17 @@ window.onload = () => {
 
 function selectRole(role){
   currentRole = role;
-  document.querySelectorAll('[id^=btn]').forEach(b=>{
-    b.classList.remove('border-green-600','bg-green-50');
-    b.classList.add('border-gray-200');
+
+  // Reset all buttons
+  ['btnCustomer','btnVendor','btnDeliveryAgent'].forEach(id=>{
+    document.getElementById(id).classList.remove('border-green-600','bg-green-50');
+    document.getElementById(id).classList.add('border-gray-200');
   });
-  document.getElementById('btn'+role.charAt(0).toUpperCase()+role.slice(1).replace('_agent','Agent')).classList.add('border-green-600','bg-green-50');
+
+  // Activate clicked button
+  if(role === 'customer') document.getElementById('btnCustomer').classList.add('border-green-600','bg-green-50');
+  if(role === 'vendor') document.getElementById('btnVendor').classList.add('border-green-600','bg-green-50');
+  if(role === 'delivery_agent') document.getElementById('btnDeliveryAgent').classList.add('border-green-600','bg-green-50');
 
   // ROLE LOGIC
   if(role === 'customer'){
@@ -146,12 +152,11 @@ async function signup(e){
     account_number: document.getElementById('accountNumber').value,
     account_name: document.getElementById('accountName').value,
     role: currentRole,
-    // Delivery agent extra
     guarantor_name: document.getElementById('guarantorName')?.value || '',
     guarantor_address: document.getElementById('guarantorAddress')?.value || '',
     has_vehicle: document.querySelector('input[name="vehicle"]:checked')?.value || 'no'
   };
-  
+
   const { error } = await supabaseClient.from('users').insert([userData]);
   if(error) alert(error.message);
   else {
