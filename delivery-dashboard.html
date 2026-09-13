@@ -27,9 +27,11 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let curUser = JSON.parse(localStorage.getItem('delivery_user')||'null');
-if(!curUser || !curUser.email){ 
-  location.href='delivery-login.html'; 
+let curUser = JSON.parse(localStorage.getItem('lgm_user')||'null');
+if(!curUser || !curUser.email){
+  alert('Please login first');
+  location.href='index.html';
+} 
 }
 document.getElementById('name').innerText = curUser.full_name || curUser.email;
 document.getElementById('email').innerText = curUser.email;
@@ -189,7 +191,7 @@ async function pickup(id){
   }
 }
 
-function logout(){ localStorage.removeItem('delivery_user'); location.href='delivery-login.html'; }
+function logout(){ localStorage.removeItem('lgm_user'); location.href='index.html'; }
 
 loadOrders(); 
 
