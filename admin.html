@@ -53,9 +53,11 @@ body{background:#f3f4f6;font-family:system-ui}
   <!-- TABS + LIST -->
   <div class="bg-white rounded-2xl shadow overflow-hidden">
     <div class="flex gap-4 p-4 border-b text-sm font-bold overflow-x-auto">
-      <button onclick="showTab('vendors')" id="tabV" class="tab-btn text-green-600 border-b-2 border-green-600 pb-1">Vendors (<span id="cV">0</span>)</button>
+      <!-- CHANGE 1: NEW ORDERS TAB ADDED - BOLD RED -->
+      <button onclick="showTab('new')" id="tabN" class="tab-btn text-red-600 border-b-2 border-red-600 pb-1">🔔 New Orders (<span id="cN">0</span>)</button>
+      <button onclick="showTab('vendors')" id="tabV" class="tab-btn text-gray-400">Vendors (<span id="cV">0</span>)</button>
       <button onclick="showTab('pending')" id="tabP" class="tab-btn text-gray-400">Pending (<span id="cP">0</span>)</button>
-      <button onclick="showTab('orders')" id="tabO" class="tab-btn text-gray-400">Orders (<span id="cO">0</span>)</button>
+      <button onclick="showTab('orders')" id="tabO" class="tab-btn text-gray-400">All Orders (<span id="cO">0</span>)</button>
       <button onclick="showTab('customers')" id="tabC" class="tab-btn text-gray-400">Customers</button>
       <button onclick="showTab('delivery')" id="tabD" class="tab-btn text-gray-400">Delivery Agents (<span id="cD">0</span>)</button>
     </div>
@@ -68,11 +70,11 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let allUsers=[]; let allOrders=[]; let curTab='vendors'; let countdownInterval;
+let allUsers=[]; let allOrders=[]; let curTab='new'; let countdownInterval; // START ON NEW
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ location.href='login.html'; }
 
-const TWO_HOURS_MS = 3 * 60 * 60 * 1000; // 2 HOURS LOCKED
+const TWO_HOURS_MS = 3 * 60 * 60 * 1000;
 
 async function loadAll(){
   const { data:users } = await supabaseClient.from('users').select('*').order('created_at',{ascending:false});
@@ -84,13 +86,15 @@ async function loadAll(){
   let pending = vendors.filter(v=>v.status==='pending');
   let delivery = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
   let deliveryPending = delivery.filter(d=>d.status==='pending');
+  let newOrders = allOrders.filter(o=>o.status==='paid'); // CHANGE 2
 
   document.getElementById('totalV').innerText=vendors.length;
   document.getElementById('statV').innerText=(vendors.length-pending.length)+' Approved • '+pending.length+' Pending';
   document.getElementById('totalCust').innerText=[...new Set(allOrders.map(o=>o.customer_email).filter(Boolean))].length;
+  document.getElementById('cN').innerText=newOrders.length; // NEW COUNT
   document.getElementById('cV').innerText=vendors.length;
   document.getElementById('cP').innerText=pending.length + deliveryPending.length;
-  document.getElementById('cO').innerText=allOrders.length;
+  document.getElementById('cO').innerText=allOrders.filter(o=>o.status!=='paid').length; // ALL EXCEPT PAID
   document.getElementById('cD').innerText=delivery.length;
   document.getElementById('orderCount').innerText=allOrders.length+' orders';
 
@@ -107,7 +111,7 @@ async function loadAll(){
 
 function formatAdminCountdown(startTime){
   if(!startTime) return '';
-  const end = new Date(startTime).getTime() + TWO_HOURS_MS; // 2 HOURS
+  const end = new Date(startTime).getTime() + TWO_HOURS_MS;
   const diff = end - new Date().getTime();
   if(diff <= 0) return `⏰ Time up! Auto-failing...`;
   const h = Math.floor(diff / 3600000);
@@ -119,25 +123,46 @@ function formatAdminCountdown(startTime){
 
 function render(){
   let list=[];
+  if(curTab==='new') list = allOrders.filter(o=>o.status==='paid'); // CHANGE 3
   if(curTab==='vendors') list = allUsers.filter(u=>u.role==='vendor');
   if(curTab==='pending') list = [...allUsers.filter(u=>u.role==='vendor' && u.status==='pending'),...allUsers.filter(u=>u.role==='delivery' && u.status==='pending')];
   if(curTab==='customers') list = allUsers.filter(u=>u.role==='customer');
   if(curTab==='delivery') list = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
-  if(curTab==='orders') list = allOrders;
+  if(curTab==='orders') list = allOrders.filter(o=>o.status!=='paid'); // ALL EXCEPT PAID
 
   if(list.length===0){ document.getElementById('list').innerHTML='<div class="text-center text-gray-400 py-8">No '+curTab+' yet</div>'; return; }
 
   let html='';
-  if(curTab==='orders'){
+  // CHANGE 4: NEW ORDERS RENDER
+  if(curTab==='new'){
+    list.forEach(o=>{
+      let deliveryFee = Math.round(Number(o.total||0) * 0.05);
+      html+=`<div class="border-2 border-red-300 bg-red-50 rounded-xl p-3 mb-3">
+        <div class="flex justify-between items-center">
+          <div class="font-bold text-red-600">🔔 NEW Order #${o.id}</div>
+          <span class="bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">AWAITING ASSIGNMENT</span>
+        </div>
+        <div class="font-bold">₦${Number(o.total||0).toLocaleString()}</div>
+        <div class="text-xs text-gray-700">${o.customer_name} - ${o.customer_email}</div>
+        <div class="text-xs text-gray-500">📍 ${o.customer_address}</div>
+        <div class="text-xs text-gray-500">📱 ${o.customer_whatsapp} | 📞 ${o.customer_phone}</div>
+        <div class="text-[10px] text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</div>
+        <div class="mt-2">
+          <button onclick="assignOrder(${o.id})" class="w-full bg-green-600 text-white px-3 py-2 rounded-full text-sm font-bold">Assign to Vendor</button>
+        </div>
+      </div>`;
+    });
+  }
+  else if(curTab==='orders'){
     list.forEach(o=>{
       let deliveryFee = Math.round(Number(o.total||0) * 0.05);
       let productTotal = Number(o.total||0) - deliveryFee;
       let vendorEarn = productTotal * 0.9;
       let platform = productTotal * 0.1 + deliveryFee;
-      let status = o.status||'paid';
+      let status = o.status||'processing';
       let statusColor = status==='delivered'? 'text-green-600' : status==='on the way'? 'text-orange-500' : status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
       let adminBtn = ''; let countdown = '';
-      if(status === 'paid'){ adminBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_email}')" class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">Mark On The Way</button>`; }
+      if(status === 'processing'){ adminBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_email}')" class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">Mark On The Way</button>`; }
       if(status === 'failed_delivery'){ adminBtn = `<button disabled class="bg-gray-300 text-gray-500 px-3 py-1 rounded-full text-xs font-bold">Delivery Failed</button>`; }
       if(status === 'on the way' && o.delivery_started_at){ countdown = `<div id="timer-${o.id}" class="text-xs mt-1 font-bold text-orange-600">${formatAdminCountdown(o.delivery_started_at)}</div>`; }
       html+=`<div class="border rounded-xl p-3 mb-3">
@@ -145,7 +170,7 @@ function render(){
           <div class="font-bold">Order #${o.id}</div>
           <div class="font-bold ${statusColor} capitalize">${status.replace('_',' ')}</div>
         </div>
-        <div class="text-xs text-gray-500">₦${Number(o.total||0).toLocaleString()} • ${o.vendor_email} • ${o.customer_name} - ${o.customer_email}</div>
+        <div class="text-xs text-gray-500">₦${Number(o.total||0).toLocaleString()} • ${o.vendor_email} • ${o.customer_name}</div>
         <div class="text-xs">Product: ₦${Math.round(productTotal).toLocaleString()} | Delivery 5%: ₦${Math.round(deliveryFee).toLocaleString()}</div>
         <div class="text-xs">Vendor 90%: ₦${Math.round(vendorEarn).toLocaleString()} | You: ₦${Math.round(platform).toLocaleString()}</div>
         <div class="text-[10px] text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</div>
@@ -198,7 +223,18 @@ function render(){
   startAllTimers();
 }
 
-// UPDATED TIMER LOGIC
+// CHANGE 5: ASSIGN ORDER FUNCTION
+async function assignOrder(orderId){
+  const vendor = prompt('Enter Vendor Email to assign this order:');
+  if(!vendor) return;
+  const { error } = await supabaseClient.from('orders').update({
+    vendor_email: vendor,
+    status: 'processing' // moves it out of "New Orders"
+  }).eq('id', orderId);
+  if(error) alert(error.message);
+  else { alert('Order Assigned!'); loadAll(); }
+}
+
 function startAllTimers(){
   clearInterval(countdownInterval);
   countdownInterval = setInterval(()=>{
@@ -215,7 +251,7 @@ function startAllTimers(){
         el.innerHTML = formatAdminCountdown(o.delivery_started_at);
       }
     });
-  }, 1000); // UPDATE EVERY 1 SECOND
+  }, 1000);
 }
 
 function renderChart(){
@@ -235,10 +271,14 @@ function renderChart(){
 
 function showTab(t){
   curTab=t;
-  document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('text-green-600','border-b-2','border-green-600'); b.classList.add('text-gray-400')});
-  let map={vendors:'tabV',pending:'tabP',orders:'tabO',customers:'tabC',delivery:'tabD'};
+  document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('text-green-600','text-red-600','border-b-2','border-green-600','border-red-600'); b.classList.add('text-gray-400')});
+  let map={new:'tabN',vendors:'tabV',pending:'tabP',orders:'tabO',customers:'tabC',delivery:'tabD'};
   let el=document.getElementById(map[t]);
-  if(el){el.classList.add('text-green-600','border-b-2','border-green-600'); el.classList.remove('text-gray-400')}
+  if(el){
+    if(t==='new') el.classList.add('text-red-600','border-b-2','border-red-600'); // RED FOR NEW
+    else el.classList.add('text-green-600','border-b-2','border-green-600');
+    el.classList.remove('text-gray-400')
+  }
   render();
 }
 
