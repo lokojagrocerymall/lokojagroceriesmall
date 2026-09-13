@@ -58,8 +58,9 @@
       </div>
 
       <h3 class="font-bold text-green-600 mt-2">Guarantor Information</h3>
-      <input id="guarantorName" type="text" placeholder="Guarantor Full Name" class="w-full p-3 border rounded-lg">
-      <input id="guarantorAddress" type="text" placeholder="Guarantor Address" class="w-full p-3 border rounded-lg">
+      <input id="guarantorName" type="text" placeholder="Guarantor Full Name" required class="w-full p-3 border rounded-lg">
+      <input id="guarantorPhone" type="tel" placeholder="Guarantor WhatsApp Number" required class="w-full p-3 border rounded-lg"> <!-- NEW -->
+      <input id="guarantorAddress" type="text" placeholder="Guarantor Address" required class="w-full p-3 border rounded-lg">
       <div>
         <label class="text-sm font-semibold">Guarantor Passport</label>
         <input id="guarantorPassport" type="file" accept="image/*" class="w-full p-2 border rounded-lg">
@@ -152,7 +153,9 @@ async function signup(e){
     account_number: document.getElementById('accountNumber').value,
     account_name: document.getElementById('accountName').value,
     role: currentRole,
+    // Delivery agent extra
     guarantor_name: document.getElementById('guarantorName')?.value || '',
+    guarantor_phone: document.getElementById('guarantorPhone')?.value || '', // NEW
     guarantor_address: document.getElementById('guarantorAddress')?.value || '',
     has_vehicle: document.querySelector('input[name="vehicle"]:checked')?.value || 'no'
   };
