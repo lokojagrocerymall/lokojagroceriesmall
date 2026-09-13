@@ -123,7 +123,6 @@ function formatAdminCountdown(startTime){
   return `⏰ Auto-fail in: ${h}h ${m}m ${s}s <span class="text-gray-400">(Picked up: ${pickedUpTime})</span>`;
 }
 
-// CHANGED: FULL CUSTOMER INFO RENDER
 function render(){
   let list=[];
   if(curTab==='new') list = allOrders.filter(o=>o.status==='paid');
@@ -150,6 +149,15 @@ function render(){
 
       let border = status==='paid'? 'border-red-300 bg-red-50' : status==='on the way'? 'border-orange-300 bg-orange-50' : 'border-gray-200';
 
+      // GET VENDOR + DELIVERY INFO
+      let vendor = allUsers.find(u => u.email === o.vendor_email);
+      let vendorName = vendor? (vendor.full_name || vendor.name || o.vendor_email) : 'Not assigned yet';
+      let vendorPhone = vendor? (vendor.whatsapp || vendor.phone || 'N/A') : '';
+
+      let deliveryAgent = allUsers.find(u => u.email === o.delivery_agent_email);
+      let agentName = deliveryAgent? (deliveryAgent.full_name || deliveryAgent.name || 'Waiting for rider') : 'Waiting for rider';
+      let agentWhatsApp = deliveryAgent? (deliveryAgent.whatsapp || 'N/A') : 'N/A';
+
       html+=`<div class="border-2 ${border} rounded-xl p-3 mb-3">
         <div class="flex justify-between items-center mb-2">
           <div class="font-bold text-base">Order #${o.id}</div>
@@ -157,8 +165,8 @@ function render(){
         </div>
 
         <!-- CUSTOMER INFO BLOCK -->
-        <div class="bg-white p-2 rounded-lg mb-2">
-          <div class="font-bold text-sm">${o.customer_name || 'No Name'}</div>
+        <div class="bg-white p-2 rounded-lg mb-2 border border-gray-100">
+          <div class="font-bold text-sm">👤 ${o.customer_name || 'No Name'}</div>
           <div class="text-xs text-gray-600">📧 ${o.customer_email}</div>
           <div class="text-xs text-gray-600">📱 WhatsApp: ${o.customer_whatsapp || 'N/A'}</div>
           <div class="text-xs text-gray-600">📞 Phone: ${o.customer_phone || 'N/A'}</div>
@@ -167,7 +175,23 @@ function render(){
           ${o.customer_landmark? `<div class="text-xs text-gray-500">📍 Landmark: ${o.customer_landmark}</div>` : ''}
         </div>
 
-        <div class="text-xs">💰 Total: <b>₦${Number(o.total||0).toLocaleString()}</b> • Vendor: ${o.vendor_email||'Not assigned yet'}</div>
+        <!-- VENDOR INFO BLOCK - NEW -->
+        <div class="bg-green-50 p-2 rounded-lg mb-2 border-green-200">
+          <div class="text-xs font-bold text-green-800">🏪 Vendor</div>
+          <div class="text-xs text-green-700">Name: ${vendorName}</div>
+          <div class="text-xs text-green-700">📧 ${o.vendor_email || 'Not assigned yet'}</div>
+          ${vendorPhone? `<div class="text-xs text-green-700">📱 ${vendorPhone}</div>` : ''}
+        </div>
+
+        <!-- DELIVERY AGENT INFO BLOCK - NEW -->
+        <div class="bg-blue-50 p-2 rounded-lg mb-2 border-blue-200">
+          <div class="text-xs font-bold text-blue-800">🚚 Delivery Agent</div>
+          <div class="text-xs text-blue-700">Name: ${agentName}</div>
+          <div class="text-xs text-blue-700">📧 ${o.delivery_agent_email || 'N/A'}</div>
+          <div class="text-xs text-blue-700">📱 WhatsApp: ${agentWhatsApp}</div>
+        </div>
+
+        <div class="text-xs">💰 Total: <b>₦${Number(o.total||0).toLocaleString()}</b></div>
         <div class="text-xs">Product: ₦${Math.round(productTotal).toLocaleString()} | Delivery 5%: ₦${Math.round(deliveryFee).toLocaleString()}</div>
         <div class="text-xs">Vendor 90%: ₦${Math.round(vendorEarn).toLocaleString()} | You: ₦${Math.round(platform).toLocaleString()}</div>
         <div class="text-[10px] text-gray-400 mt-1">Ordered: ${new Date(o.created_at).toLocaleString()}</div>
