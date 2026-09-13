@@ -22,7 +22,6 @@ body{background:#f3f4f6;font-family:system-ui}
 </header>
 
 <div class="p-4 max-w-6xl mx-auto">
-  <!-- STATS CARDS -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
     <div onclick="showTab('new')" class="bg-white p-4 rounded-2xl shadow cursor-pointer border-2 border-red-200 hover:bg-red-50 transition active:scale-95">
       <div class="text-xs text-red-500 font-bold flex items-center gap-1">🔔 New Orders</div>
@@ -46,17 +45,15 @@ body{background:#f3f4f6;font-family:system-ui}
     </div>
   </div>
 
-  <!-- CHART -->
   <div class="bg-white p-4 rounded-2xl shadow mb-4">
     <h3 class="font-black text-sm mb-2">📈 Daily Sales Last 7 Days</h3>
     <div id="chart" class="text-xs text-gray-400">Sales chart will appear after orders</div>
   </div>
 
-  <!-- TABS + LIST -->
   <div class="bg-white rounded-2xl shadow overflow-hidden">
     <div class="flex gap-4 p-4 border-b text-sm font-bold overflow-x-auto">
       <button onclick="showTab('new')" id="tabN" class="tab-btn text-red-600 border-b-2 border-red-600 pb-1">🔔 New Orders (<span id="cN">0</span>)</button>
-      <button onclick="showTab('active')" id="tabA" class="tab-btn text-gray-400">🚚 Active (<span id="cA">0</span>)</button> <!-- NEW TAB -->
+      <button onclick="showTab('active')" id="tabA" class="tab-btn text-gray-400">🚚 Active (<span id="cA">0</span>)</button>
       <button onclick="showTab('orders')" id="tabO" class="tab-btn text-gray-400">All Orders (<span id="cO">0</span>)</button>
       <button onclick="showTab('vendors')" id="tabV" class="tab-btn text-gray-400">Vendors (<span id="cV">0</span>)</button>
       <button onclick="showTab('pending')" id="tabP" class="tab-btn text-gray-400">Pending (<span id="cP">0</span>)</button>
@@ -76,7 +73,7 @@ let allUsers=[]; let allOrders=[]; let curTab='new'; let countdownInterval;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ location.href='login.html'; }
 
-const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // 3 HOURS
+const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
 async function loadAll(){
   const { data:users } = await supabaseClient.from('users').select('*').order('created_at',{ascending:false});
@@ -89,13 +86,13 @@ async function loadAll(){
   let delivery = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
   let deliveryPending = delivery.filter(d=>d.status==='pending');
   let newOrders = allOrders.filter(o=>o.status==='paid');
-  let activeOrders = allOrders.filter(o=>o.status==='on the way' || o.status==='processing'); // NEW
+  let activeOrders = allOrders.filter(o=>o.status==='on the way' || o.status==='processing');
 
   document.getElementById('newOrderCount').innerText = newOrders.length;
   if(newOrders.length > 0) document.getElementById('newOrderCount').classList.add('animate-pulse'); else document.getElementById('newOrderCount').classList.remove('animate-pulse');
 
   document.getElementById('cN').innerText=newOrders.length;
-  document.getElementById('cA').innerText=activeOrders.length; // NEW COUNT
+  document.getElementById('cA').innerText=activeOrders.length;
   document.getElementById('cV').innerText=vendors.length;
   document.getElementById('cP').innerText=pending.length + deliveryPending.length;
   document.getElementById('cO').innerText=allOrders.length;
@@ -126,10 +123,11 @@ function formatAdminCountdown(startTime){
   return `⏰ Auto-fail in: ${h}h ${m}m ${s}s <span class="text-gray-400">(Picked up: ${pickedUpTime})</span>`;
 }
 
+// CHANGED: FULL CUSTOMER INFO RENDER
 function render(){
   let list=[];
   if(curTab==='new') list = allOrders.filter(o=>o.status==='paid');
-  if(curTab==='active') list = allOrders.filter(o=>o.status==='on the way' || o.status==='processing'); // NEW
+  if(curTab==='active') list = allOrders.filter(o=>o.status==='on the way' || o.status==='processing');
   if(curTab==='vendors') list = allUsers.filter(u=>u.role==='vendor');
   if(curTab==='pending') list = [...allUsers.filter(u=>u.role==='vendor' && u.status==='pending'),...allUsers.filter(u=>u.role==='delivery' && u.status==='pending')];
   if(curTab==='customers') list = allUsers.filter(u=>u.role==='customer');
@@ -139,7 +137,7 @@ function render(){
   if(list.length===0){ document.getElementById('list').innerHTML='<div class="text-center text-gray-400 py-8">No '+curTab+' yet</div>'; return; }
 
   let html='';
-  if(curTab==='new' || curTab==='active' || curTab==='orders'){ // COMBINED RENDER
+  if(curTab==='new' || curTab==='active' || curTab==='orders'){
     list.forEach(o=>{
       let deliveryFee = Math.round(Number(o.total||0) * 0.05);
       let productTotal = Number(o.total||0) - deliveryFee;
@@ -153,14 +151,26 @@ function render(){
       let border = status==='paid'? 'border-red-300 bg-red-50' : status==='on the way'? 'border-orange-300 bg-orange-50' : 'border-gray-200';
 
       html+=`<div class="border-2 ${border} rounded-xl p-3 mb-3">
-        <div class="flex justify-between items-center">
-          <div class="font-bold">Order #${o.id}</div>
+        <div class="flex justify-between items-center mb-2">
+          <div class="font-bold text-base">Order #${o.id}</div>
           <div class="font-bold ${statusColor} capitalize">${status.replace('_',' ')}</div>
         </div>
-        <div class="text-xs text-gray-500">₦${Number(o.total||0).toLocaleString()} • ${o.vendor_email||'No Vendor Yet'} • ${o.customer_name}</div>
+
+        <!-- CUSTOMER INFO BLOCK -->
+        <div class="bg-white p-2 rounded-lg mb-2">
+          <div class="font-bold text-sm">${o.customer_name || 'No Name'}</div>
+          <div class="text-xs text-gray-600">📧 ${o.customer_email}</div>
+          <div class="text-xs text-gray-600">📱 WhatsApp: ${o.customer_whatsapp || 'N/A'}</div>
+          <div class="text-xs text-gray-600">📞 Phone: ${o.customer_phone || 'N/A'}</div>
+          <div class="text-xs text-gray-600 mt-1">📍 ${o.customer_location || ''}</div>
+          <div class="text-xs text-gray-600">🏠 ${o.customer_address || 'No Address'}</div>
+          ${o.customer_landmark? `<div class="text-xs text-gray-500">📍 Landmark: ${o.customer_landmark}</div>` : ''}
+        </div>
+
+        <div class="text-xs">💰 Total: <b>₦${Number(o.total||0).toLocaleString()}</b> • Vendor: ${o.vendor_email||'Not assigned yet'}</div>
         <div class="text-xs">Product: ₦${Math.round(productTotal).toLocaleString()} | Delivery 5%: ₦${Math.round(deliveryFee).toLocaleString()}</div>
         <div class="text-xs">Vendor 90%: ₦${Math.round(vendorEarn).toLocaleString()} | You: ₦${Math.round(platform).toLocaleString()}</div>
-        <div class="text-[10px] text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</div>
+        <div class="text-[10px] text-gray-400 mt-1">Ordered: ${new Date(o.created_at).toLocaleString()}</div>
         ${countdown}
       </div>`;
     });
@@ -248,7 +258,7 @@ async function approveDelivery(email){ const { error } = await supabaseClient.fr
 async function removeUser(email){ if(!confirm('Delete this user?')) return; await supabaseClient.from('users').delete().eq('email',email); loadAll(); }
 async function markFailed(id){ const order = allOrders.find(o=>o.id===id); if(order && order.status!== 'failed_delivery' && order.status!== 'delivered'){ await supabaseClient.from('orders').update({status:'failed_delivery'}).eq('id',id); loadAll(); } }
 function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
-loadAll(); setInterval(loadAll, 5000); // REFRESH EVERY 5S
+loadAll(); setInterval(loadAll, 5000);
 </script>
 </body>
 </html>
