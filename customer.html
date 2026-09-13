@@ -18,8 +18,6 @@
     <p class="text-sm">Role: <span id="role" class="font-bold"></span></p>
   </div>
 
-  <!-- REMOVED: Delivery Profile Card -->
-
   <div class="flex gap-4 mb-3 bg-white p-3 rounded-2xl shadow text-sm font-bold overflow-x-auto">
     <button onclick="showTab('shop')" id="tabShop" class="text-green-600 border-b-2 border-green-600 pb-1">🛒 Shop</button>
     <button onclick="showTab('cart')" id="tabCart" class="text-gray-400">🛍️ Cart (<span id="cartCount">0</span>)</button>
@@ -30,7 +28,7 @@
     <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3">Loading products...</div>
   </div>
 
-  <!-- CHANGE 1: CART NOW HAS DELIVERY FORM -->
+  <!-- CART WITH DELIVERY FORM -->
   <div id="view-cart" class="view hidden">
     <form onsubmit="checkout(event)" class="bg-white p-4 rounded-2xl shadow">
       <h3 class="font-bold mb-3">Your Cart</h3>
@@ -39,6 +37,16 @@
       <!-- DELIVERY DETAILS - FILL EVERY TIME -->
       <div id="deliveryForm" class="border-t pt-3 mt-3 space-y-3 hidden">
         <h4 class="font-bold text-green-600">🚚 Delivery Details</h4>
+
+        <!-- CHANGE 1: LOCATION DROPDOWN + CUSTOM INPUT -->
+        <div>
+          <label class="text-sm font-semibold text-gray-700">Location in Lokoja</label>
+          <select id="checkoutLocation" onchange="toggleCustomLocation()" required class="w-full p-3 border rounded-lg mt-1 bg-white">
+            <option value="">Select Location</option>
+          </select>
+          <input id="customLocation" type="text" placeholder="Type your location if not listed" class="w-full p-3 border rounded-lg mt-2 hidden">
+        </div>
+
         <div>
           <label class="text-sm font-semibold text-gray-700">Delivery Address</label>
           <input id="checkoutAddress" type="text" placeholder="House No, Street, Area" required class="w-full p-3 border rounded-lg mt-1">
@@ -89,8 +97,37 @@ let isUserInteracting = false;
 
 const THREE_HOURS_MS = 4 * 60 * 60 * 1000;
 
+// CHANGE 2: LOKOJA AREAS ARRAY
+const LOKOJA_AREAS = [
+  "200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs",
+  "Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC",
+  "FUL Adankolo","FUL Felele","Fentolu","Felele","Gadumo","Ganaja","Ganaja Junction",
+  "Government Day","Government House","GRA","Hydro Junction","Jimgbe","Kabawa","Kabba Junction",
+  "Karaworo","Kporoka","Kpata Market","Maigeri Palace","NATACO","NUJ","NTA","New Market",
+  "New Stadium","Old Market","Old Poly Qtrs","Otokiti","Phase 1","Phase 2","Police Clinic",
+  "Poly","Post Office","Shetima","Zenith Bank","Zango","Zone 8","Other"
+];
+
 window.onload = () => {
+  // Populate location dropdown
+  const select = document.getElementById('checkoutLocation');
+  LOKOJA_AREAS.forEach(area => {
+    select.innerHTML += `<option value="${area}">${area}</option>`;
+  });
   showTab('shop');
+}
+
+function toggleCustomLocation(){
+  const val = document.getElementById('checkoutLocation').value;
+  const customInput = document.getElementById('customLocation');
+  if(val === 'Other'){
+    customInput.classList.remove('hidden');
+    customInput.required = true;
+  } else {
+    customInput.classList.add('hidden');
+    customInput.required = false;
+    customInput.value = '';
+  }
 }
 
 function showTab(t){
@@ -184,7 +221,6 @@ function removeItem(id){
   renderCart();
 }
 
-// CHANGE 2: SHOW DELIVERY FORM WHEN CART HAS ITEMS
 function renderCart(){
   saveCart();
   if(cart.length===0){
@@ -221,14 +257,18 @@ function renderCart(){
   document.getElementById('subTotal').innerText='₦'+subtotal.toLocaleString();
   document.getElementById('deliveryFee').innerText='₦'+delivery.toLocaleString();
   document.getElementById('cartTotal').innerText='₦'+total.toLocaleString();
-  document.getElementById('deliveryForm').classList.remove('hidden'); // SHOW FORM
-  document.getElementById('placeOrderBtn').classList.remove('hidden'); // SHOW BUTTON
+  document.getElementById('deliveryForm').classList.remove('hidden');
+  document.getElementById('placeOrderBtn').classList.remove('hidden');
 }
 
-// CHANGE 3: CHECKOUT NOW TAKES FORM DATA
+// CHANGE 3: CHECKOUT NOW INCLUDES LOCATION
 async function checkout(e){
   e.preventDefault();
   if(cart.length===0) return alert('Cart is empty');
+
+  const locationSelect = document.getElementById('checkoutLocation').value;
+  const customLocation = document.getElementById('customLocation').value;
+  const finalLocation = locationSelect === 'Other'? customLocation : locationSelect;
 
   const checkoutAddress = document.getElementById('checkoutAddress').value;
   const checkoutPhone = document.getElementById('checkoutPhone').value;
@@ -242,8 +282,8 @@ async function checkout(e){
   const { error } = await supabaseClient.from('orders').insert({
     customer_name: displayName,
     customer_email: user.email,
-    customer_phone: checkoutPhone, // FROM FORM
-    customer_address: checkoutAddress + ' | Landmark: ' + checkoutLandmark, // FROM FORM
+    customer_phone: checkoutPhone,
+    customer_address: `${finalLocation} | ${checkoutAddress} | Landmark: ${checkoutLandmark}`, // NOW INCLUDES LOCATION
     vendor_email: vendor,
     total: total,
     status: 'paid'
@@ -252,6 +292,8 @@ async function checkout(e){
   else {
     alert(`Order Placed! Total: ₦${total.toLocaleString()}`);
     cart=[]; localStorage.removeItem('lgm_cart');
+    document.getElementById('checkoutLocation').value = '';
+    document.getElementById('customLocation').value = '';
     document.getElementById('checkoutAddress').value = '';
     document.getElementById('checkoutPhone').value = '';
     document.getElementById('checkoutLandmark').value = '';
