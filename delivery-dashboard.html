@@ -57,11 +57,12 @@ function formatPickedUpTime(startTime){
 // LOAD RIDER RATING STATS
 async function loadRiderStats(){
   try{
-    const {data} = await supabaseClient.from('orders')
+    const {data, error} = await supabaseClient.from('orders')
       .select('customer_rating')
       .eq('delivery_agent_email', curUser.email)
       .eq('status', 'delivered')
       .not('customer_rating', 'is', null);
+    if(error) throw error;
     
     const ratings = data?.map(d=>d.customer_rating) || [];
     const avg = ratings.length > 0 ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '0';
@@ -77,12 +78,14 @@ async function loadRiderStats(){
 }
 
 async function fetchOrders(){
-  const { data:paidOrders } = await supabaseClient.from('orders').select('*').eq('status','paid').order('created_at',{ascending:false});
-  const { data:myActive } = await supabaseClient.from('orders').select('*').eq('status','on the way').eq('delivery_agent_email', curUser.email).order('created_at',{ascending:false});
-  
-  const orderMap = new Map();
-  [...(paidOrders||[]), ...(myActive||[])].forEach(o => orderMap.set(o.id, o));
-  ordersCache = Array.from(orderMap.values());
+  try{
+    const { data:paidOrders } = await supabaseClient.from('orders').select('*').eq('status','paid').order('created_at',{ascending:false});
+    const { data:myActive } = await supabaseClient.from('orders').select('*').eq('status','on the way').eq('delivery_agent_email', curUser.email).order('created_at',{ascending:false});
+    
+    const orderMap = new Map();
+    [...(paidOrders||[]), ...(myActive||[])].forEach(o => orderMap.set(o.id, o));
+    ordersCache = Array.from(orderMap.values());
+  }catch(e){ console.log(e) }
 }
 
 function renderOrders(){
@@ -137,31 +140,33 @@ function renderOrders(){
 }
 
 async function loadCompleted(){
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  
-  const { data:completed } = await supabaseClient.from('orders')
-    .select('*')
-    .eq('status','delivered')
-    .eq('delivery_agent_email', curUser.email)
-    .gte('delivered_at', sevenDaysAgo.toISOString())
-    .order('delivered_at',{ascending:false});
+  try{
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
-  if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }
-  else {
-    document.getElementById('completed').innerHTML = completed.map(o=>{
-      const addr = o.customer_address || o.address || 'N/A';
-      const deliveredDate = new Date(o.delivered_at).toLocaleString();
-      const stars = o.customer_rating ? '⭐'.repeat(o.customer_rating) : 'No rating yet';
-      return `<div class="bg-white p-3 rounded-xl shadow mb-2 border-gray-200 opacity-90">
-        <div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div>
-        <p class="text-xs"><b>Customer:</b> ${o.customer_name}</p>
-        <p class="text-xs"><b>Address:</b> ${addr}</p>
-        <p class="text-xs text-gray-500"><b>Delivered:</b> ${deliveredDate}</p>
-        <p class="text-xs text-yellow-600 font-bold mt-1">${stars}</p>
-      </div>`;
-    }).join('');
-  }
+    const { data:completed } = await supabaseClient.from('orders')
+      .select('*')
+      .eq('status','delivered')
+      .eq('delivery_agent_email', curUser.email)
+      .gte('delivered_at', sevenDaysAgo.toISOString())
+      .order('delivered_at',{ascending:false});
+      
+    if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }
+    else {
+      document.getElementById('completed').innerHTML = completed.map(o=>{
+        const addr = o.customer_address || o.address || 'N/A';
+        const deliveredDate = new Date(o.delivered_at).toLocaleString();
+        const stars = o.customer_rating ? '⭐'.repeat(o.customer_rating) : 'No rating yet';
+        return `<div class="bg-white p-3 rounded-xl shadow mb-2 border border-gray-200 opacity-90">
+          <div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div>
+          <p class="text-xs"><b>Customer:</b> ${o.customer_name}</p>
+          <p class="text-xs"><b>Address:</b> ${addr}</p>
+          <p class="text-xs text-gray-500"><b>Delivered:</b> ${deliveredDate}</p>
+          <p class="text-xs text-yellow-600 font-bold mt-1">${stars}</p>
+        </div>`;
+      }).join('');
+    }
+  }catch(e){ console.log(e) }
 }
 
 async function loadOrders(){
@@ -183,8 +188,6 @@ async function pickup(id){
     loadOrders();
   }
 }
-
-// REMOVED cancelPickup FUNCTION
 
 function logout(){ localStorage.removeItem('delivery_user'); location.href='delivery-login.html'; }
 
