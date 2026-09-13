@@ -28,23 +28,21 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// EYE ICON: Show/Hide Password
 function togglePassword(){
   const pass = document.getElementById('password');
   pass.type = pass.type === 'password' ? 'text' : 'password';
 }
 
-// FORGOT PASSWORD - Sends reset link to email
 async function forgotPassword(){
   const email = document.getElementById('email').value;
   if(!email) return alert('Enter your email first');
   
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://lokoja-grocery-mall.vercel.app/reset-password.html' // <-- Fixed domain
+    redirectTo: window.location.origin + '/reset-password.html'
   });
   
   if(error) alert(error.message);
-  else alert('Password reset link sent to ' + email + '. Check your inbox/spam');
+  else alert('Password reset link sent to ' + email);
 }
 
 async function login(){
@@ -52,16 +50,14 @@ async function login(){
   const password = document.getElementById('password').value;
   document.getElementById('error').innerText = '';
   
-  // Use Supabase Auth instead of plain password check
   const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({email, password});
   if(authError){ 
     document.getElementById('error').innerText = 'Invalid email or password'; 
     return; 
   }
   
-  // Get user role from users table
-  const { data: user, error } = await supabaseClient.from('users').select('*').eq('id', authData.user.id).single();
-  if(error || !user){ 
+  const { data: user } = await supabaseClient.from('users').select('*').eq('id', authData.user.id).single();
+  if(!user){ 
     document.getElementById('error').innerText = 'User profile not found'; 
     await supabaseClient.auth.signOut();
     return; 
@@ -69,7 +65,7 @@ async function login(){
   
   alert('Login Successful! Role: ' + user.role);
   
-  // FIXED REDIRECTS FOR ALL 4 ROLES
+  // FIXED REDIRECTS
   if(user.role==='admin'){
     localStorage.setItem('admin_user', JSON.stringify(user));
     location.href = 'admin.html';
@@ -79,10 +75,10 @@ async function login(){
     location.href = 'vendor.html';
   }
   else if(user.role==='delivery' || user.role==='agent'){
-    localStorage.setItem('delivery_user', JSON.stringify(user)); // <-- Must match dashboard
-    location.href = 'delivery-dashboard.html'; // <-- FIXED THIS
+    localStorage.setItem('delivery_user', JSON.stringify(user));
+    location.href = 'delivery-dashboard.html'; // <-- THIS IS THE FIX
   }
-  else { // customer
+  else {
     localStorage.setItem('customer_user', JSON.stringify(user));
     location.href = 'customer.html';
   }
