@@ -2,62 +2,53 @@
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Join Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
-<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
-<div class="bg-white w-full max-w-md p-6 rounded-2xl shadow">
-  <h1 class="text-2xl font-bold text-green-600 text-center">Join Lokoja Grocery Mall</h1>
-  <p class="text-center text-gray-500 mb-4">I want to join as</p>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
+<div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
+  <h1 class="text-2xl font-bold text-center text-green-600">Join Lokoja Grocery Mall</h1>
+  <p class="text-center text-gray-500 text-sm mb-4">I want to join as</p>
+
+  <!-- ROLE SELECTOR -->
   <div class="flex gap-2 mb-4">
-    <button type="button" onclick="selectRole('customer')" id="btn-customer" class="flex-1 p-2 border rounded-lg">🛒 Customer</button>
-    <button type="button" onclick="selectRole('vendor')" id="btn-vendor" class="flex-1 p-2 border rounded-lg">🏪 Vendor</button>
-    <button type="button" onclick="selectRole('delivery')" id="btn-delivery" class="flex-1 p-2 border rounded-lg">🚚 Delivery Agent</button>
+    <button type="button" onclick="selectRole('customer')" id="btnCustomer" class="flex-1 p-2 rounded-lg border-2 border-green-600 bg-green-50">
+      🛒<br><b>Customer</b>
+    </button>
+    <button type="button" onclick="selectRole('vendor')" id="btnVendor" class="flex-1 p-2 rounded-lg border-2 border-gray-200">
+      🏪<br><b>Vendor</b>
+    </button>
+    <button type="button" onclick="selectRole('delivery_agent')" id="btnAgent" class="flex-1 p-2 rounded-lg border-2 border-gray-200">
+      🚚<br><b>Delivery<br>Agent</b>
+    </button>
   </div>
 
-  <form id="signupForm" class="space-y-3">
-    <input name="role" type="hidden" value="customer">
-    <input name="full_name" placeholder="Full Name" required class="w-full border p-2 rounded">
-    <input name="location" placeholder="Location in Lokoja" class="w-full border p-2 rounded">
-    <input name="address" placeholder="Shop/House Address" required class="w-full border p-2 rounded">
-    <input name="landmark" placeholder="Nearest Bus Stop / Landmark" class="w-full border p-2 rounded">
-    <input name="whatsapp" placeholder="WhatsApp Number" required class="w-full border p-2 rounded">
-    <input name="email" type="email" placeholder="Email" required class="w-full border p-2 rounded">
+  <form onsubmit="signup(event)" class="space-y-3">
+    <input id="fullName" type="text" placeholder="Full Name" required class="w-full p-3 border rounded-lg">
     
-    <div class="relative">
-      <input id="passwordInput" name="password" type="password" placeholder="Password - At least 6 characters" required class="w-full border p-2 rounded pr-10">
-      <button type="button" onclick="togglePassword()" class="absolute right-3 top-2.5">👁️</button>
+    <!-- 1. LOCATION DROPDOWN FOR LOKOJA - A-Z -->
+    <select id="location" required class="w-full p-3 border rounded-lg bg-white">
+      <option value="">Select Location in Lokoja</option>
+    </select>
+
+    <!-- 2. THIS FIELD WILL HIDE FOR CUSTOMERS -->
+    <div id="addressField">
+      <input id="address" type="text" placeholder="Shop/House Address" required class="w-full p-3 border rounded-lg">
+    </div>
+    
+    <input id="landmark" type="text" placeholder="Nearest Bus Stop / Landmark" required class="w-full p-3 border rounded-lg">
+    <input id="phone" type="tel" placeholder="WhatsApp Number" required class="w-full p-3 border rounded-lg">
+    <input id="email" type="email" placeholder="Email" required class="w-full p-3 border rounded-lg">
+    <input id="password" type="password" placeholder="Password - At least 6 characters" required class="w-full p-3 border rounded-lg">
+
+    <!-- 3. BANK FIELDS WILL HIDE FOR CUSTOMERS -->
+    <div id="bankFields" class="space-y-3">
+      <input id="bankName" type="text" placeholder="Bank Name" class="w-full p-3 border rounded-lg">
+      <input id="accountNumber" type="text" placeholder="Account Number" class="w-full p-3 border rounded-lg">
+      <input id="accountName" type="text" placeholder="Account Name" class="w-full p-3 border rounded-lg">
     </div>
 
-    <input name="bank_name" placeholder="Bank Name" class="w-full border p-2 rounded">
-    <input name="account_number" placeholder="Account Number" class="w-full border p-2 rounded">
-    <input name="account_name" placeholder="Account Name" class="w-full border p-2 rounded">
-
-    <!-- DELIVERY AGENT ONLY FIELDS -->
-    <div id="deliveryFields" class="hidden space-y-3 border-t pt-3">
-      <h3 class="font-bold text-green-700">Delivery Verification</h3>
-      <label class="text-sm font-bold">Passport Photograph</label>
-      <input name="passport" type="file" accept="image/*" class="w-full">
-      <label class="text-sm font-bold">NIN Slip / Card</label>
-      <input name="nin" type="file" accept="image/*,.pdf" class="w-full">
-
-      <h3 class="font-bold text-green-700 pt-2">Guarantor Information</h3>
-      <input name="g_name" placeholder="Guarantor Full Name" class="w-full border p-2 rounded">
-      <input name="g_address" placeholder="Guarantor House/Office Address" class="w-full border p-2 rounded">
-      <label class="text-sm font-bold">Guarantor Passport</label>
-      <input name="g_passport" type="file" accept="image/*" class="w-full">
-      <label class="text-sm font-bold">Guarantor NIN</label>
-      <input name="g_nin" type="file" accept="image/*,.pdf" class="w-full">
-
-      <h3 class="font-bold text-green-700 pt-2">Vehicle</h3>
-      <div class="flex gap-4">
-        <label><input type="radio" name="is_driver_rider" value="yes"> Yes, I am Driver & Rider</label>
-        <label><input type="radio" name="is_driver_rider" value="no"> No</label>
-      </div>
-    </div>
-
-    <button id="submitBtn" type="submit" class="w-full bg-green-600 text-white py-3 rounded-full font-bold">Continue</button>
-    <p id="msg" class="text-center text-sm"></p>
+    <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-full font-bold">Continue</button>
   </form>
-  <p class="text-center text-sm mt-3">Already have account? <a href="login.html" class="text-purple-600">Login</a></p>
+  <p class="text-center text-sm mt-3">Already have account? <a href="login.html" class="text-purple-600 font-bold">Login</a></p>
 </div>
 
 <script>
@@ -66,94 +57,71 @@ const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentRole = 'customer';
-const deliveryFields = document.getElementById('deliveryFields');
-const submitBtn = document.getElementById('submitBtn');
-const passwordInput = document.getElementById('passwordInput');
 
-function togglePassword(){
-  passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+const LOKOJA_AREAS = [
+  "200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs",
+  "Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC",
+  "FUL Adankolo","FUL Felele","Fentolu","Felele","Gadumo","Ganaja","Ganaja Junction",
+  "Government Day","Government House","GRA","Hydro Junction","Jimgbe","Kabawa","Kabba Junction",
+  "Karaworo","Kporoka","Kpata Market","Maigeri Palace","NATACO","NUJ","NTA","New Market",
+  "New Stadium","Old Market","Old Poly Qtrs","Otokiti","Phase 1","Phase 2","Police Clinic",
+  "Poly","Post Office","Shetima","Zenith Bank","Zango","Zone 8"
+];
+
+// FILL DROPDOWN
+window.onload = () => {
+  const select = document.getElementById('location');
+  LOKOJA_AREAS.forEach(area => {
+    select.innerHTML += `<option value="${area}">${area}</option>`;
+  });
+  selectRole('customer'); // default
 }
 
 function selectRole(role){
   currentRole = role;
-  document.querySelector('input[name="role"]').value = role;
-  ['customer','vendor','delivery'].forEach(r=>{
-    document.getElementById('btn-'+r).classList.remove('bg-green-100','border-green-600');
-  })
-  document.getElementById('btn-'+role).classList.add('bg-green-100','border-green-600');
-  
-  if(role === 'delivery'){
-    deliveryFields.classList.remove('hidden');
-    deliveryFields.querySelectorAll('input').forEach(i=>i.required=true);
+  document.querySelectorAll('[id^=btn]').forEach(b=>{
+    b.classList.remove('border-green-600','bg-green-50');
+    b.classList.add('border-gray-200');
+  });
+  document.getElementById('btn'+role.charAt(0).toUpperCase()+role.slice(1).replace('_agent','Agent')).classList.add('border-green-600','bg-green-50');
+
+  // HIDE/SHOW FIELDS - ONLY FOR CUSTOMER
+  if(role === 'customer'){
+    document.getElementById('addressField').classList.add('hidden');
+    document.getElementById('bankFields').classList.add('hidden');
+    document.getElementById('address').required = false;
+    document.getElementById('bankName').required = false;
+    document.getElementById('accountNumber').required = false;
+    document.getElementById('accountName').required = false;
   } else {
-    deliveryFields.classList.add('hidden');
-    deliveryFields.querySelectorAll('input').forEach(i=>i.required=false);
+    document.getElementById('addressField').classList.remove('hidden');
+    document.getElementById('bankFields').classList.remove('hidden');
+    document.getElementById('address').required = true;
   }
 }
-selectRole('customer');
 
-document.addEventListener('change', e=>{
-  if(e.target.name === 'is_driver_rider'){
-    submitBtn.disabled = e.target.value === 'no';
-    submitBtn.innerText = e.target.value === 'no' ? 'Must be Driver & Rider' : 'Continue';
-    submitBtn.classList.toggle('bg-gray-400', e.target.value === 'no');
-  }
-})
-
-document.getElementById('signupForm').onsubmit = async (e)=>{
+async function signup(e){
   e.preventDefault();
-  const fd = new FormData(e.target);
-  submitBtn.disabled = true;
-  submitBtn.innerText = 'Submitting...';
-
-  const upload = async (file, folder) => {
-    if(!file || file.size === 0) return null;
-    const path = `${folder}/${Date.now()}_${file.name}`;
-    await supabaseClient.storage.from('delivery_docs').upload(path, file);
-    return path;
+  const userData = {
+    full_name: document.getElementById('fullName').value,
+    location: document.getElementById('location').value,
+    address: document.getElementById('address').value,
+    landmark: document.getElementById('landmark').value,
+    phone: document.getElementById('phone').value,
+    email: document.getElementById('email').value,
+    password: document.getElementById('password').value,
+    bank_name: document.getElementById('bankName').value,
+    account_number: document.getElementById('accountNumber').value,
+    account_name: document.getElementById('accountName').value,
+    role: currentRole
+  };
+  
+  const { error } = await supabaseClient.from('users').insert([userData]);
+  if(error) alert(error.message);
+  else {
+    alert('Account Created! Please Login');
+    location.href='login.html';
   }
-
-  try{
-    let extraData = {};
-    if(currentRole === 'delivery'){
-      const passport = await upload(fd.get('passport'), 'passports');
-      const nin = await upload(fd.get('nin'), 'nin');
-      const g_passport = await upload(fd.get('g_passport'), 'guarantor_passports');
-      const g_nin = await upload(fd.get('g_nin'), 'guarantor_nin');
-      
-      extraData = {
-        passport_url: passport, nin_url: nin,
-        g_full_name: fd.get('g_name'), g_house_address: fd.get('g_address'),
-        g_passport_url: g_passport, g_nin_url: g_nin,
-        is_driver_rider: fd.get('is_driver_rider') === 'yes',
-        status: 'pending'
-      }
-    }
-
-    const { error } = await supabaseClient.from('users').insert([{
-      full_name: fd.get('full_name'),
-      email: fd.get('email'),
-      password: fd.get('password'),
-      whatsapp: fd.get('whatsapp'),
-      address: fd.get('address'),
-      location: fd.get('location'),
-      landmark: fd.get('landmark'),
-      bank_name: fd.get('bank_name'),
-      account_number: fd.get('account_number'),
-      account_name: fd.get('account_name'),
-      role: currentRole,
-      status: currentRole === 'delivery' ? 'pending' : 'approved', // FIXED: use status instead of approved
-      ...extraData
-    }]);
-
-    if(error) throw error;
-    document.getElementById('msg').innerText = currentRole==='delivery' 
-      ? '✅ Application submitted! Admin will verify your NIN and contact you.'
-      : '✅ Account created! You can login now.';
-    e.target.reset();
-
-  }catch(err){ alert('Error: ' + err.message) }
-  submitBtn.disabled = false;
-  submitBtn.innerText = 'Continue';
 }
-</script></body></html>
+</script>
+</body></html>
