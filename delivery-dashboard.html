@@ -12,10 +12,10 @@
     <p class="text-sm">Welcome, <b id="name"></b></p>
   </div>
 
-  <!-- NEW: RIDER STATS CARD -->
+  <!-- RIDER STATS CARD -->
   <div id="riderStats"></div>
   
-  <h2 class="font-bold mb-3">My Active Deliveries</h2>
+  <h2 class="font-bold mb-3">Available & My Active Deliveries</h2>
   <div id="orders" class="mb-6">Loading...</div>
 
   <h2 class="font-bold mb-3 text-gray-600">Completed Deliveries - Last 7 Days</h2>
@@ -29,7 +29,7 @@ let curUser = JSON.parse(localStorage.getItem('delivery_user')||'{}');
 if(!curUser.email){ location.href='delivery-login.html'; }
 document.getElementById('name').innerText = curUser.full_name || curUser.email;
 
-const THREE_HOURS_MS = 4 * 60 * 60 * 1000; // 3 HOURS LOCKED - FIXED
+const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // FIXED: 3 HOURS
 
 let isCalling = false; // stops refresh when calling
 
@@ -49,11 +49,11 @@ function formatPickedUpTime(startTime){
   return new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
 }
 
-// NEW: LOAD RIDER RATING STATS
+// LOAD RIDER RATING STATS
 async function loadRiderStats(){
   const {data} = await supabaseClient.from('orders')
     .select('customer_rating')
-    .eq('delivery_agent_id', curUser.id)
+    .eq('delivery_agent_email', curUser.email) // CHANGED TO EMAIL
     .eq('status', 'delivered')
     .not('customer_rating', 'is', null);
   
@@ -70,12 +70,12 @@ async function loadRiderStats(){
 }
 
 async function loadOrders(){
-  await loadRiderStats(); // load stats first
+  await loadRiderStats();
 
-  // ACTIVE ORDERS
+  // ACTIVE ORDERS: Show all "paid" + "on the way" assigned to me
   const { data:orders } = await supabaseClient.from('orders')
     .select('*')
-    .or(`status.eq.paid,and(status.eq.on the way,delivery_agent_id.eq.${curUser.id})`)
+    .or(`status.eq.paid,and(status.eq.on the way,delivery_agent_email.eq.${curUser.email})`)
     .order('created_at',{ascending:false});
   
   if(!orders || orders.length===0){ document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No active orders</p>'; }
@@ -91,17 +91,18 @@ async function loadOrders(){
           <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Pick Up & Start 3HR Delivery</button>
         </div>`;
       } else {
-        return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-red-400">
+        return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-orange-400">
           <div class="flex justify-between"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
           <p class="text-sm"><b>Customer:</b> ${o.customer_name}</p>
           <p class="text-sm"><b>Phone:</b> ${o.customer_phone}</p>
           <p class="text-sm"><b>Address:</b> ${addr}</p>
-          <div class="bg-red-50 p-2 rounded-lg mt-2 text-center">
+          <div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
             <p class="text-xs text-gray-600 font-bold">3 HOUR DELIVERY WINDOW</p>
             <p class="text-xs text-gray-500">Picked up at: ${formatPickedUpTime(o.delivery_started_at)}</p>
             <b>⏰ Time Left:</b> ${formatCountdown(o.delivery_started_at)}
           </div>
           <a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-2 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
+          <button onclick="markDelivered('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Mark Delivered</button>
         </div>`;
       }
     }).join('');
@@ -114,7 +115,7 @@ async function loadOrders(){
   const { data:completed } = await supabaseClient.from('orders')
     .select('*')
     .eq('status','delivered')
-    .eq('delivery_agent_id', curUser.id) // FIXED: only show THIS rider's deliveries
+    .eq('delivery_agent_email', curUser.email) // CHANGED TO EMAIL
     .gte('delivered_at', sevenDaysAgo.toISOString())
     .order('delivered_at',{ascending:false});
     
@@ -138,14 +139,24 @@ async function loadOrders(){
 async function pickup(id){
   await supabaseClient.from('orders').update({
     status:'on the way', 
-    delivery_started_at:new Date().toISOString(), // STARTS FULL 3HR TIMER
-    delivery_agent_id: curUser.id
+    delivery_started_at:new Date().toISOString(), // STARTS 3HR TIMER
+    delivery_agent_email: curUser.email, // KEY: SAVE EMAIL FOR ADMIN TRACKING
+    delivery_agent_id: curUser.id // KEEP ID TOO
   }).eq('id',id);
   alert('Order picked up! 3 Hour countdown started');
   loadOrders();
 }
 
+async function markDelivered(id){
+  await supabaseClient.from('orders').update({
+    status:'delivered',
+    delivered_at: new Date().toISOString()
+  }).eq('id',id);
+  alert('Order marked as delivered!');
+  loadOrders();
+}
+
 function logout(){ localStorage.removeItem('delivery_user'); location.href='delivery-login.html'; }
 loadOrders(); 
-setInterval(()=>{ if(!isCalling) loadOrders(); }, 3000); // refresh every 3s, pause when calling
+setInterval(()=>{ if(!isCalling) loadOrders(); }, 5000); // refresh every 5s
 </script></body></html>
