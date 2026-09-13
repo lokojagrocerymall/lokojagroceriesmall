@@ -73,11 +73,13 @@ async function loadRiderStats(){
 async function loadOrders(){
   await loadRiderStats();
 
-  // ACTIVE ORDERS: Show all "paid" + "on the way" assigned to me
+  // FIX 1: Prevent duplicates with Map
   const { data:paidOrders } = await supabaseClient.from('orders').select('*').eq('status','paid').order('created_at',{ascending:false});
   const { data:myActive } = await supabaseClient.from('orders').select('*').eq('status','on the way').eq('delivery_agent_email', curUser.email).order('created_at',{ascending:false});
   
-  const orders = [...(paidOrders||[]), ...(myActive||[])];
+  const orderMap = new Map();
+  [...(paidOrders||[]), ...(myActive||[])].forEach(o => orderMap.set(o.id, o));
+  const orders = Array.from(orderMap.values());
 
   if(!orders || orders.length===0){ 
     document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No active orders</p>'; 
@@ -100,7 +102,7 @@ async function loadOrders(){
           <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Pick Up & Start 3HR Delivery</button>
         </div>`;
       } else {
-        return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-orange-400">
+        return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-orange-400" id="order-${o.id}">
           <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
           
           <div class="mt-2 p-2 bg-gray-50 rounded-lg">
@@ -115,12 +117,11 @@ async function loadOrders(){
           <div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
             <p class="text-xs text-gray-600 font-bold">3 HOUR DELIVERY WINDOW</p>
             <p class="text-xs text-gray-500">Picked up at: ${formatPickedUpTime(o.delivery_started_at)}</p>
-            <b>⏰ Time Left:</b> ${formatCountdown(o.delivery_started_at)}
+            <b>⏰ Time Left:</b> <span class="countdown" data-start="${o.delivery_started_at}">${formatCountdown(o.delivery_started_at)}</span>
           </div>
           <a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-2 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
           
-          <!-- REMOVED MARK DELIVERED -->
-          <div class="mt-2 p-2 bg-blue-50 rounded-lg text-center border-blue-200">
+          <div class="mt-2 p-2 bg-blue-50 rounded-lg text-center border border-blue-200">
             <p class="text-xs text-blue-700 font-bold">Waiting for Customer to Confirm Delivery</p>
           </div>
           <button onclick="cancelPickup('${o.id}')" class="mt-2 w-full bg-red-100 text-red-600 py-2 rounded-lg font-bold">Cancel Delivery</button>
@@ -146,7 +147,7 @@ async function loadOrders(){
       const addr = o.customer_address || o.address || 'N/A';
       const deliveredDate = new Date(o.delivered_at).toLocaleString();
       const stars = o.customer_rating ? '⭐'.repeat(o.customer_rating) : 'No rating yet';
-      return `<div class="bg-white p-3 rounded-xl shadow mb-2 border border-gray-200 opacity-90">
+      return `<div class="bg-white p-3 rounded-xl shadow mb-2 border-gray-200 opacity-90">
         <div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div>
         <p class="text-xs"><b>Customer:</b> ${o.customer_name}</p>
         <p class="text-xs"><b>Address:</b> ${addr}</p>
@@ -182,6 +183,14 @@ async function cancelPickup(id){
 }
 
 function logout(){ localStorage.removeItem('delivery_user'); location.href='delivery-login.html'; }
+
 loadOrders(); 
-setInterval(()=>{ if(!isCalling) loadOrders(); }, 5000);
+
+// FIX 2: Update countdown every 1 second instead of 5s
+setInterval(()=>{ 
+  document.querySelectorAll('.countdown').forEach(el => {
+    el.innerHTML = formatCountdown(el.dataset.start);
+  });
+  if(!isCalling) loadOrders(); 
+}, 1000);
 </script></body></html>
