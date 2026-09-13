@@ -10,6 +10,7 @@
 <div class="p-4 max-w-2xl mx-auto">
   <div class="bg-white p-3 rounded-xl mb-4">
     <p class="text-sm">Welcome, <b id="name"></b></p>
+    <p class="text-xs text-gray-400">Email: <span id="email"></span></p>
   </div>
 
   <!-- RIDER STATS CARD -->
@@ -28,6 +29,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let curUser = JSON.parse(localStorage.getItem('delivery_user')||'{}');
 if(!curUser.email){ location.href='delivery-login.html'; }
 document.getElementById('name').innerText = curUser.full_name || curUser.email;
+document.getElementById('email').innerText = curUser.email;
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // 3 HOURS
 
@@ -61,7 +63,7 @@ async function loadRiderStats(){
   const avg = ratings.length > 0 ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : 0;
   
   document.getElementById('riderStats').innerHTML = `
-    <div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border border-yellow-200">
+    <div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border-yellow-200">
       <p class="text-xs text-gray-600">Your Performance</p>
       <p class="text-3xl font-bold text-yellow-600">${avg}⭐</p>
       <p class="text-xs text-gray-500">${ratings.length} Customer Reviews</p>
@@ -72,13 +74,11 @@ async function loadRiderStats(){
 async function loadOrders(){
   await loadRiderStats();
 
-  // ACTIVE ORDERS: Show all "paid" + "on the way" assigned to me
-  const { data:orders, error } = await supabaseClient.from('orders')
-    .select('*')
-    .or(`status.eq.paid,and(status.eq.on the way,delivery_agent_email.eq.${curUser.email})`)
-    .order('created_at',{ascending:false});
+  // FIXED: Split query to avoid .or() bug
+  const { data:paidOrders } = await supabaseClient.from('orders').select('*').eq('status','paid').order('created_at',{ascending:false});
+  const { data:myActive } = await supabaseClient.from('orders').select('*').eq('status','on the way').eq('delivery_agent_email', curUser.email).order('created_at',{ascending:false});
   
-  if(error) { console.error(error); }
+  const orders = [...(paidOrders||[]), ...(myActive||[])];
 
   if(!orders || orders.length===0){ 
     document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No active orders</p>'; 
@@ -167,8 +167,8 @@ async function pickup(id){
     delivery_agent_email: curUser.email, // KEY FOR ADMIN TO TRACK
     delivery_agent_id: curUser.id
   }).eq('id',id);
-  if(error) alert(error.message); else {
-    alert('Order picked up! 3 Hour countdown started');
+  if(error) alert('ERROR: '+error.message); else {
+    alert('Order picked up! Check Admin now');
     loadOrders();
   }
 }
