@@ -6,9 +6,7 @@
 <title>Lokoja Grocery Mall - Fresh Groceries</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-body{font-family:system-ui,-apple-system;background:#f8fafc}
-</style>
+<style>body{font-family:system-ui,-apple-system;background:#f8fafc}</style>
 </head>
 <body>
 
@@ -34,7 +32,7 @@ body{font-family:system-ui,-apple-system;background:#f8fafc}
   <a href="browse.html" class="block py-2">🛍️ Browse Market</a>
   <a href="customer.html" class="block py-2">👤 My Account</a>
   <a href="vendor.html" class="block py-2">🏪 Vendor Dashboard</a>
-  <a href="login.html" class="block py-2">🔐 Login</a>
+  <a href="#" onclick="showDeliveryLogin()" class="block py-2">🔐 Login</a> <!-- CHANGED: opens modal instead of blank page -->
   <a href="signup.html" class="block py-2 text-green-600">➕ Sign Up</a>
 </div>
 
@@ -89,7 +87,7 @@ function updateCart(){
 }
 
 async function loadProducts(){
-  const { data, error } = await supabaseClient.from('products').select('*').order('created_at',{ascending:false}).limit(50);
+  const { data, error } = await supabaseClient.from('products').select('*').eq('status','active').order('created_at',{ascending:false}).limit(50);
   console.log('LOAD:', data, error);
   if(error){
     document.getElementById('productsGrid').innerHTML=`<div class="col-span-2 text-center text-sm text-red-400 py-10">Error: ${error.message}</div>`;
@@ -114,7 +112,6 @@ async function loadProducts(){
   document.getElementById('productsGrid').innerHTML=html;
 }
 
-// FIXED: Now saves image too - so cart will show image!
 function addToCart(id,name,price,image){
   let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
   let f=cart.find(i=>i.id===id);
@@ -127,11 +124,12 @@ function addToCart(id,name,price,image){
 updateCart();
 loadProducts();
 </script>
-  <!-- DELIVERY LOGIN MODAL - SECRET -->
+
+<!-- DELIVERY LOGIN MODAL -->
 <div id="deliveryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
   <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-sm mx-4">
-    <h1 class="text-2xl font-bold text-center text-green-700 mb-6">🚚 Delivery Login</h1>
-    <input id="d_email" type="email" placeholder="Email" class="w-full p-3 border rounded-lg mb-3">
+    <h1 class="text-2xl font-bold text-center text-green-700 mb-6">🚚 LGM Login</h1>
+    <input id="d_email" type="email" placeholder="Email" value="bayetijames@gmail.com" class="w-full p-3 border rounded-lg mb-3">
     <input id="d_password" type="password" placeholder="Password" class="w-full p-3 border rounded-lg mb-4">
     <button onclick="deliveryLogin()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold">Login</button>
     <button onclick="hideDeliveryLogin()" class="w-full mt-2 text-gray-600">Cancel</button>
@@ -144,16 +142,36 @@ function showDeliveryLogin(){ document.getElementById('deliveryModal').classList
 function hideDeliveryLogin(){ document.getElementById('deliveryModal').classList.add('hidden'); }
 
 async function deliveryLogin(){
-  const email=document.getElementById('d_email').value.trim().toLowerCase();
-  const password=document.getElementById('d_password').value.trim();
-  const { data:user, error } = await supabaseClient.from('delivery_users').select('*').eq('email',email).single();
+  const errorEl = document.getElementById('d_error');
+  errorEl.innerText = "Checking...";
   
-  if(error || !user){ document.getElementById('d_error').innerText='Email not found'; return; }
-  if(user.password.trim() !== password){ document.getElementById('d_error').innerText='Wrong password'; return; }
+  const email = document.getElementById('d_email').value.trim().toLowerCase();
+  const password = document.getElementById('d_password').value.trim();
   
-  localStorage.setItem('delivery_user', JSON.stringify(user));
-  alert('Login Successful!');
-  location.href='delivery-dashboard.html'; 
+  if(!email ||!password){ errorEl.innerText = "Please enter email and password"; return; }
+
+  // FIX: Use 'users' table for ALL roles, not 'delivery_users'
+  const { data: user, error } = await supabaseClient
+   .from('users')
+   .select('*')
+   .eq('email', email)
+   .eq('password', password)
+   .eq('is_approved', true)
+   .maybeSingle();
+    
+  if(error){ errorEl.innerText = "DB Error: " + error.message; return; }
+  if(!user){ errorEl.innerText = "Invalid email, password, or not approved"; return; }
+  
+  localStorage.setItem('lgm_user', JSON.stringify(user));
+  errorEl.className = "text-green-600 text-sm mt-3 text-center";
+  errorEl.innerText = "Login OK. Role: " + user.role + ". Redirecting...";
+  
+  setTimeout(() => {
+    if(user.role === 'admin') location.href = 'admin-dashboard.html';
+    else if(user.role === 'vendor') location.href = 'vendor-dashboard.html';
+    else if(user.role === 'delivery' || user.role === 'agent') location.href = 'delivery-dashboard.html';
+    else location.href = 'customer-dashboard.html';
+  }, 800);
 }
 
 // SECRET: Auto open login if URL has #delivery
