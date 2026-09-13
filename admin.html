@@ -22,11 +22,14 @@ body{background:#f3f4f6;font-family:system-ui}
 <div class="p-4 max-w-6xl mx-auto">
   <!-- STATS CARDS -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-    <div class="bg-white p-4 rounded-2xl shadow">
-      <div class="text-xs text-gray-400">Total Vendors</div>
-      <div class="text-2xl font-black" id="totalV">0</div>
-      <div class="text-xs text-green-600" id="statV">0 Approved • 0 Pending</div>
+
+    <!-- CHANGE 1: REPLACED TOTAL VENDORS WITH NEW ORDERS CARD -->
+    <div onclick="showTab('new')" class="bg-white p-4 rounded-2xl shadow cursor-pointer border-2 border-red-200 hover:bg-red-50 transition active:scale-95">
+      <div class="text-xs text-red-500 font-bold flex items-center gap-1">🔔 New Orders</div>
+      <div class="text-2xl font-black text-red-600" id="newOrderCount">0</div>
+      <div class="text-xs text-red-700">Tap to assign vendor</div>
     </div>
+
     <div class="bg-white p-4 rounded-2xl shadow">
       <div class="text-xs text-gray-400">Gross Sales</div>
       <div class="text-2xl font-black" id="totalSales">₦0</div>
@@ -53,7 +56,6 @@ body{background:#f3f4f6;font-family:system-ui}
   <!-- TABS + LIST -->
   <div class="bg-white rounded-2xl shadow overflow-hidden">
     <div class="flex gap-4 p-4 border-b text-sm font-bold overflow-x-auto">
-      <!-- CHANGE 1: NEW ORDERS TAB ADDED - BOLD RED -->
       <button onclick="showTab('new')" id="tabN" class="tab-btn text-red-600 border-b-2 border-red-600 pb-1">🔔 New Orders (<span id="cN">0</span>)</button>
       <button onclick="showTab('vendors')" id="tabV" class="tab-btn text-gray-400">Vendors (<span id="cV">0</span>)</button>
       <button onclick="showTab('pending')" id="tabP" class="tab-btn text-gray-400">Pending (<span id="cP">0</span>)</button>
@@ -70,7 +72,7 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let allUsers=[]; let allOrders=[]; let curTab='new'; let countdownInterval; // START ON NEW
+let allUsers=[]; let allOrders=[]; let curTab='new'; let countdownInterval;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ location.href='login.html'; }
 
@@ -86,16 +88,22 @@ async function loadAll(){
   let pending = vendors.filter(v=>v.status==='pending');
   let delivery = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
   let deliveryPending = delivery.filter(d=>d.status==='pending');
-  let newOrders = allOrders.filter(o=>o.status==='paid'); // CHANGE 2
+  let newOrders = allOrders.filter(o=>o.status==='paid');
 
-  document.getElementById('totalV').innerText=vendors.length;
-  document.getElementById('statV').innerText=(vendors.length-pending.length)+' Approved • '+pending.length+' Pending';
-  document.getElementById('totalCust').innerText=[...new Set(allOrders.map(o=>o.customer_email).filter(Boolean))].length;
-  document.getElementById('cN').innerText=newOrders.length; // NEW COUNT
+  // CHANGE 2: UPDATE NEW ORDER CARD
+  document.getElementById('newOrderCount').innerText = newOrders.length;
+  if(newOrders.length > 0){
+    document.getElementById('newOrderCount').classList.add('animate-pulse');
+  } else {
+    document.getElementById('newOrderCount').classList.remove('animate-pulse');
+  }
+
+  document.getElementById('cN').innerText=newOrders.length;
   document.getElementById('cV').innerText=vendors.length;
   document.getElementById('cP').innerText=pending.length + deliveryPending.length;
-  document.getElementById('cO').innerText=allOrders.filter(o=>o.status!=='paid').length; // ALL EXCEPT PAID
+  document.getElementById('cO').innerText=allOrders.filter(o=>o.status!=='paid').length;
   document.getElementById('cD').innerText=delivery.length;
+  document.getElementById('totalCust').innerText=[...new Set(allOrders.map(o=>o.customer_email).filter(Boolean))].length;
   document.getElementById('orderCount').innerText=allOrders.length+' orders';
 
   let grossSales = allOrders.reduce((s,o)=> s + Number(o.total||0), 0);
@@ -123,20 +131,18 @@ function formatAdminCountdown(startTime){
 
 function render(){
   let list=[];
-  if(curTab==='new') list = allOrders.filter(o=>o.status==='paid'); // CHANGE 3
+  if(curTab==='new') list = allOrders.filter(o=>o.status==='paid');
   if(curTab==='vendors') list = allUsers.filter(u=>u.role==='vendor');
   if(curTab==='pending') list = [...allUsers.filter(u=>u.role==='vendor' && u.status==='pending'),...allUsers.filter(u=>u.role==='delivery' && u.status==='pending')];
   if(curTab==='customers') list = allUsers.filter(u=>u.role==='customer');
   if(curTab==='delivery') list = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
-  if(curTab==='orders') list = allOrders.filter(o=>o.status!=='paid'); // ALL EXCEPT PAID
+  if(curTab==='orders') list = allOrders.filter(o=>o.status!=='paid');
 
   if(list.length===0){ document.getElementById('list').innerHTML='<div class="text-center text-gray-400 py-8">No '+curTab+' yet</div>'; return; }
 
   let html='';
-  // CHANGE 4: NEW ORDERS RENDER
   if(curTab==='new'){
     list.forEach(o=>{
-      let deliveryFee = Math.round(Number(o.total||0) * 0.05);
       html+=`<div class="border-2 border-red-300 bg-red-50 rounded-xl p-3 mb-3">
         <div class="flex justify-between items-center">
           <div class="font-bold text-red-600">🔔 NEW Order #${o.id}</div>
@@ -223,13 +229,12 @@ function render(){
   startAllTimers();
 }
 
-// CHANGE 5: ASSIGN ORDER FUNCTION
 async function assignOrder(orderId){
   const vendor = prompt('Enter Vendor Email to assign this order:');
   if(!vendor) return;
   const { error } = await supabaseClient.from('orders').update({
     vendor_email: vendor,
-    status: 'processing' // moves it out of "New Orders"
+    status: 'processing'
   }).eq('id', orderId);
   if(error) alert(error.message);
   else { alert('Order Assigned!'); loadAll(); }
@@ -275,7 +280,7 @@ function showTab(t){
   let map={new:'tabN',vendors:'tabV',pending:'tabP',orders:'tabO',customers:'tabC',delivery:'tabD'};
   let el=document.getElementById(map[t]);
   if(el){
-    if(t==='new') el.classList.add('text-red-600','border-b-2','border-red-600'); // RED FOR NEW
+    if(t==='new') el.classList.add('text-red-600','border-b-2','border-red-600');
     else el.classList.add('text-green-600','border-b-2','border-green-600');
     el.classList.remove('text-gray-400')
   }
