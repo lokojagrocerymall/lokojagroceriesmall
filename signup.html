@@ -28,7 +28,6 @@
       <option value="">Select Location in Lokoja</option>
     </select>
 
-    <!-- ADDRESS + BANK - HIDE FOR CUSTOMER -->
     <div id="addressField">
       <input id="address" type="text" placeholder="Shop/House Address" required class="w-full p-3 border rounded-lg">
     </div>
@@ -36,7 +35,14 @@
     <input id="landmark" type="text" placeholder="Nearest Bus Stop / Landmark" required class="w-full p-3 border rounded-lg">
     <input id="phone" type="tel" placeholder="WhatsApp Number" required class="w-full p-3 border rounded-lg">
     <input id="email" type="email" placeholder="Email" required class="w-full p-3 border rounded-lg">
-    <input id="password" type="password" placeholder="Password - At least 6 characters" required class="w-full p-3 border rounded-lg">
+    
+    <!-- PASSWORD WITH EYE ICON -->
+    <div class="relative">
+      <input id="password" type="password" placeholder="Password - At least 6 characters" required class="w-full p-3 border rounded-lg pr-10">
+      <button type="button" onclick="togglePassword('password')" class="absolute right-3 top-3 text-gray-500">
+        <span id="eye-password">👁️</span>
+      </button>
+    </div>
 
     <div id="bankFields" class="space-y-3">
       <input id="bankName" type="text" placeholder="Bank Name" class="w-full p-3 border rounded-lg">
@@ -46,7 +52,6 @@
 
     <!-- DELIVERY AGENT ONLY SECTION -->
     <div id="deliveryFields" class="hidden space-y-4">
-
       <h3 class="font-bold text-green-600 mt-2">Delivery Verification</h3>
       <div>
         <label class="text-sm font-semibold">Passport Photograph</label>
@@ -59,7 +64,7 @@
 
       <h3 class="font-bold text-green-600 mt-2">Guarantor Information</h3>
       <input id="guarantorName" type="text" placeholder="Guarantor Full Name" required class="w-full p-3 border rounded-lg">
-      <input id="guarantorPhone" type="tel" placeholder="Guarantor WhatsApp Number" required class="w-full p-3 border rounded-lg"> <!-- NEW -->
+      <input id="guarantorPhone" type="tel" placeholder="Guarantor WhatsApp Number" required class="w-full p-3 border rounded-lg">
       <input id="guarantorAddress" type="text" placeholder="Guarantor Address" required class="w-full p-3 border rounded-lg">
       <div>
         <label class="text-sm font-semibold">Guarantor Passport</label>
@@ -107,21 +112,29 @@ window.onload = () => {
   selectRole('customer');
 }
 
+// NEW FUNCTION: TOGGLE PASSWORD
+function togglePassword(id) {
+  const input = document.getElementById(id);
+  const eye = document.getElementById('eye-' + id);
+  if(input.type === "password"){
+    input.type = "text";
+    eye.textContent = "🙈"; // hide
+  } else {
+    input.type = "password";
+    eye.textContent = "👁️"; // show
+  }
+}
+
 function selectRole(role){
   currentRole = role;
-
-  // Reset all buttons
   ['btnCustomer','btnVendor','btnDeliveryAgent'].forEach(id=>{
     document.getElementById(id).classList.remove('border-green-600','bg-green-50');
     document.getElementById(id).classList.add('border-gray-200');
   });
-
-  // Activate clicked button
   if(role === 'customer') document.getElementById('btnCustomer').classList.add('border-green-600','bg-green-50');
   if(role === 'vendor') document.getElementById('btnVendor').classList.add('border-green-600','bg-green-50');
   if(role === 'delivery_agent') document.getElementById('btnDeliveryAgent').classList.add('border-green-600','bg-green-50');
 
-  // ROLE LOGIC
   if(role === 'customer'){
     document.getElementById('addressField').classList.add('hidden');
     document.getElementById('bankFields').classList.add('hidden');
@@ -153,9 +166,8 @@ async function signup(e){
     account_number: document.getElementById('accountNumber').value,
     account_name: document.getElementById('accountName').value,
     role: currentRole,
-    // Delivery agent extra
     guarantor_name: document.getElementById('guarantorName')?.value || '',
-    guarantor_phone: document.getElementById('guarantorPhone')?.value || '', // NEW
+    guarantor_phone: document.getElementById('guarantorPhone')?.value || '',
     guarantor_address: document.getElementById('guarantorAddress')?.value || '',
     has_vehicle: document.querySelector('input[name="vehicle"]:checked')?.value || 'no'
   };
