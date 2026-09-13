@@ -3,7 +3,7 @@
 <title>Delivery Dashboard</title><script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
 <body class="bg-gray-100">
-<header class="bg-white p-4 shadow flex justify-between items-center sticky top-0">
+<header class="bg-white p-4 shadow flex justify-between items-center sticky top-0 z-10">
   <b class="text-green-700">🚚 Delivery Dashboard</b>
   <button onclick="logout()" class="text-red-500 font-bold">Logout</button>
 </header>
@@ -29,9 +29,9 @@ let curUser = JSON.parse(localStorage.getItem('delivery_user')||'{}');
 if(!curUser.email){ location.href='delivery-login.html'; }
 document.getElementById('name').innerText = curUser.full_name || curUser.email;
 
-const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // FIXED: 3 HOURS
+const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // 3 HOURS
 
-let isCalling = false; // stops refresh when calling
+let isCalling = false;
 
 function formatCountdown(startTime){
   if(!startTime) return '';
@@ -53,7 +53,7 @@ function formatPickedUpTime(startTime){
 async function loadRiderStats(){
   const {data} = await supabaseClient.from('orders')
     .select('customer_rating')
-    .eq('delivery_agent_email', curUser.email) // CHANGED TO EMAIL
+    .eq('delivery_agent_email', curUser.email)
     .eq('status', 'delivered')
     .not('customer_rating', 'is', null);
   
@@ -61,7 +61,7 @@ async function loadRiderStats(){
   const avg = ratings.length > 0 ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : 0;
   
   document.getElementById('riderStats').innerHTML = `
-    <div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border-yellow-200">
+    <div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border border-yellow-200">
       <p class="text-xs text-gray-600">Your Performance</p>
       <p class="text-3xl font-bold text-yellow-600">${avg}⭐</p>
       <p class="text-xs text-gray-500">${ratings.length} Customer Reviews</p>
@@ -73,36 +73,60 @@ async function loadOrders(){
   await loadRiderStats();
 
   // ACTIVE ORDERS: Show all "paid" + "on the way" assigned to me
-  const { data:orders } = await supabaseClient.from('orders')
+  const { data:orders, error } = await supabaseClient.from('orders')
     .select('*')
     .or(`status.eq.paid,and(status.eq.on the way,delivery_agent_email.eq.${curUser.email})`)
     .order('created_at',{ascending:false});
   
-  if(!orders || orders.length===0){ document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No active orders</p>'; }
+  if(error) { console.error(error); }
+
+  if(!orders || orders.length===0){ 
+    document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No active orders</p>'; 
+  }
   else {
     document.getElementById('orders').innerHTML = orders.map(o=>{
-      const addr = o.address || o.customer_address || 'N/A';
+      const addr = o.customer_address || o.address || 'N/A';
       if(o.status === 'paid'){
         return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-green-400">
-          <div class="flex justify-between"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
-          <p class="text-sm"><b>Customer:</b> ${o.customer_name}</p>
-          <p class="text-sm"><b>Phone:</b> ${o.customer_phone}</p>
-          <p class="text-sm"><b>Address:</b> ${addr}</p>
+          <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
+          
+          <!-- FULL CUSTOMER INFO FOR RIDER -->
+          <div class="mt-2 p-2 bg-gray-50 rounded-lg">
+            <p class="text-sm font-bold">👤 ${o.customer_name}</p>
+            <p class="text-xs">📧 ${o.customer_email}</p>
+            <p class="text-xs">📱 WhatsApp: ${o.customer_whatsapp || o.customer_phone}</p>
+            <p class="text-xs">📞 Phone: ${o.customer_phone}</p>
+            <p class="text-xs">📍 ${o.customer_location || ''}</p>
+            <p class="text-xs">🏠 ${addr}</p>
+            ${o.customer_landmark? `<p class="text-xs">📍 Landmark: ${o.customer_landmark}</p>` : ''}
+          </div>
           <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Pick Up & Start 3HR Delivery</button>
         </div>`;
       } else {
         return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-orange-400">
-          <div class="flex justify-between"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
-          <p class="text-sm"><b>Customer:</b> ${o.customer_name}</p>
-          <p class="text-sm"><b>Phone:</b> ${o.customer_phone}</p>
-          <p class="text-sm"><b>Address:</b> ${addr}</p>
+          <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
+          
+          <!-- FULL CUSTOMER INFO FOR RIDER -->
+          <div class="mt-2 p-2 bg-gray-50 rounded-lg">
+            <p class="text-sm font-bold">👤 ${o.customer_name}</p>
+            <p class="text-xs">📧 ${o.customer_email}</p>
+            <p class="text-xs">📱 WhatsApp: ${o.customer_whatsapp || o.customer_phone}</p>
+            <p class="text-xs">📞 Phone: ${o.customer_phone}</p>
+            <p class="text-xs">📍 ${o.customer_location || ''}</p>
+            <p class="text-xs">🏠 ${addr}</p>
+            ${o.customer_landmark? `<p class="text-xs">📍 Landmark: ${o.customer_landmark}</p>` : ''}
+          </div>
+
           <div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
             <p class="text-xs text-gray-600 font-bold">3 HOUR DELIVERY WINDOW</p>
             <p class="text-xs text-gray-500">Picked up at: ${formatPickedUpTime(o.delivery_started_at)}</p>
             <b>⏰ Time Left:</b> ${formatCountdown(o.delivery_started_at)}
           </div>
           <a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-2 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
-          <button onclick="markDelivered('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Mark Delivered</button>
+          <div class="flex gap-2">
+            <button onclick="markDelivered('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">Mark Delivered</button>
+            <button onclick="cancelPickup('${o.id}')" class="mt-2 w-full bg-red-100 text-red-600 py-2 rounded-lg font-bold">Cancel</button>
+          </div>
         </div>`;
       }
     }).join('');
@@ -115,17 +139,17 @@ async function loadOrders(){
   const { data:completed } = await supabaseClient.from('orders')
     .select('*')
     .eq('status','delivered')
-    .eq('delivery_agent_email', curUser.email) // CHANGED TO EMAIL
+    .eq('delivery_agent_email', curUser.email)
     .gte('delivered_at', sevenDaysAgo.toISOString())
     .order('delivered_at',{ascending:false});
     
   if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }
   else {
     document.getElementById('completed').innerHTML = completed.map(o=>{
-      const addr = o.address || o.customer_address || 'N/A';
+      const addr = o.customer_address || o.address || 'N/A';
       const deliveredDate = new Date(o.delivered_at).toLocaleString();
       const stars = o.customer_rating ? '⭐'.repeat(o.customer_rating) : 'No rating yet';
-      return `<div class="bg-white p-3 rounded-xl shadow mb-2 border-gray-200 opacity-90">
+      return `<div class="bg-white p-3 rounded-xl shadow mb-2 border border-gray-200 opacity-90">
         <div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div>
         <p class="text-xs"><b>Customer:</b> ${o.customer_name}</p>
         <p class="text-xs"><b>Address:</b> ${addr}</p>
@@ -137,13 +161,26 @@ async function loadOrders(){
 }
 
 async function pickup(id){
-  await supabaseClient.from('orders').update({
+  const { error } = await supabaseClient.from('orders').update({
     status:'on the way', 
-    delivery_started_at:new Date().toISOString(), // STARTS 3HR TIMER
-    delivery_agent_email: curUser.email, // KEY: SAVE EMAIL FOR ADMIN TRACKING
-    delivery_agent_id: curUser.id // KEEP ID TOO
+    delivery_started_at:new Date().toISOString(),
+    delivery_agent_email: curUser.email, // KEY FOR ADMIN TO TRACK
+    delivery_agent_id: curUser.id
   }).eq('id',id);
-  alert('Order picked up! 3 Hour countdown started');
+  if(error) alert(error.message); else {
+    alert('Order picked up! 3 Hour countdown started');
+    loadOrders();
+  }
+}
+
+async function cancelPickup(id){
+  if(!confirm('Cancel this delivery?')) return;
+  await supabaseClient.from('orders').update({
+    status:'paid', 
+    delivery_started_at:null,
+    delivery_agent_email: null,
+    delivery_agent_id: null
+  }).eq('id',id);
   loadOrders();
 }
 
@@ -158,5 +195,5 @@ async function markDelivered(id){
 
 function logout(){ localStorage.removeItem('delivery_user'); location.href='delivery-login.html'; }
 loadOrders(); 
-setInterval(()=>{ if(!isCalling) loadOrders(); }, 5000); // refresh every 5s
+setInterval(()=>{ if(!isCalling) loadOrders(); }, 5000);
 </script></body></html>
