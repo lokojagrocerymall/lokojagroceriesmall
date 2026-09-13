@@ -1,47 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LGM Login</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-</head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-<div class="bg-white p-6 rounded-2xl shadow w-full max-w-sm">
-  <h1 class="text-2xl font-bold text-center text-green-700 mb-4">Login to Lokoja Grocery Mall</h1>
-  <input id="email" type="email" placeholder="Email" class="w-full border p-3 rounded-lg mb-3">
-  <input id="password" type="password" placeholder="Password" class="w-full border p-3 rounded-lg mb-4">
-  <button onclick="login()" class="w-full bg-green-600 text-white py-3 rounded-full font-bold">Login</button>
-  <p id="error" class="text-red-500 text-sm mt-3 text-center break-words"></p>
-</div>
-
 <script>
 console.log("JS Loaded");
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 
-let supabase;
-try {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  document.getElementById('error').innerText = "Supabase Loaded OK";
-} catch(e) {
-  document.getElementById('error').innerText = "Supabase Load Error: " + e.message;
-}
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function login(){
-  document.getElementById('error').innerText = "Button clicked. Checking...";
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
+  document.getElementById('error').innerText = "Checking...";
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if(error) throw error;
-    document.getElementById('error').innerText = "Step 1 OK. Auth ID: " + data.user.id.substring(0,8);
+    // STEP 1: Check users table directly
+    const { data: profile, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .eq('password', password)
+      .eq('is_approved', true)
+      .single();
+      
+    if(error || !profile) throw new Error("Invalid email or password");
     
-    const { data: profile, error: profileError } = await supabase.from('users').select('*').eq('auth_user_id', data.user.id).single();
-    if(profileError) throw profileError;
-    
-    document.getElementById('error').innerText = "Step 2 OK. Role: " + profile.role + ". Redirecting...";
+    document.getElementById('error').innerText = "Login OK. Role: " + profile.role + ". Redirecting...";
     localStorage.setItem('lgm_user', JSON.stringify(profile));
     
     setTimeout(() => {
@@ -56,4 +37,3 @@ async function login(){
   }
 }
 </script>
-</body></html>
