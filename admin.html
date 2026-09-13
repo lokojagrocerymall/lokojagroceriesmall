@@ -8,6 +8,8 @@
 <style>
 body{background:#f3f4f6;font-family:system-ui}
 .tab-btn{white-space:nowrap}
+@keyframes pulse {0%, 100% {opacity: 1;} 50% {opacity:.5;}}
+.animate-pulse {animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;}
 </style>
 </head>
 <body>
@@ -25,7 +27,7 @@ body{background:#f3f4f6;font-family:system-ui}
     <div onclick="showTab('new')" class="bg-white p-4 rounded-2xl shadow cursor-pointer border-2 border-red-200 hover:bg-red-50 transition active:scale-95">
       <div class="text-xs text-red-500 font-bold flex items-center gap-1">🔔 New Orders</div>
       <div class="text-2xl font-black text-red-600" id="newOrderCount">0</div>
-      <div class="text-xs text-red-700">Tap to view</div> <!-- CHANGED -->
+      <div class="text-xs text-red-700">Tap to view</div>
     </div>
     <div class="bg-white p-4 rounded-2xl shadow">
       <div class="text-xs text-gray-400">Gross Sales</div>
@@ -54,9 +56,10 @@ body{background:#f3f4f6;font-family:system-ui}
   <div class="bg-white rounded-2xl shadow overflow-hidden">
     <div class="flex gap-4 p-4 border-b text-sm font-bold overflow-x-auto">
       <button onclick="showTab('new')" id="tabN" class="tab-btn text-red-600 border-b-2 border-red-600 pb-1">🔔 New Orders (<span id="cN">0</span>)</button>
+      <button onclick="showTab('active')" id="tabA" class="tab-btn text-gray-400">🚚 Active (<span id="cA">0</span>)</button> <!-- NEW TAB -->
+      <button onclick="showTab('orders')" id="tabO" class="tab-btn text-gray-400">All Orders (<span id="cO">0</span>)</button>
       <button onclick="showTab('vendors')" id="tabV" class="tab-btn text-gray-400">Vendors (<span id="cV">0</span>)</button>
       <button onclick="showTab('pending')" id="tabP" class="tab-btn text-gray-400">Pending (<span id="cP">0</span>)</button>
-      <button onclick="showTab('orders')" id="tabO" class="tab-btn text-gray-400">All Orders (<span id="cO">0</span>)</button>
       <button onclick="showTab('customers')" id="tabC" class="tab-btn text-gray-400">Customers</button>
       <button onclick="showTab('delivery')" id="tabD" class="tab-btn text-gray-400">Delivery Agents (<span id="cD">0</span>)</button>
     </div>
@@ -73,7 +76,7 @@ let allUsers=[]; let allOrders=[]; let curTab='new'; let countdownInterval;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ location.href='login.html'; }
 
-const TWO_HOURS_MS = 3 * 60 * 60 * 1000; // 3 HOURS
+const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // 3 HOURS
 
 async function loadAll(){
   const { data:users } = await supabaseClient.from('users').select('*').order('created_at',{ascending:false});
@@ -86,18 +89,16 @@ async function loadAll(){
   let delivery = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
   let deliveryPending = delivery.filter(d=>d.status==='pending');
   let newOrders = allOrders.filter(o=>o.status==='paid');
+  let activeOrders = allOrders.filter(o=>o.status==='on the way' || o.status==='processing'); // NEW
 
   document.getElementById('newOrderCount').innerText = newOrders.length;
-  if(newOrders.length > 0){
-    document.getElementById('newOrderCount').classList.add('animate-pulse');
-  } else {
-    document.getElementById('newOrderCount').classList.remove('animate-pulse');
-  }
+  if(newOrders.length > 0) document.getElementById('newOrderCount').classList.add('animate-pulse'); else document.getElementById('newOrderCount').classList.remove('animate-pulse');
 
   document.getElementById('cN').innerText=newOrders.length;
+  document.getElementById('cA').innerText=activeOrders.length; // NEW COUNT
   document.getElementById('cV').innerText=vendors.length;
   document.getElementById('cP').innerText=pending.length + deliveryPending.length;
-  document.getElementById('cO').innerText=allOrders.filter(o=>o.status!=='paid').length;
+  document.getElementById('cO').innerText=allOrders.length;
   document.getElementById('cD').innerText=delivery.length;
   document.getElementById('totalCust').innerText=[...new Set(allOrders.map(o=>o.customer_email).filter(Boolean))].length;
   document.getElementById('orderCount').innerText=allOrders.length+' orders';
@@ -110,12 +111,12 @@ async function loadAll(){
   document.getElementById('totalSales').innerText='₦'+Math.round(grossSales).toLocaleString();
   document.getElementById('totalIncome').innerText='₦'+Math.round(platformIncome).toLocaleString();
   document.getElementById('incomeBreak').innerText=`₦${Math.round(commission).toLocaleString()} commission + ₦${Math.round(totalDelivery).toLocaleString()} delivery`;
-  render(); renderChart(); checkCountdowns();
+  render(); renderChart(); startAllTimers();
 }
 
 function formatAdminCountdown(startTime){
   if(!startTime) return '';
-  const end = new Date(startTime).getTime() + TWO_HOURS_MS;
+  const end = new Date(startTime).getTime() + THREE_HOURS_MS;
   const diff = end - new Date().getTime();
   if(diff <= 0) return `⏰ Time up! Auto-failing...`;
   const h = Math.floor(diff / 3600000);
@@ -128,73 +129,48 @@ function formatAdminCountdown(startTime){
 function render(){
   let list=[];
   if(curTab==='new') list = allOrders.filter(o=>o.status==='paid');
+  if(curTab==='active') list = allOrders.filter(o=>o.status==='on the way' || o.status==='processing'); // NEW
   if(curTab==='vendors') list = allUsers.filter(u=>u.role==='vendor');
   if(curTab==='pending') list = [...allUsers.filter(u=>u.role==='vendor' && u.status==='pending'),...allUsers.filter(u=>u.role==='delivery' && u.status==='pending')];
   if(curTab==='customers') list = allUsers.filter(u=>u.role==='customer');
   if(curTab==='delivery') list = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
-  if(curTab==='orders') list = allOrders.filter(o=>o.status!=='paid');
+  if(curTab==='orders') list = allOrders;
 
   if(list.length===0){ document.getElementById('list').innerHTML='<div class="text-center text-gray-400 py-8">No '+curTab+' yet</div>'; return; }
 
   let html='';
-  if(curTab==='new'){
-    list.forEach(o=>{
-      html+=`<div class="border-2 border-red-300 bg-red-50 rounded-xl p-3 mb-3">
-        <div class="flex justify-between items-center">
-          <div class="font-bold text-red-600">🔔 NEW Order #${o.id}</div>
-          <span class="bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">WAITING FOR RIDER</span> <!-- CHANGED -->
-        </div>
-        <div class="font-bold">₦${Number(o.total||0).toLocaleString()}</div>
-        <div class="text-xs text-gray-700">${o.customer_name} - ${o.customer_email}</div>
-        <div class="text-xs text-gray-500">📍 ${o.customer_address}</div>
-        <div class="text-xs text-gray-500">📱 ${o.customer_whatsapp} | 📞 ${o.customer_phone}</div>
-        <div class="text-xs text-orange-600 mt-1">Delivery Agent will start timer</div> <!-- CHANGED -->
-        <div class="text-[10px] text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</div>
-      </div>`; // REMOVED ASSIGN BUTTON
-    });
-  }
-  else if(curTab==='orders'){
+  if(curTab==='new' || curTab==='active' || curTab==='orders'){ // COMBINED RENDER
     list.forEach(o=>{
       let deliveryFee = Math.round(Number(o.total||0) * 0.05);
       let productTotal = Number(o.total||0) - deliveryFee;
       let vendorEarn = productTotal * 0.9;
       let platform = productTotal * 0.1 + deliveryFee;
-      let status = o.status||'processing';
-      let statusColor = status==='delivered'? 'text-green-600' : status==='on the way'? 'text-orange-500' : status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
+      let status = o.status||'paid';
+      let statusColor = status==='delivered'? 'text-green-600' : status==='on the way'? 'text-orange-500' : status==='failed_delivery'? 'text-red-600' : status==='paid'? 'text-red-600' : 'text-blue-600';
       let countdown = '';
       if(status === 'on the way' && o.delivery_started_at){ countdown = `<div id="timer-${o.id}" class="text-xs mt-1 font-bold text-orange-600">${formatAdminCountdown(o.delivery_started_at)}</div>`; }
-      html+=`<div class="border rounded-xl p-3 mb-3">
+
+      let border = status==='paid'? 'border-red-300 bg-red-50' : status==='on the way'? 'border-orange-300 bg-orange-50' : 'border-gray-200';
+
+      html+=`<div class="border-2 ${border} rounded-xl p-3 mb-3">
         <div class="flex justify-between items-center">
           <div class="font-bold">Order #${o.id}</div>
           <div class="font-bold ${statusColor} capitalize">${status.replace('_',' ')}</div>
         </div>
-        <div class="text-xs text-gray-500">₦${Number(o.total||0).toLocaleString()} • ${o.vendor_email} • ${o.customer_name}</div>
+        <div class="text-xs text-gray-500">₦${Number(o.total||0).toLocaleString()} • ${o.vendor_email||'No Vendor Yet'} • ${o.customer_name}</div>
         <div class="text-xs">Product: ₦${Math.round(productTotal).toLocaleString()} | Delivery 5%: ₦${Math.round(deliveryFee).toLocaleString()}</div>
         <div class="text-xs">Vendor 90%: ₦${Math.round(vendorEarn).toLocaleString()} | You: ₦${Math.round(platform).toLocaleString()}</div>
         <div class="text-[10px] text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</div>
         ${countdown}
-      </div>`; // REMOVED startDelivery BUTTON
+      </div>`;
     });
   } else if(curTab==='delivery'){
     list.forEach(u=>{
       let statusColor = u.status==='pending'? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
       let borderColor = u.status==='pending'? 'border-yellow-400' : 'border-green-400';
       html+=`<div class="border-2 ${borderColor} rounded-xl p-3 mb-3">
-        <div class="flex justify-between items-start">
-          <div>
-            <div class="font-bold text-base">${u.full_name||u.name||u.email} <span class="px-2 py-0.5 text-xs rounded-full ${statusColor}">${u.status}</span></div>
-            <div class="text-xs text-gray-500">${u.email} • ${u.whatsapp||''}</div>
-            <div class="text-xs text-gray-500">${u.location||''} • ${u.address||''}</div>
-            <div class="text-xs mt-1"><b>Driver/Rider:</b> ${u.is_driver_rider? 'Yes ✅' : 'No ❌'}</div>
-          </div>
-        </div>
-        ${u.g_full_name? `<div class="mt-2 p-2 bg-gray-50 rounded text-xs"><b>Guarantor:</b> ${u.g_full_name}<br><b>Address:</b> ${u.g_house_address}</div>` : ''}
-        <div class="flex gap-2 mt-2 flex-wrap text-xs">
-          ${u.passport_url? `<a href="${SUPABASE_URL}/storage/v1/object/public/delivery_docs/${u.passport_url}" target="_blank" class="text-blue-600 underline">Passport</a>` : ''}
-          ${u.nin_url? `<a href="${SUPABASE_URL}/storage/v1/object/public/delivery_docs/${u.nin_url}" target="_blank" class="text-blue-600 underline">NIN</a>` : ''}
-          ${u.g_passport_url? `<a href="${SUPABASE_URL}/storage/v1/object/public/delivery_docs/${u.g_passport_url}" target="_blank" class="text-blue-600 underline">G-Passport</a>` : ''}
-          ${u.g_nin_url? `<a href="${SUPABASE_URL}/storage/v1/object/public/delivery_docs/${u.g_nin_url}" target="_blank" class="text-blue-600 underline">G-NIN</a>` : ''}
-        </div>
+        <div class="font-bold text-base">${u.full_name||u.name||u.email} <span class="px-2 py-0.5 text-xs rounded-full ${statusColor}">${u.status}</span></div>
+        <div class="text-xs text-gray-500">${u.email} • ${u.whatsapp||''}</div>
         <div class="flex gap-2 mt-3">
           ${u.status==='pending'?`<button onclick="approveDelivery('${u.email}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
           <button onclick="removeUser('${u.email}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs">Delete</button>
@@ -218,11 +194,7 @@ function render(){
     });
   }
   document.getElementById('list').innerHTML=html;
-  startAllTimers();
 }
-
-// REMOVED assignOrder() FUNCTION
-// REMOVED startDelivery() FUNCTION
 
 function startAllTimers(){
   clearInterval(countdownInterval);
@@ -230,7 +202,7 @@ function startAllTimers(){
     allOrders.filter(o=>o.status==='on the way' && o.delivery_started_at).forEach(o=>{
       let el = document.getElementById(`timer-${o.id}`);
       if(!el) return;
-      let end = new Date(o.delivery_started_at).getTime() + TWO_HOURS_MS;
+      let end = new Date(o.delivery_started_at).getTime() + THREE_HOURS_MS;
       let left = end - new Date().getTime();
       if(left <= 0){
         el.innerHTML = '⏰ Time up! Auto-failing...';
@@ -261,7 +233,7 @@ function renderChart(){
 function showTab(t){
   curTab=t;
   document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('text-green-600','text-red-600','border-b-2','border-green-600','border-red-600'); b.classList.add('text-gray-400')});
-  let map={new:'tabN',vendors:'tabV',pending:'tabP',orders:'tabO',customers:'tabC',delivery:'tabD'};
+  let map={new:'tabN',active:'tabA',vendors:'tabV',pending:'tabP',orders:'tabO',customers:'tabC',delivery:'tabD'};
   let el=document.getElementById(map[t]);
   if(el){
     if(t==='new') el.classList.add('text-red-600','border-b-2','border-red-600');
@@ -271,33 +243,12 @@ function showTab(t){
   render();
 }
 
-async function approve(email){
-  const { error } = await supabaseClient.from('users').update({status:'approved'}).eq('email',email);
-  if(error) alert(error.message); else { alert('Vendor Approved!'); loadAll(); }
-}
-
-async function approveDelivery(email){
-  const { error } = await supabaseClient.from('users').update({status:'approved'}).eq('email',email);
-  if(error) alert(error.message); else { alert('Delivery Agent Approved!'); loadAll(); }
-}
-
-async function removeUser(email){
-  if(!confirm('Delete this user?')) return;
-  await supabaseClient.from('users').delete().eq('email',email);
-  loadAll();
-}
-
-async function markFailed(id){
-  const order = allOrders.find(o=>o.id===id);
-  if(order && order.status!== 'failed_delivery' && order.status!== 'delivered'){
-    await supabaseClient.from('orders').update({status:'failed_delivery'}).eq('id',id);
-    loadAll();
-  }
-}
-
-function checkCountdowns(){}
+async function approve(email){ const { error } = await supabaseClient.from('users').update({status:'approved'}).eq('email',email); if(error) alert(error.message); else { alert('Vendor Approved!'); loadAll(); } }
+async function approveDelivery(email){ const { error } = await supabaseClient.from('users').update({status:'approved'}).eq('email',email); if(error) alert(error.message); else { alert('Delivery Agent Approved!'); loadAll(); } }
+async function removeUser(email){ if(!confirm('Delete this user?')) return; await supabaseClient.from('users').delete().eq('email',email); loadAll(); }
+async function markFailed(id){ const order = allOrders.find(o=>o.id===id); if(order && order.status!== 'failed_delivery' && order.status!== 'delivered'){ await supabaseClient.from('orders').update({status:'failed_delivery'}).eq('id',id); loadAll(); } }
 function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
-loadAll(); setInterval(loadAll, 10000);
+loadAll(); setInterval(loadAll, 5000); // REFRESH EVERY 5S
 </script>
 </body>
 </html>
