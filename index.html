@@ -87,7 +87,6 @@ function updateCart(){
 }
 
 async function loadProducts(){
-  // FIX 1: REMOVED.eq('status','active') because column doesn't exist yet
   const { data, error } = await supabaseClient.from('products').select('*').order('created_at',{ascending:false}).limit(50);
   console.log('LOAD:', data, error);
   if(error){
@@ -151,23 +150,22 @@ async function deliveryLogin(){
 
   if(!email ||!password){ errorEl.innerText = "Please enter email and password"; return; }
 
+  // FIXED: REMOVED.eq('is_approved', true)
   const { data: user, error } = await supabaseClient
-  .from('users')
-  .select('*')
-  .eq('email', email)
-  .eq('password', password)
-  .eq('is_approved', true)
-  .maybeSingle();
+ .from('users')
+ .select('*')
+ .eq('email', email)
+ .eq('password', password)
+ .maybeSingle();
 
   if(error){ errorEl.innerText = "DB Error: " + error.message; return; }
-  if(!user){ errorEl.innerText = "Invalid email, password, or not approved"; return; }
+  if(!user){ errorEl.innerText = "Invalid email or password"; return; }
 
   localStorage.setItem('lgm_user', JSON.stringify(user));
   errorEl.className = "text-green-600 text-sm mt-3 text-center";
   errorEl.innerText = "Login OK. Role: " + user.role + ". Redirecting...";
 
   setTimeout(() => {
-    // FIX 2: Changed to match your actual file names
     if(user.role === 'admin') location.href = 'admin.html';
     else if(user.role === 'vendor') location.href = 'vendor.html';
     else if(user.role === 'delivery' || user.role === 'agent') location.href = 'delivery-dashboard.html';
