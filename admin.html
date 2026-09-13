@@ -22,14 +22,11 @@ body{background:#f3f4f6;font-family:system-ui}
 <div class="p-4 max-w-6xl mx-auto">
   <!-- STATS CARDS -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-
-    <!-- CHANGE 1: REPLACED TOTAL VENDORS WITH NEW ORDERS CARD -->
     <div onclick="showTab('new')" class="bg-white p-4 rounded-2xl shadow cursor-pointer border-2 border-red-200 hover:bg-red-50 transition active:scale-95">
       <div class="text-xs text-red-500 font-bold flex items-center gap-1">🔔 New Orders</div>
       <div class="text-2xl font-black text-red-600" id="newOrderCount">0</div>
-      <div class="text-xs text-red-700">Tap to assign vendor</div>
+      <div class="text-xs text-red-700">Tap to view</div> <!-- CHANGED -->
     </div>
-
     <div class="bg-white p-4 rounded-2xl shadow">
       <div class="text-xs text-gray-400">Gross Sales</div>
       <div class="text-2xl font-black" id="totalSales">₦0</div>
@@ -76,7 +73,7 @@ let allUsers=[]; let allOrders=[]; let curTab='new'; let countdownInterval;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ location.href='login.html'; }
 
-const TWO_HOURS_MS = 3 * 60 * 60 * 1000;
+const TWO_HOURS_MS = 3 * 60 * 60 * 1000; // 3 HOURS
 
 async function loadAll(){
   const { data:users } = await supabaseClient.from('users').select('*').order('created_at',{ascending:false});
@@ -90,7 +87,6 @@ async function loadAll(){
   let deliveryPending = delivery.filter(d=>d.status==='pending');
   let newOrders = allOrders.filter(o=>o.status==='paid');
 
-  // CHANGE 2: UPDATE NEW ORDER CARD
   document.getElementById('newOrderCount').innerText = newOrders.length;
   if(newOrders.length > 0){
     document.getElementById('newOrderCount').classList.add('animate-pulse');
@@ -146,17 +142,15 @@ function render(){
       html+=`<div class="border-2 border-red-300 bg-red-50 rounded-xl p-3 mb-3">
         <div class="flex justify-between items-center">
           <div class="font-bold text-red-600">🔔 NEW Order #${o.id}</div>
-          <span class="bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">AWAITING ASSIGNMENT</span>
+          <span class="bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">WAITING FOR RIDER</span> <!-- CHANGED -->
         </div>
         <div class="font-bold">₦${Number(o.total||0).toLocaleString()}</div>
         <div class="text-xs text-gray-700">${o.customer_name} - ${o.customer_email}</div>
         <div class="text-xs text-gray-500">📍 ${o.customer_address}</div>
         <div class="text-xs text-gray-500">📱 ${o.customer_whatsapp} | 📞 ${o.customer_phone}</div>
+        <div class="text-xs text-orange-600 mt-1">Delivery Agent will start timer</div> <!-- CHANGED -->
         <div class="text-[10px] text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</div>
-        <div class="mt-2">
-          <button onclick="assignOrder(${o.id})" class="w-full bg-green-600 text-white px-3 py-2 rounded-full text-sm font-bold">Assign to Vendor</button>
-        </div>
-      </div>`;
+      </div>`; // REMOVED ASSIGN BUTTON
     });
   }
   else if(curTab==='orders'){
@@ -167,9 +161,7 @@ function render(){
       let platform = productTotal * 0.1 + deliveryFee;
       let status = o.status||'processing';
       let statusColor = status==='delivered'? 'text-green-600' : status==='on the way'? 'text-orange-500' : status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
-      let adminBtn = ''; let countdown = '';
-      if(status === 'processing'){ adminBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_email}')" class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">Mark On The Way</button>`; }
-      if(status === 'failed_delivery'){ adminBtn = `<button disabled class="bg-gray-300 text-gray-500 px-3 py-1 rounded-full text-xs font-bold">Delivery Failed</button>`; }
+      let countdown = '';
       if(status === 'on the way' && o.delivery_started_at){ countdown = `<div id="timer-${o.id}" class="text-xs mt-1 font-bold text-orange-600">${formatAdminCountdown(o.delivery_started_at)}</div>`; }
       html+=`<div class="border rounded-xl p-3 mb-3">
         <div class="flex justify-between items-center">
@@ -180,8 +172,8 @@ function render(){
         <div class="text-xs">Product: ₦${Math.round(productTotal).toLocaleString()} | Delivery 5%: ₦${Math.round(deliveryFee).toLocaleString()}</div>
         <div class="text-xs">Vendor 90%: ₦${Math.round(vendorEarn).toLocaleString()} | You: ₦${Math.round(platform).toLocaleString()}</div>
         <div class="text-[10px] text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</div>
-        ${countdown}<div class="mt-2">${adminBtn}</div>
-      </div>`;
+        ${countdown}
+      </div>`; // REMOVED startDelivery BUTTON
     });
   } else if(curTab==='delivery'){
     list.forEach(u=>{
@@ -229,16 +221,8 @@ function render(){
   startAllTimers();
 }
 
-async function assignOrder(orderId){
-  const vendor = prompt('Enter Vendor Email to assign this order:');
-  if(!vendor) return;
-  const { error } = await supabaseClient.from('orders').update({
-    vendor_email: vendor,
-    status: 'processing'
-  }).eq('id', orderId);
-  if(error) alert(error.message);
-  else { alert('Order Assigned!'); loadAll(); }
-}
+// REMOVED assignOrder() FUNCTION
+// REMOVED startDelivery() FUNCTION
 
 function startAllTimers(){
   clearInterval(countdownInterval);
@@ -301,14 +285,6 @@ async function removeUser(email){
   if(!confirm('Delete this user?')) return;
   await supabaseClient.from('users').delete().eq('email',email);
   loadAll();
-}
-
-async function startDelivery(id, customerEmail){
-  const { error } = await supabaseClient.from('orders').update({
-    status: 'on the way',
-    delivery_started_at: new Date().toISOString()
-  }).eq('id',id);
-  if(error) alert(error.message); else { alert('Order is On The Way. 2hr countdown started'); loadAll(); }
 }
 
 async function markFailed(id){
