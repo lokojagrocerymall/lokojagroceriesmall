@@ -19,6 +19,7 @@
   <button onclick="forgotPassword()" class="text-sm text-green-600 mb-3 w-full text-right">Forgot Password?</button>
 
   <button onclick="login()" class="w-full bg-green-600 text-white py-2 rounded-full font-bold">Login</button>
+  <p id="error" class="text-red-500 text-sm mt-2 text-center"></p>
   <p class="text-center text-sm mt-3">No account? <a href="signup.html" class="text-green-600 font-bold">Sign Up</a></p>
 </div>
 
@@ -39,7 +40,7 @@ async function forgotPassword(){
   if(!email) return alert('Enter your email first');
   
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://y-mall.vercel.app/reset-password.html'
+    redirectTo: 'https://lokoja-grocery-mall.vercel.app/reset-password.html' // <-- Fixed domain
   });
   
   if(error) alert(error.message);
@@ -49,18 +50,42 @@ async function forgotPassword(){
 async function login(){
   const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;
+  document.getElementById('error').innerText = '';
   
-  const { data: user, error } = await supabaseClient.from('users').select('*').eq('email', email).eq('password', password).single();
-  if(error || !user){ alert('Invalid email or password'); return; }
+  // Use Supabase Auth instead of plain password check
+  const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({email, password});
+  if(authError){ 
+    document.getElementById('error').innerText = 'Invalid email or password'; 
+    return; 
+  }
   
-  localStorage.setItem('lgm_user', JSON.stringify(user));
+  // Get user role from users table
+  const { data: user, error } = await supabaseClient.from('users').select('*').eq('id', authData.user.id).single();
+  if(error || !user){ 
+    document.getElementById('error').innerText = 'User profile not found'; 
+    await supabaseClient.auth.signOut();
+    return; 
+  }
+  
   alert('Login Successful! Role: ' + user.role);
   
-  // CORRECT REDIRECT FOR ALL 4 ROLES
-  if(user.role==='admin') location.href = 'admin.html';
-  else if(user.role==='vendor') location.href = 'vendor.html';
-  else if(user.role==='agent' || user.role==='delivery') location.href = 'agent.html';
-  else location.href = 'customer.html';
+  // FIXED REDIRECTS FOR ALL 4 ROLES
+  if(user.role==='admin'){
+    localStorage.setItem('admin_user', JSON.stringify(user));
+    location.href = 'admin.html';
+  }
+  else if(user.role==='vendor'){
+    localStorage.setItem('vendor_user', JSON.stringify(user));
+    location.href = 'vendor.html';
+  }
+  else if(user.role==='delivery' || user.role==='agent'){
+    localStorage.setItem('delivery_user', JSON.stringify(user)); // <-- Must match dashboard
+    location.href = 'delivery-dashboard.html'; // <-- FIXED THIS
+  }
+  else { // customer
+    localStorage.setItem('customer_user', JSON.stringify(user));
+    location.href = 'customer.html';
+  }
 }
 </script>
 </body></html>
