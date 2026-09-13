@@ -7,7 +7,7 @@
   <b class="text-green-700">My Account</b>
   <div class="flex gap-2">
     <button onclick="location.href='/'" class="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm font-bold">Store</button>
-    <button onclick="logout()" class="bg-red-500 text-white px-3 py-1.5 rounded-full text-sm">Logout</button>
+    <button onclick="localStorage.removeItem('lgm_user'); location.href='index.html';" class="bg-red-500 text-white px-3 py-1 rounded">Logout</button>
   </div>
 </header>
 
