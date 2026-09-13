@@ -33,7 +33,7 @@ if(!curUser || !curUser.email){
   location.href='index.html';
 } 
 }
-document.getElementById('name').innerText = curUser.full_name || curUser.email;
+document.getElementById('name').innerText = curUser.name || curUser.email;
 document.getElementById('email').innerText = curUser.email;
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // 3 HOURS
