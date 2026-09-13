@@ -24,12 +24,11 @@
   <form onsubmit="signup(event)" class="space-y-3">
     <input id="fullName" type="text" placeholder="Full Name" required class="w-full p-3 border rounded-lg">
     
-    <!-- 1. LOCATION DROPDOWN FOR LOKOJA - A-Z -->
     <select id="location" required class="w-full p-3 border rounded-lg bg-white">
       <option value="">Select Location in Lokoja</option>
     </select>
 
-    <!-- 2. THIS FIELD WILL HIDE FOR CUSTOMERS -->
+    <!-- ADDRESS + BANK - HIDE FOR CUSTOMER -->
     <div id="addressField">
       <input id="address" type="text" placeholder="Shop/House Address" required class="w-full p-3 border rounded-lg">
     </div>
@@ -39,11 +38,42 @@
     <input id="email" type="email" placeholder="Email" required class="w-full p-3 border rounded-lg">
     <input id="password" type="password" placeholder="Password - At least 6 characters" required class="w-full p-3 border rounded-lg">
 
-    <!-- 3. BANK FIELDS WILL HIDE FOR CUSTOMERS -->
     <div id="bankFields" class="space-y-3">
       <input id="bankName" type="text" placeholder="Bank Name" class="w-full p-3 border rounded-lg">
       <input id="accountNumber" type="text" placeholder="Account Number" class="w-full p-3 border rounded-lg">
       <input id="accountName" type="text" placeholder="Account Name" class="w-full p-3 border rounded-lg">
+    </div>
+
+    <!-- 1. DELIVERY AGENT ONLY SECTION -->
+    <div id="deliveryFields" class="hidden space-y-4">
+      
+      <h3 class="font-bold text-green-600 mt-2">Delivery Verification</h3>
+      <div>
+        <label class="text-sm font-semibold">Passport Photograph</label>
+        <input id="passportPhoto" type="file" accept="image/*" class="w-full p-2 border rounded-lg">
+      </div>
+      <div>
+        <label class="text-sm font-semibold">NIN Slip / Card</label>
+        <input id="ninCard" type="file" accept="image/*" class="w-full p-2 border rounded-lg">
+      </div>
+
+      <h3 class="font-bold text-green-600 mt-2">Guarantor Information</h3>
+      <input id="guarantorName" type="text" placeholder="Guarantor Full Name" class="w-full p-3 border rounded-lg">
+      <input id="guarantorAddress" type="text" placeholder="Guarantor Address" class="w-full p-3 border rounded-lg">
+      <div>
+        <label class="text-sm font-semibold">Guarantor Passport</label>
+        <input id="guarantorPassport" type="file" accept="image/*" class="w-full p-2 border rounded-lg">
+      </div>
+      <div>
+        <label class="text-sm font-semibold">Guarantor NIN</label>
+        <input id="guarantorNIN" type="file" accept="image/*" class="w-full p-2 border rounded-lg">
+      </div>
+
+      <h3 class="font-bold text-green-600 mt-2">Vehicle</h3>
+      <div class="flex gap-4">
+        <label><input type="radio" name="vehicle" value="yes" checked> Yes, I am Driver & Rider</label>
+        <label><input type="radio" name="vehicle" value="no"> No</label>
+      </div>
     </div>
 
     <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-full font-bold">Continue</button>
@@ -68,13 +98,12 @@ const LOKOJA_AREAS = [
   "Poly","Post Office","Shetima","Zenith Bank","Zango","Zone 8"
 ];
 
-// FILL DROPDOWN
 window.onload = () => {
   const select = document.getElementById('location');
   LOKOJA_AREAS.forEach(area => {
     select.innerHTML += `<option value="${area}">${area}</option>`;
   });
-  selectRole('customer'); // default
+  selectRole('customer');
 }
 
 function selectRole(role){
@@ -85,18 +114,21 @@ function selectRole(role){
   });
   document.getElementById('btn'+role.charAt(0).toUpperCase()+role.slice(1).replace('_agent','Agent')).classList.add('border-green-600','bg-green-50');
 
-  // HIDE/SHOW FIELDS - ONLY FOR CUSTOMER
+  // ROLE LOGIC
   if(role === 'customer'){
     document.getElementById('addressField').classList.add('hidden');
     document.getElementById('bankFields').classList.add('hidden');
+    document.getElementById('deliveryFields').classList.add('hidden');
     document.getElementById('address').required = false;
-    document.getElementById('bankName').required = false;
-    document.getElementById('accountNumber').required = false;
-    document.getElementById('accountName').required = false;
   } else {
     document.getElementById('addressField').classList.remove('hidden');
     document.getElementById('bankFields').classList.remove('hidden');
     document.getElementById('address').required = true;
+    if(role === 'delivery_agent'){
+      document.getElementById('deliveryFields').classList.remove('hidden');
+    } else {
+      document.getElementById('deliveryFields').classList.add('hidden');
+    }
   }
 }
 
@@ -113,7 +145,11 @@ async function signup(e){
     bank_name: document.getElementById('bankName').value,
     account_number: document.getElementById('accountNumber').value,
     account_name: document.getElementById('accountName').value,
-    role: currentRole
+    role: currentRole,
+    // Delivery agent extra
+    guarantor_name: document.getElementById('guarantorName')?.value || '',
+    guarantor_address: document.getElementById('guarantorAddress')?.value || '',
+    has_vehicle: document.querySelector('input[name="vehicle"]:checked')?.value || 'no'
   };
   
   const { error } = await supabaseClient.from('users').insert([userData]);
