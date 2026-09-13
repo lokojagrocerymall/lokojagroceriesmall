@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LGM Login V3</title><script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script></head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<div class="bg-white p-6 rounded-2xl shadow w-full max-w-sm">
+  <h1 class="text-2xl font-bold text-center text-green-700 mb-4">LGM Login V3</h1>
+  <input id="email" type="email" placeholder="Email" class="w-full border p-3 rounded-lg mb-3">
+  <input id="password" type="password" placeholder="Password" class="w-full border p-3 rounded-lg mb-4">
+  <button id="loginBtn" class="w-full bg-green-600 text-white py-3 rounded-full font-bold">Login</button>
+  <p id="status" class="text-sm mt-3 text-center"></p>
+</div>
+<script>
+const { createClient } = supabase;
+const supabaseClient = createClient("https://yhfxmrpqaccbllszoxyf.supabase.co","sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9");
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const status = document.getElementById('status');
+  try {
+    const { data } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById('email').value, password: document.getElementById('password').value });
+    status.innerText = "1. Auth OK. Looking for profile...";
+    
+    // TRY 1: auth_user_id
+    let { data: profile } = await supabaseClient.from('users').select('*').eq('auth_user_id', data.user.id).single();
+    // TRY 2: id 
+    if(!profile) { let res = await supabaseClient.from('users').select('*').eq('id', data.user.id).single(); profile = res.data; }
+    
+    if(!profile) throw new Error("No profile found in 'users' table for this auth ID");
+    
+    status.innerText = "2. Success! Role: " + profile.role;
+    localStorage.setItem('lgm_user', JSON.stringify(profile));
+    setTimeout(() => window.location.href = profile.role + '-dashboard.html', 1000);
+  } catch (err) {
+    status.className = "text-red-500 text-sm mt-3 text-center";
+    status.innerText = "ERROR: " + err.message;
+  }
+});
+</script></body></html>
