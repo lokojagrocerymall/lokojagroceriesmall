@@ -55,8 +55,25 @@ async function login(e){
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if(error) throw error;
 
-    const { data: userData } = await supabaseClient.from('users').select('role, is_approved').eq('user_id', data.user.id).single();
+    // CHECK APPROVAL STATUS FROM DB
+    const { data: userData, error: userError } = await supabaseClient
+      .from('users')
+      .select('role, is_approved, full_name')
+      .eq('user_id', data.user.id)
+      .single();
     
+    if(userError) throw userError;
+
+    // BLOCK VENDOR/DELIVERY IF NOT APPROVED
+    if(userData.role !== 'customer' && userData.role !== 'admin' && userData.is_approved === false){
+      await supabaseClient.auth.signOut(); // Log them out immediately
+      msg.className = "text-center text-sm mt-2 text-yellow-600 font-bold p-3 bg-yellow-50 rounded-lg";
+      msg.innerText = `⏳ Pending Approval\nHi ${userData.full_name}, your account is awaiting admin approval. You will be notified once approved.`;
+      btn.disabled = false; btn.innerText = "Login";
+      return;
+    }
+
+    // APPROVED: REDIRECT TO DASHBOARD
     if(userData.role === 'admin') window.location.href = 'admin.html';
     else if(userData.role === 'vendor') window.location.href = 'vendor.html';
     else if(userData.role === 'delivery_agent') window.location.href = 'delivery.html';
