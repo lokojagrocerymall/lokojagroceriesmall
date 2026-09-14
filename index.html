@@ -150,16 +150,19 @@ async function deliveryLogin(){
 
   if(!email ||!password){ errorEl.innerText = "Please enter email and password"; return; }
 
-  // FIXED: REMOVED.eq('is_approved', true)
-  const { data: user, error } = await supabaseClient
- .from('users')
- .select('*')
- .eq('email', email)
- .eq('password', password)
- .maybeSingle();
+  // FIX 1: LOGIN WITH SUPABASE AUTH
+  const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if(authError){ errorEl.innerText = "Login Error: " + authError.message; return; }
 
-  if(error){ errorEl.innerText = "DB Error: " + error.message; return; }
-  if(!user){ errorEl.innerText = "Invalid email or password"; return; }
+  // FIX 2: GET PROFILE FROM users TABLE
+  const { data: user, error: profileError } = await supabaseClient
+   .from('users')
+   .select('*')
+   .eq('id', authData.user.id)
+   .maybeSingle();
+
+  if(profileError){ errorEl.innerText = "Profile Error: " + profileError.message; return; }
+  if(!user){ errorEl.innerText = "Profile not found"; return; }
 
   localStorage.setItem('lgm_user', JSON.stringify(user));
   errorEl.className = "text-green-600 text-sm mt-3 text-center";
@@ -168,7 +171,7 @@ async function deliveryLogin(){
   setTimeout(() => {
     if(user.role === 'admin') location.href = 'admin.html';
     else if(user.role === 'vendor') location.href = 'vendor.html';
-    else if(user.role === 'delivery' || user.role === 'agent') location.href = 'delivery-dashboard.html';
+    else if(user.role === 'delivery_agent') location.href = 'delivery-dashboard.html'; // fixed role name
     else location.href = 'customer.html';
   }, 800);
 }
