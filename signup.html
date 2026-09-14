@@ -106,11 +106,6 @@ function togglePassword(id) {
   eye.textContent = input.type === "password"? "👁️" : "🙈";
 }
 
-function clearForm(){
-  document.getElementById('signupForm').reset();
-  document.getElementById('location').value = '';
-}
-
 function checkVehicle(){
   const btn = document.getElementById('submitBtn');
   const vehicle = document.querySelector('input[name="vehicle"]:checked')?.value;
@@ -173,7 +168,7 @@ function selectRole(role){
 
 async function uploadFile(file, path){
   if(!file) return '';
-  const { data, error } = await supabaseClient.storage.from('delivery_docs').upload(path, file);
+  const { data, error } = await supabaseClient.storage.from('delivery_docs').upload(path, file, {upsert: true}); // upsert files too
   if(error) throw error;
   const { data: urlData } = supabaseClient.storage.from('delivery_docs').getPublicUrl(path);
   return urlData.publicUrl;
@@ -200,11 +195,21 @@ async function signup(e){
       if(!document.getElementById('guarantorNIN').files[0]) throw new Error("Please upload Guarantor NIN");
     }
 
-    const { data, error: authError } = await supabaseClient.auth.signUp({
+    // 1. Try to signup
+    let { data, error: authError } = await supabaseClient.auth.signUp({
       email, password,
       options: { data: { full_name: fullName, role: currentRole }}
     });
-    if(authError) throw authError;
+    
+    // 2. If email already exists, login instead
+    if(authError && authError.message.includes("already registered")){
+      msg.innerText = "Email exists. Logging you in...";
+      const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({email, password});
+      if(loginError) throw new Error("This email is already registered. Use the correct password or login.");
+      data = loginData;
+    } else if(authError) {
+      throw authError;
+    }
 
     let passport_url='', nin_url='', g_passport='', g_nin='';
     if(currentRole === 'delivery_agent'){
@@ -215,8 +220,9 @@ async function signup(e){
       g_nin = await uploadFile(document.getElementById('guarantorNIN').files[0], `delivery/${uid}/g_nin.jpg`);
     }
 
-    const { error } = await supabaseClient.from('users').insert({
-      id: data.user.id, // FIXED: changed user_id to id
+    // 3. UPSERT profile - this fixes the duplicate key error
+    const { error } = await supabaseClient.from('users').upsert({
+      id: data.user.id,
       email, full_name: fullName,
       location: document.getElementById('location').value, address: finalAddress,
       landmark: document.getElementById('landmark').value, phone: document.getElementById('phone').value,
@@ -230,19 +236,19 @@ async function signup(e){
       has_vehicle: document.querySelector('input[name="vehicle"]:checked')?.value || 'no',
       passport_url, nin_url, guarantor_passport_url: g_passport, guarantor_nin_url: g_nin,
       is_approved: currentRole === 'customer'? true : false
-    });
+    }, { onConflict: 'id' }); // important for upsert
     if(error) throw error;
 
     msg.className = "text-center text-sm mt-2 text-green-600 font-bold";
-    msg.innerText = "Account Created! Redirecting to login...";
+    msg.innerText = "Success! Redirecting to login...";
 
     setTimeout(() => {
-      window.location.href = 'index.html#login'; // FIXED: Go to homepage popup instead of login.html
+      window.location.href = 'index.html#login';
     }, 1500);
 
   } catch(err){
     msg.className = "text-center text-sm mt-2 text-red-500";
-    msg.innerText = err.message.includes("already registered")? "Error: This email is already registered." : "Error: " + err.message;
+    msg.innerText = "Error: " + err.message;
     btn.disabled = false; btn.innerText = "Continue";
     btn.classList.remove('bg-yellow-500');
     btn.classList.add('bg-green-600');
