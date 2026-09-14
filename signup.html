@@ -8,7 +8,6 @@
   <h1 class="text-2xl font-bold text-center text-green-600">Join Lokoja Grocery Mall</h1>
   <p class="text-center text-gray-500 text-sm mb-4">I want to join as</p>
 
-  <!-- ROLE SELECTOR -->
   <div class="flex gap-2 mb-4">
     <button type="button" onclick="selectRole('customer')" id="btnCustomer" class="flex-1 p-2 rounded-lg border-2 border-green-600 bg-green-50">
       🛒<br><b>Customer</b>
@@ -21,7 +20,7 @@
     </button>
   </div>
 
-  <form onsubmit="signup(event)" class="space-y-3">
+  <form id="signupForm" onsubmit="signup(event)" class="space-y-3">
     <input id="fullName" type="text" placeholder="Full Name" required class="w-full p-3 border rounded-lg">
     <select id="location" required class="w-full p-3 border rounded-lg bg-white"><option value="">Select Location in Lokoja</option></select>
 
@@ -106,8 +105,6 @@ function togglePassword(id) {
 
 function selectRole(role){
   currentRole = role;
-  
-  // Reset all buttons
   document.getElementById('btnCustomer').classList.remove('border-green-600','bg-green-50');
   document.getElementById('btnVendor').classList.remove('border-green-600','bg-green-50');
   document.getElementById('btnDeliveryAgent').classList.remove('border-green-600','bg-green-50');
@@ -115,23 +112,19 @@ function selectRole(role){
   document.getElementById('btnVendor').classList.add('border-gray-200');
   document.getElementById('btnDeliveryAgent').classList.add('border-gray-200');
 
-  // Activate current button
   if(role === 'customer') document.getElementById('btnCustomer').classList.add('border-green-600','bg-green-50');
   if(role === 'vendor') document.getElementById('btnVendor').classList.add('border-green-600','bg-green-50');
   if(role === 'delivery_agent') document.getElementById('btnDeliveryAgent').classList.add('border-green-600','bg-green-50');
 
-  // Hide all fields first
   document.getElementById('customerAddressField').classList.add('hidden');
   document.getElementById('addressField').classList.add('hidden');
   document.getElementById('bankFields').classList.add('hidden');
   document.getElementById('deliveryFields').classList.add('hidden');
 
-  // Reset required
   ['customerAddress','address','bankName','accountNumber','accountName','guarantorName','guarantorPhone','guarantorAddress','passportPhoto','ninCard','guarantorPassport','guarantorNIN'].forEach(id=>{
     if(document.getElementById(id)) document.getElementById(id).required = false;
   });
 
-  // Show correct fields + set required
   if(role === 'customer'){
     document.getElementById('customerAddressField').classList.remove('hidden');
     document.getElementById('customerAddress').required = true;
@@ -152,7 +145,6 @@ function selectRole(role){
     document.getElementById('accountNumber').required = true;
     document.getElementById('accountName').required = true;
     document.getElementById('deliveryFields').classList.remove('hidden');
-    // DELIVERY AGENT REQUIRED FIELDS
     document.getElementById('passportPhoto').required = true;
     document.getElementById('ninCard').required = true;
     document.getElementById('guarantorName').required = true;
@@ -172,7 +164,7 @@ async function uploadFile(file, path){
 }
 
 async function signup(e){
-  e.preventDefault();
+  e.preventDefault(); // PREVENT PAGE REFRESH
   const btn = document.getElementById('submitBtn');
   const msg = document.getElementById('msg');
   btn.disabled = true; btn.innerText = "Creating...";
@@ -183,7 +175,6 @@ async function signup(e){
     const password = document.getElementById('password').value.trim();
     const finalAddress = currentRole === 'customer'? document.getElementById('customerAddress').value : document.getElementById('address').value;
 
-    // VALIDATE DELIVERY AGENT FILES
     if(currentRole === 'delivery_agent'){
       if(!document.getElementById('passportPhoto').files[0]) throw new Error("Please upload Passport Photograph");
       if(!document.getElementById('ninCard').files[0]) throw new Error("Please upload NIN Slip");
@@ -233,12 +224,18 @@ async function signup(e){
     if(error) throw error;
 
     msg.className = "text-center text-sm mt-2 text-green-600";
-    msg.innerText = "Account Created! Please Login";
-    setTimeout(() => { location.href='login.html'; }, 1500);
+    msg.innerText = "Account Created! Redirecting to Login...";
+    setTimeout(() => { window.location.href='login.html'; }, 2000);
 
   } catch(err){
+    console.error(err);
     msg.className = "text-center text-sm mt-2 text-red-500";
-    msg.innerText = "Error: " + err.message;
+    // BETTER ERROR MESSAGE
+    if(err.message.includes("already registered")){
+      msg.innerText = "Error: This email is already registered. Please Login or use a different email.";
+    } else {
+      msg.innerText = "Error: " + err.message;
+    }
     btn.disabled = false; btn.innerText = "Continue";
   }
 }
