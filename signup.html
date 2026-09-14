@@ -21,46 +21,50 @@
   </div>
 
   <form id="signupForm" onsubmit="signup(event)" class="space-y-3">
+    <!-- COMMON FIELDS FOR ALL -->
     <input id="fullName" type="text" placeholder="Full Name" required class="w-full p-3 border rounded-lg">
     <select id="location" required class="w-full p-3 border rounded-lg bg-white"><option value="">Select Location in Lokoja</option></select>
-
-    <div id="customerAddressField" class="hidden">
-      <input id="customerAddress" type="text" placeholder="Delivery Address" class="w-full p-3 border rounded-lg">
-      <p class="text-xs text-gray-500 mt-1">Where should we deliver your orders?</p>
-    </div>
-
-    <div id="addressField" class="hidden">
-      <input id="address" type="text" placeholder="Shop/House Address" class="w-full p-3 border rounded-lg">
-    </div>
-
     <input id="landmark" type="text" placeholder="Nearest Bus Stop / Landmark" required class="w-full p-3 border rounded-lg">
     <input id="phone" type="tel" placeholder="WhatsApp Number" required class="w-full p-3 border rounded-lg">
     <input id="email" type="email" placeholder="Email" required class="w-full p-3 border rounded-lg">
-
     <div class="relative">
       <input id="password" type="password" placeholder="Password - At least 6 characters" required minlength="6" class="w-full p-3 border rounded-lg pr-10">
       <button type="button" onclick="togglePassword('password')" class="absolute right-3 top-3 text-gray-500"><span id="eye-password">👁️</span></button>
     </div>
 
+    <!-- CUSTOMER ONLY -->
+    <div id="customerAddressField" class="hidden">
+      <input id="customerAddress" type="text" placeholder="Delivery Address" class="w-full p-3 border rounded-lg">
+      <p class="text-xs text-gray-500 mt-1">Where should we deliver your orders?</p>
+    </div>
+
+    <!-- VENDOR + DELIVERY AGENT -->
+    <div id="addressField" class="hidden">
+      <input id="address" type="text" placeholder="Shop/House Address" class="w-full p-3 border rounded-lg">
+    </div>
+
+    <!-- VENDOR + DELIVERY AGENT -->
     <div id="bankFields" class="space-y-3 hidden">
+      <p class="text-sm font-bold text-green-600">Bank Details for Payout</p>
       <input id="bankName" type="text" placeholder="Bank Name" class="w-full p-3 border rounded-lg">
       <input id="accountNumber" type="text" placeholder="Account Number" class="w-full p-3 border rounded-lg">
       <input id="accountName" type="text" placeholder="Account Name" class="w-full p-3 border rounded-lg">
     </div>
 
+    <!-- DELIVERY AGENT ONLY -->
     <div id="deliveryFields" class="hidden space-y-4">
-      <h3 class="font-bold text-green-600 mt-2">Delivery Verification *</h3>
+      <p class="text-sm font-bold text-green-600">Delivery Verification *</p>
       <div><label class="text-sm font-semibold">Passport Photograph *</label><input id="passportPhoto" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
       <div><label class="text-sm font-semibold">NIN Slip / Card *</label><input id="ninCard" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
 
-      <h3 class="font-bold text-green-600 mt-2">Guarantor Information *</h3>
+      <p class="text-sm font-bold text-green-600">Guarantor Information *</p>
       <input id="guarantorName" type="text" placeholder="Guarantor Full Name" class="w-full p-3 border rounded-lg">
       <input id="guarantorPhone" type="tel" placeholder="Guarantor WhatsApp Number" class="w-full p-3 border rounded-lg">
       <input id="guarantorAddress" type="text" placeholder="Guarantor Address" class="w-full p-3 border rounded-lg">
       <div><label class="text-sm font-semibold">Guarantor Passport *</label><input id="guarantorPassport" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
       <div><label class="text-sm font-semibold">Guarantor NIN *</label><input id="guarantorNIN" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
 
-      <h3 class="font-bold text-green-600 mt-2">Vehicle</h3>
+      <p class="text-sm font-bold text-green-600">Vehicle</p>
       <div class="flex gap-4">
         <label><input type="radio" name="vehicle" value="yes" checked> Yes, I am Driver & Rider</label>
         <label><input type="radio" name="vehicle" value="no"> No</label>
@@ -99,58 +103,37 @@ window.onload = () => {
 function togglePassword(id) {
   const input = document.getElementById(id);
   const eye = document.getElementById('eye-' + id);
-  if(input.type === "password"){ input.type = "text"; eye.textContent = "🙈"; } 
-  else { input.type = "password"; eye.textContent = "👁️"; }
+  input.type = input.type === "password"? "text" : "password";
+  eye.textContent = input.type === "password"? "👁️" : "🙈";
+}
+
+function clearForm(){
+  document.getElementById('signupForm').reset();
+  document.getElementById('location').value = '';
 }
 
 function selectRole(role){
+  clearForm(); // CLEAR FORM ON ROLE CHANGE
   currentRole = role;
   
   // Reset all buttons
-  document.getElementById('btnCustomer').classList.remove('border-green-600','bg-green-50');
-  document.getElementById('btnVendor').classList.remove('border-green-600','bg-green-50');
-  document.getElementById('btnDeliveryAgent').classList.remove('border-green-600','bg-green-50');
-  document.getElementById('btnCustomer').classList.add('border-gray-200');
-  document.getElementById('btnVendor').classList.add('border-gray-200');
-  document.getElementById('btnDeliveryAgent').classList.add('border-gray-200');
+  ['btnCustomer','btnVendor','btnDeliveryAgent'].forEach(id=>{
+    document.getElementById(id).classList.remove('border-green-600','bg-green-50');
+    document.getElementById(id).classList.add('border-gray-200');
+  });
 
-  // Activate current button
+  // Activate current button - FIXED FOR delivery_agent
   if(role === 'customer') document.getElementById('btnCustomer').classList.add('border-green-600','bg-green-50');
   if(role === 'vendor') document.getElementById('btnVendor').classList.add('border-green-600','bg-green-50');
   if(role === 'delivery_agent') document.getElementById('btnDeliveryAgent').classList.add('border-green-600','bg-green-50');
 
-  // CLEAR ALL INPUTS WHEN SWITCHING ROLES
-  document.getElementById('fullName').value = '';
-  document.getElementById('location').value = '';
-  document.getElementById('customerAddress').value = '';
-  document.getElementById('address').value = '';
-  document.getElementById('landmark').value = '';
-  document.getElementById('phone').value = '';
-  document.getElementById('email').value = '';
-  document.getElementById('password').value = '';
-  document.getElementById('bankName').value = '';
-  document.getElementById('accountNumber').value = '';
-  document.getElementById('accountName').value = '';
-  document.getElementById('guarantorName').value = '';
-  document.getElementById('guarantorPhone').value = '';
-  document.getElementById('guarantorAddress').value = '';
-  document.getElementById('passportPhoto').value = '';
-  document.getElementById('ninCard').value = '';
-  document.getElementById('guarantorPassport').value = '';
-  document.getElementById('guarantorNIN').value = '';
-
-  // Hide all fields first
-  document.getElementById('customerAddressField').classList.add('hidden');
-  document.getElementById('addressField').classList.add('hidden');
-  document.getElementById('bankFields').classList.add('hidden');
-  document.getElementById('deliveryFields').classList.add('hidden');
-
+  // Hide all role fields
+  ['customerAddressField','addressField','bankFields','deliveryFields'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  
   // Reset required
-  ['customerAddress','address','bankName','accountNumber','accountName','guarantorName','guarantorPhone','guarantorAddress','passportPhoto','ninCard','guarantorPassport','guarantorNIN'].forEach(id=>{
-    if(document.getElementById(id)) document.getElementById(id).required = false;
-  });
+  ['customerAddress','address','bankName','accountNumber','accountName','guarantorName','guarantorPhone','guarantorAddress','passportPhoto','ninCard','guarantorPassport','guarantorNIN'].forEach(id=>document.getElementById(id).required = false);
 
-  // Show correct fields + set required
+  // Show only what's needed for this role
   if(role === 'customer'){
     document.getElementById('customerAddressField').classList.remove('hidden');
     document.getElementById('customerAddress').required = true;
@@ -190,17 +173,17 @@ async function uploadFile(file, path){
 }
 
 async function signup(e){
-  e.preventDefault(); // PREVENT PAGE REFRESH
+  e.preventDefault();
   const btn = document.getElementById('submitBtn');
   const msg = document.getElementById('msg');
-  btn.disabled = true; btn.innerText = "Creating...";
-  msg.innerText = "";
+  btn.disabled = true; btn.innerText = "Creating..."; msg.innerText = "";
 
   try{
     const email = document.getElementById('email').value.trim().toLowerCase();
     const password = document.getElementById('password').value.trim();
     const finalAddress = currentRole === 'customer'? document.getElementById('customerAddress').value : document.getElementById('address').value;
 
+    // VALIDATE FILES FOR DELIVERY
     if(currentRole === 'delivery_agent'){
       if(!document.getElementById('passportPhoto').files[0]) throw new Error("Please upload Passport Photograph");
       if(!document.getElementById('ninCard').files[0]) throw new Error("Please upload NIN Slip");
@@ -210,8 +193,7 @@ async function signup(e){
 
     // STEP 1: CREATE AUTH USER
     const { data, error: authError } = await supabaseClient.auth.signUp({ 
-      email, 
-      password,
+      email, password,
       options: { data: { full_name: document.getElementById('fullName').value, role: currentRole }}
     });
     if(authError) throw authError;
@@ -228,25 +210,20 @@ async function signup(e){
 
     // STEP 3: INSERT INTO USERS TABLE
     const { error } = await supabaseClient.from('users').insert({
-      id: data.user.id,
-      email: email,
-      full_name: document.getElementById('fullName').value,
-      location: document.getElementById('location').value,
-      address: finalAddress,
-      landmark: document.getElementById('landmark').value,
-      phone: document.getElementById('phone').value,
+      id: data.user.id, email, full_name: document.getElementById('fullName').value,
+      location: document.getElementById('location').value, address: finalAddress,
+      landmark: document.getElementById('landmark').value, phone: document.getElementById('phone').value,
       role: currentRole,
       bank_name: document.getElementById('bankName').value || null,
       account_number: document.getElementById('accountNumber').value || null,
       account_name: document.getElementById('accountName').value || null,
-      guarantor_name: document.getElementById('guarantorName')?.value || null,
-      guarantor_phone: document.getElementById('guarantorPhone')?.value || null,
-      guarantor_address: document.getElementById('guarantorAddress')?.value || null,
+      guarantor_name: document.getElementById('guarantorName').value || null,
+      guarantor_phone: document.getElementById('guarantorPhone').value || null,
+      guarantor_address: document.getElementById('guarantorAddress').value || null,
       has_vehicle: document.querySelector('input[name="vehicle"]:checked')?.value || 'no',
       passport_url, nin_url, guarantor_passport_url: g_passport, guarantor_nin_url: g_nin,
       is_approved: currentRole === 'customer'
     });
-
     if(error) throw error;
 
     msg.className = "text-center text-sm mt-2 text-green-600";
@@ -254,14 +231,8 @@ async function signup(e){
     setTimeout(() => { window.location.href='login.html'; }, 2000);
 
   } catch(err){
-    console.error(err);
     msg.className = "text-center text-sm mt-2 text-red-500";
-    // BETTER ERROR MESSAGE
-    if(err.message.includes("already registered")){
-      msg.innerText = "Error: This email is already registered. Please Login or use a different email.";
-    } else {
-      msg.innerText = "Error: " + err.message;
-    }
+    msg.innerText = err.message.includes("already registered")? "Error: This email is already registered." : "Error: " + err.message;
     btn.disabled = false; btn.innerText = "Continue";
   }
 }
