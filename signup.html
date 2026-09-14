@@ -50,16 +50,16 @@
     </div>
 
     <div id="deliveryFields" class="hidden space-y-4">
-      <h3 class="font-bold text-green-600 mt-2">Delivery Verification</h3>
-      <div><label class="text-sm font-semibold">Passport Photograph</label><input id="passportPhoto" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
-      <div><label class="text-sm font-semibold">NIN Slip / Card</label><input id="ninCard" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
+      <h3 class="font-bold text-green-600 mt-2">Delivery Verification *</h3>
+      <div><label class="text-sm font-semibold">Passport Photograph *</label><input id="passportPhoto" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
+      <div><label class="text-sm font-semibold">NIN Slip / Card *</label><input id="ninCard" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
 
-      <h3 class="font-bold text-green-600 mt-2">Guarantor Information</h3>
+      <h3 class="font-bold text-green-600 mt-2">Guarantor Information *</h3>
       <input id="guarantorName" type="text" placeholder="Guarantor Full Name" class="w-full p-3 border rounded-lg">
       <input id="guarantorPhone" type="tel" placeholder="Guarantor WhatsApp Number" class="w-full p-3 border rounded-lg">
       <input id="guarantorAddress" type="text" placeholder="Guarantor Address" class="w-full p-3 border rounded-lg">
-      <div><label class="text-sm font-semibold">Guarantor Passport</label><input id="guarantorPassport" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
-      <div><label class="text-sm font-semibold">Guarantor NIN</label><input id="guarantorNIN" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
+      <div><label class="text-sm font-semibold">Guarantor Passport *</label><input id="guarantorPassport" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
+      <div><label class="text-sm font-semibold">Guarantor NIN *</label><input id="guarantorNIN" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
 
       <h3 class="font-bold text-green-600 mt-2">Vehicle</h3>
       <div class="flex gap-4">
@@ -106,42 +106,60 @@ function togglePassword(id) {
 
 function selectRole(role){
   currentRole = role;
-  ['btnCustomer','btnVendor','btnDeliveryAgent'].forEach(id=>{
-    document.getElementById(id).classList.remove('border-green-600','bg-green-50');
-    document.getElementById(id).classList.add('border-gray-200');
-  });
-  document.getElementById('btn'+role.charAt(0).toUpperCase()+role.slice(1)).classList.add('border-green-600','bg-green-50');
+  
+  // Reset all buttons
+  document.getElementById('btnCustomer').classList.remove('border-green-600','bg-green-50');
+  document.getElementById('btnVendor').classList.remove('border-green-600','bg-green-50');
+  document.getElementById('btnDeliveryAgent').classList.remove('border-green-600','bg-green-50');
+  document.getElementById('btnCustomer').classList.add('border-gray-200');
+  document.getElementById('btnVendor').classList.add('border-gray-200');
+  document.getElementById('btnDeliveryAgent').classList.add('border-gray-200');
 
+  // Activate current button
+  if(role === 'customer') document.getElementById('btnCustomer').classList.add('border-green-600','bg-green-50');
+  if(role === 'vendor') document.getElementById('btnVendor').classList.add('border-green-600','bg-green-50');
+  if(role === 'delivery_agent') document.getElementById('btnDeliveryAgent').classList.add('border-green-600','bg-green-50');
+
+  // Hide all fields first
   document.getElementById('customerAddressField').classList.add('hidden');
   document.getElementById('addressField').classList.add('hidden');
   document.getElementById('bankFields').classList.add('hidden');
   document.getElementById('deliveryFields').classList.add('hidden');
 
-  document.getElementById('customerAddress').required = false;
-  document.getElementById('address').required = false;
-  document.getElementById('bankName').required = false;
-  document.getElementById('accountNumber').required = false;
-  document.getElementById('accountName').required = false;
-  document.getElementById('guarantorName').required = false;
-  document.getElementById('guarantorPhone').required = false;
-  document.getElementById('guarantorAddress').required = false;
+  // Reset required
+  ['customerAddress','address','bankName','accountNumber','accountName','guarantorName','guarantorPhone','guarantorAddress','passportPhoto','ninCard','guarantorPassport','guarantorNIN'].forEach(id=>{
+    if(document.getElementById(id)) document.getElementById(id).required = false;
+  });
 
+  // Show correct fields + set required
   if(role === 'customer'){
     document.getElementById('customerAddressField').classList.remove('hidden');
     document.getElementById('customerAddress').required = true;
-  } else {
+  } 
+  if(role === 'vendor'){
     document.getElementById('addressField').classList.remove('hidden');
     document.getElementById('address').required = true;
     document.getElementById('bankFields').classList.remove('hidden');
     document.getElementById('bankName').required = true;
     document.getElementById('accountNumber').required = true;
     document.getElementById('accountName').required = true;
-    if(role === 'delivery_agent'){
-      document.getElementById('deliveryFields').classList.remove('hidden');
-      document.getElementById('guarantorName').required = true;
-      document.getElementById('guarantorPhone').required = true;
-      document.getElementById('guarantorAddress').required = true;
-    }
+  }
+  if(role === 'delivery_agent'){
+    document.getElementById('addressField').classList.remove('hidden');
+    document.getElementById('address').required = true;
+    document.getElementById('bankFields').classList.remove('hidden');
+    document.getElementById('bankName').required = true;
+    document.getElementById('accountNumber').required = true;
+    document.getElementById('accountName').required = true;
+    document.getElementById('deliveryFields').classList.remove('hidden');
+    // DELIVERY AGENT REQUIRED FIELDS
+    document.getElementById('passportPhoto').required = true;
+    document.getElementById('ninCard').required = true;
+    document.getElementById('guarantorName').required = true;
+    document.getElementById('guarantorPhone').required = true;
+    document.getElementById('guarantorAddress').required = true;
+    document.getElementById('guarantorPassport').required = true;
+    document.getElementById('guarantorNIN').required = true;
   }
 }
 
@@ -165,6 +183,14 @@ async function signup(e){
     const password = document.getElementById('password').value.trim();
     const finalAddress = currentRole === 'customer'? document.getElementById('customerAddress').value : document.getElementById('address').value;
 
+    // VALIDATE DELIVERY AGENT FILES
+    if(currentRole === 'delivery_agent'){
+      if(!document.getElementById('passportPhoto').files[0]) throw new Error("Please upload Passport Photograph");
+      if(!document.getElementById('ninCard').files[0]) throw new Error("Please upload NIN Slip");
+      if(!document.getElementById('guarantorPassport').files[0]) throw new Error("Please upload Guarantor Passport");
+      if(!document.getElementById('guarantorNIN').files[0]) throw new Error("Please upload Guarantor NIN");
+    }
+
     // STEP 1: CREATE AUTH USER
     const { data, error: authError } = await supabaseClient.auth.signUp({ 
       email, 
@@ -183,9 +209,9 @@ async function signup(e){
       g_nin = await uploadFile(document.getElementById('guarantorNIN').files[0], `delivery/${uid}/g_nin.jpg`);
     }
 
-    // STEP 3: INSERT INTO USERS TABLE - NOT UPDATE
+    // STEP 3: INSERT INTO USERS TABLE
     const { error } = await supabaseClient.from('users').insert({
-      id: data.user.id, // CRITICAL: Link to auth
+      id: data.user.id,
       email: email,
       full_name: document.getElementById('fullName').value,
       location: document.getElementById('location').value,
@@ -201,7 +227,7 @@ async function signup(e){
       guarantor_address: document.getElementById('guarantorAddress')?.value || null,
       has_vehicle: document.querySelector('input[name="vehicle"]:checked')?.value || 'no',
       passport_url, nin_url, guarantor_passport_url: g_passport, guarantor_nin_url: g_nin,
-      is_approved: currentRole === 'customer' // Auto approve customers
+      is_approved: currentRole === 'customer'
     });
 
     if(error) throw error;
