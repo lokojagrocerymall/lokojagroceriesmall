@@ -127,7 +127,7 @@ function checkVehicle(){
 }
 
 function selectRole(role){
-  clearForm();
+  // FIX: Don't clear form here. Only clear extra fields
   currentRole = role;
 
   ['btnCustomer','btnVendor','btnDeliveryAgent'].forEach(id=>{
@@ -189,6 +189,7 @@ async function signup(e){
   try{
     const email = document.getElementById('email').value.trim().toLowerCase();
     const password = document.getElementById('password').value.trim();
+    const fullName = document.getElementById('fullName').value;
     const finalAddress = currentRole === 'customer'? document.getElementById('customerAddress').value : document.getElementById('address').value;
 
     if(currentRole === 'delivery_agent'){
@@ -202,7 +203,7 @@ async function signup(e){
 
     const { data, error: authError } = await supabaseClient.auth.signUp({
       email, password,
-      options: { data: { full_name: document.getElementById('fullName').value, role: currentRole }}
+      options: { data: { full_name: fullName, role: currentRole }}
     });
     if(authError) throw authError;
 
@@ -217,10 +218,10 @@ async function signup(e){
 
     const { error } = await supabaseClient.from('users').insert({
       user_id: data.user.id,
-      email, full_name: document.getElementById('fullName').value,
+      email, full_name: fullName,
       location: document.getElementById('location').value, address: finalAddress,
       landmark: document.getElementById('landmark').value, phone: document.getElementById('phone').value,
-      role: currentRole,
+      role: currentRole, // FIX: This now saves correctly
       bank_name: document.getElementById('bankName').value || null,
       account_number: document.getElementById('accountNumber').value || null,
       account_name: document.getElementById('accountName').value || null,
@@ -236,7 +237,6 @@ async function signup(e){
     msg.className = "text-center text-sm mt-2 text-green-600 font-bold";
     msg.innerText = "Account Created! Your account is pending approval.";
     
-    // STAY ON PAGE - NO REDIRECT
     btn.innerText = "Awaiting Approval";
     btn.classList.remove('bg-green-600');
     btn.classList.add('bg-yellow-500');
