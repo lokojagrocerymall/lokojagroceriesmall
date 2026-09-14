@@ -74,6 +74,21 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// FIX 1: BLOCK UNAPPROVED USERS ON PAGE LOAD
+supabaseClient.auth.getUser().then(async ({data: {user}}) => {
+  if(user){
+    const { data: userData } = await supabaseClient.from('users').select('role, is_approved').eq('user_id', user.id).single();
+    
+    // If vendor/delivery and not approved, kick them out
+    if(userData && userData.role!== 'customer' && userData.role!== 'admin' && userData.is_approved === false){
+      await supabaseClient.auth.signOut();
+      localStorage.removeItem('lgm_user');
+      alert("⏳ Your account is Pending Approval");
+      window.location.href = 'login.html';
+    }
+  }
+})
+
 function doSearch(){
   const q=document.getElementById('searchInput').value.trim();
   if(q) location.href='browse.html?q='+encodeURIComponent(q);
@@ -150,19 +165,27 @@ async function deliveryLogin(){
 
   if(!email ||!password){ errorEl.innerText = "Please enter email and password"; return; }
 
-  // FIX 1: LOGIN WITH SUPABASE AUTH
+  // FIX 2: LOGIN WITH SUPABASE AUTH
   const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({ email, password });
   if(authError){ errorEl.innerText = "Login Error: " + authError.message; return; }
 
-  // FIX 2: GET PROFILE FROM users TABLE
+  // FIX 3: GET PROFILE FROM users TABLE USING user_id NOT id
   const { data: user, error: profileError } = await supabaseClient
-   .from('users')
-   .select('*')
-   .eq('id', authData.user.id)
-   .maybeSingle();
+  .from('users')
+  .select('role, is_approved, full_name, user_id')
+  .eq('user_id', authData.user.id) // FIXED: was.eq('id',...)
+  .single();
 
   if(profileError){ errorEl.innerText = "Profile Error: " + profileError.message; return; }
   if(!user){ errorEl.innerText = "Profile not found"; return; }
+
+  // FIX 4: BLOCK IF NOT APPROVED
+  if(user.role!== 'customer' && user.role!== 'admin' && user.is_approved === false){
+    await supabaseClient.auth.signOut();
+    errorEl.className = "text-yellow-600 text-sm mt-3 text-center font-bold";
+    errorEl.innerText = `⏳ Pending Approval\nHi ${user.full_name}, your account is awaiting admin approval.`;
+    return;
+  }
 
   localStorage.setItem('lgm_user', JSON.stringify(user));
   errorEl.className = "text-green-600 text-sm mt-3 text-center";
@@ -171,7 +194,7 @@ async function deliveryLogin(){
   setTimeout(() => {
     if(user.role === 'admin') location.href = 'admin.html';
     else if(user.role === 'vendor') location.href = 'vendor.html';
-    else if(user.role === 'delivery_agent') location.href = 'delivery-dashboard.html'; // fixed role name
+    else if(user.role === 'delivery_agent') location.href = 'delivery.html';
     else location.href = 'customer.html';
   }, 800);
 }
