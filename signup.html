@@ -21,7 +21,6 @@
   </div>
 
   <form id="signupForm" onsubmit="signup(event)" class="space-y-3">
-    <!-- COMMON FIELDS FOR ALL -->
     <input id="fullName" type="text" placeholder="Full Name" required class="w-full p-3 border rounded-lg">
     <select id="location" required class="w-full p-3 border rounded-lg bg-white"><option value="">Select Location in Lokoja</option></select>
     <input id="landmark" type="text" placeholder="Nearest Bus Stop / Landmark" required class="w-full p-3 border rounded-lg">
@@ -32,18 +31,15 @@
       <button type="button" onclick="togglePassword('password')" class="absolute right-3 top-3 text-gray-500"><span id="eye-password">👁️</span></button>
     </div>
 
-    <!-- CUSTOMER ONLY -->
     <div id="customerAddressField" class="hidden">
       <input id="customerAddress" type="text" placeholder="Delivery Address" class="w-full p-3 border rounded-lg">
       <p class="text-xs text-gray-500 mt-1">Where should we deliver your orders?</p>
     </div>
 
-    <!-- VENDOR + DELIVERY AGENT -->
     <div id="addressField" class="hidden">
       <input id="address" type="text" placeholder="Shop/House Address" class="w-full p-3 border rounded-lg">
     </div>
 
-    <!-- VENDOR + DELIVERY AGENT -->
     <div id="bankFields" class="space-y-3 hidden">
       <p class="text-sm font-bold text-green-600">Bank Details for Payout</p>
       <input id="bankName" type="text" placeholder="Bank Name" class="w-full p-3 border rounded-lg">
@@ -51,7 +47,6 @@
       <input id="accountName" type="text" placeholder="Account Name" class="w-full p-3 border rounded-lg">
     </div>
 
-    <!-- DELIVERY AGENT ONLY -->
     <div id="deliveryFields" class="hidden space-y-4">
       <p class="text-sm font-bold text-green-600">Delivery Verification *</p>
       <div><label class="text-sm font-semibold">Passport Photograph *</label><input id="passportPhoto" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
@@ -99,7 +94,6 @@ window.onload = () => {
   LOKOJA_AREAS.forEach(area => { select.innerHTML += `<option value="${area}">${area}</option>`; });
   selectRole('customer');
 
-  // LISTEN FOR VEHICLE CHANGE
   document.querySelectorAll('input[name="vehicle"]').forEach(radio => {
     radio.addEventListener('change', checkVehicle);
   });
@@ -119,29 +113,24 @@ function clearForm(){
 
 function checkVehicle(){
   const btn = document.getElementById('submitBtn');
-  const msg = document.getElementById('msg');
   const vehicle = document.querySelector('input[name="vehicle"]:checked')?.value;
-  
+
   if(currentRole === 'delivery_agent' && vehicle === 'no'){
     btn.disabled = true;
     btn.classList.remove('bg-green-600');
     btn.classList.add('bg-gray-400','cursor-not-allowed');
-    btn.innerText = "Vehicle Required";
-    msg.className = "text-center text-sm mt-2 text-red-500";
-    msg.innerText = "Delivery Agents must have a motorcycle/vehicle";
+    // REMOVED: btn.innerText = "Vehicle Required";
   } else {
     btn.disabled = false;
     btn.classList.add('bg-green-600');
     btn.classList.remove('bg-gray-400','cursor-not-allowed');
-    btn.innerText = "Continue";
-    if(msg.innerText.includes("Vehicle")) msg.innerText = "";
   }
 }
 
 function selectRole(role){
   clearForm();
   currentRole = role;
-  
+
   ['btnCustomer','btnVendor','btnDeliveryAgent'].forEach(id=>{
     document.getElementById(id).classList.remove('border-green-600','bg-green-50');
     document.getElementById(id).classList.add('border-gray-200');
@@ -156,7 +145,7 @@ function selectRole(role){
   if(role === 'customer'){
     document.getElementById('customerAddressField').classList.remove('hidden');
     document.getElementById('customerAddress').required = true;
-  } 
+  }
   if(role === 'vendor'){
     document.getElementById('addressField').classList.remove('hidden');
     document.getElementById('address').required = true;
@@ -180,7 +169,7 @@ function selectRole(role){
     document.getElementById('guarantorAddress').required = true;
     document.getElementById('guarantorPassport').required = true;
     document.getElementById('guarantorNIN').required = true;
-    checkVehicle(); // RUN CHECK
+    checkVehicle();
   }
 }
 
@@ -205,14 +194,14 @@ async function signup(e){
 
     if(currentRole === 'delivery_agent'){
       const vehicle = document.querySelector('input[name="vehicle"]:checked')?.value;
-      if(vehicle === 'no') throw new Error("Delivery Agents must have a vehicle");
+      if(vehicle === 'no') throw new Error("You must have a vehicle to be a Delivery Agent");
       if(!document.getElementById('passportPhoto').files[0]) throw new Error("Please upload Passport Photograph");
       if(!document.getElementById('ninCard').files[0]) throw new Error("Please upload NIN Slip");
       if(!document.getElementById('guarantorPassport').files[0]) throw new Error("Please upload Guarantor Passport");
       if(!document.getElementById('guarantorNIN').files[0]) throw new Error("Please upload Guarantor NIN");
     }
 
-    const { data, error: authError } = await supabaseClient.auth.signUp({ 
+    const { data, error: authError } = await supabaseClient.auth.signUp({
       email, password,
       options: { data: { full_name: document.getElementById('fullName').value, role: currentRole }}
     });
