@@ -82,9 +82,9 @@ async function loadAll(){
   allOrders=orders||[];
 
   let vendors = allUsers.filter(u=>u.role==='vendor');
-  let pending = vendors.filter(v=>v.status==='pending');
+  let pending = vendors.filter(v=>v.is_approved===false); // FIX 1
   let delivery = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
-  let deliveryPending = delivery.filter(d=>d.status==='pending');
+  let deliveryPending = delivery.filter(d=>d.is_approved===false); // FIX 2
   let newOrders = allOrders.filter(o=>o.status==='paid');
   let activeOrders = allOrders.filter(o=>o.status==='on the way' || o.status==='processing');
 
@@ -128,7 +128,7 @@ function render(){
   if(curTab==='new') list = allOrders.filter(o=>o.status==='paid');
   if(curTab==='active') list = allOrders.filter(o=>o.status==='on the way' || o.status==='processing');
   if(curTab==='vendors') list = allUsers.filter(u=>u.role==='vendor');
-  if(curTab==='pending') list = [...allUsers.filter(u=>u.role==='vendor' && u.status==='pending'),...allUsers.filter(u=>u.role==='delivery' && u.status==='pending')];
+  if(curTab==='pending') list = [...allUsers.filter(u=>u.role==='vendor' && u.is_approved===false),...allUsers.filter(u=>u.role==='delivery' && u.is_approved===false)]; // FIX 3
   if(curTab==='customers') list = allUsers.filter(u=>u.role==='customer');
   if(curTab==='delivery') list = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
   if(curTab==='orders') list = allOrders;
@@ -149,7 +149,6 @@ function render(){
 
       let border = status==='paid'? 'border-red-300 bg-red-50' : status==='on the way'? 'border-orange-300 bg-orange-50' : 'border-gray-200';
 
-      // GET VENDOR + DELIVERY INFO
       let vendor = allUsers.find(u => u.email === o.vendor_email);
       let vendorName = vendor? (vendor.full_name || vendor.name || o.vendor_email) : 'Not assigned yet';
       let vendorPhone = vendor? (vendor.whatsapp || vendor.phone || 'N/A') : '';
@@ -163,9 +162,7 @@ function render(){
           <div class="font-bold text-base">Order #${o.id}</div>
           <div class="font-bold ${statusColor} capitalize">${status.replace('_',' ')}</div>
         </div>
-
-        <!-- CUSTOMER INFO BLOCK -->
-        <div class="bg-white p-2 rounded-lg mb-2 border border-gray-100">
+        <div class="bg-white p-2 rounded-lg mb-2 border-gray-100">
           <div class="font-bold text-sm">👤 ${o.customer_name || 'No Name'}</div>
           <div class="text-xs text-gray-600">📧 ${o.customer_email}</div>
           <div class="text-xs text-gray-600">📱 WhatsApp: ${o.customer_whatsapp || 'N/A'}</div>
@@ -174,23 +171,18 @@ function render(){
           <div class="text-xs text-gray-600">🏠 ${o.customer_address || 'No Address'}</div>
           ${o.customer_landmark? `<div class="text-xs text-gray-500">📍 Landmark: ${o.customer_landmark}</div>` : ''}
         </div>
-
-        <!-- VENDOR INFO BLOCK - NEW -->
         <div class="bg-green-50 p-2 rounded-lg mb-2 border-green-200">
           <div class="text-xs font-bold text-green-800">🏪 Vendor</div>
           <div class="text-xs text-green-700">Name: ${vendorName}</div>
           <div class="text-xs text-green-700">📧 ${o.vendor_email || 'Not assigned yet'}</div>
           ${vendorPhone? `<div class="text-xs text-green-700">📱 ${vendorPhone}</div>` : ''}
         </div>
-
-        <!-- DELIVERY AGENT INFO BLOCK - NEW -->
         <div class="bg-blue-50 p-2 rounded-lg mb-2 border-blue-200">
           <div class="text-xs font-bold text-blue-800">🚚 Delivery Agent</div>
           <div class="text-xs text-blue-700">Name: ${agentName}</div>
           <div class="text-xs text-blue-700">📧 ${o.delivery_agent_email || 'N/A'}</div>
           <div class="text-xs text-blue-700">📱 WhatsApp: ${agentWhatsApp}</div>
         </div>
-
         <div class="text-xs">💰 Total: <b>₦${Number(o.total||0).toLocaleString()}</b></div>
         <div class="text-xs">Product: ₦${Math.round(productTotal).toLocaleString()} | Delivery 5%: ₦${Math.round(deliveryFee).toLocaleString()}</div>
         <div class="text-xs">Vendor 90%: ₦${Math.round(vendorEarn).toLocaleString()} | You: ₦${Math.round(platform).toLocaleString()}</div>
@@ -200,13 +192,13 @@ function render(){
     });
   } else if(curTab==='delivery'){
     list.forEach(u=>{
-      let statusColor = u.status==='pending'? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
-      let borderColor = u.status==='pending'? 'border-yellow-400' : 'border-green-400';
+      let statusColor = u.is_approved===false? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'; // FIX 4
+      let borderColor = u.is_approved===false? 'border-yellow-400' : 'border-green-400'; // FIX 5
       html+=`<div class="border-2 ${borderColor} rounded-xl p-3 mb-3">
-        <div class="font-bold text-base">${u.full_name||u.name||u.email} <span class="px-2 py-0.5 text-xs rounded-full ${statusColor}">${u.status}</span></div>
+        <div class="font-bold text-base">${u.full_name||u.name||u.email} <span class="px-2 py-0.5 text-xs rounded-full ${statusColor}">${u.is_approved===false?'pending':'approved'}</span></div> <!-- FIX 6 -->
         <div class="text-xs text-gray-500">${u.email} • ${u.whatsapp||''}</div>
         <div class="flex gap-2 mt-3">
-          ${u.status==='pending'?`<button onclick="approveDelivery('${u.email}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
+          ${u.is_approved===false?`<button onclick="approveDelivery('${u.email}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''} <!-- FIX 7 -->
           <button onclick="removeUser('${u.email}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs">Delete</button>
         </div>
       </div>`;
@@ -216,12 +208,12 @@ function render(){
       html+=`<div class="border rounded-xl p-3 mb-3 flex justify-between items-center">
         <div>
           <div class="font-bold">${u.full_name||u.name||u.email}
-            <span class="text-xs ${u.status==='pending'?'text-orange-500':'text-green-600'}">${u.role==='vendor'? (u.status==='pending'?'(Pending)':'(Approved)') : ''}</span>
+            <span class="text-xs ${u.is_approved===false?'text-orange-500':'text-green-600'}">${u.role==='vendor'? (u.is_approved===false?'(Pending)':'(Approved)') : ''}</span> <!-- FIX 8 -->
           </div>
           <div class="text-xs text-gray-500">${u.email} • ${u.whatsapp||u.phone||''} • ${u.location||''}</div>
         </div>
         <div class="flex gap-2">
-          ${u.role==='vendor' && u.status==='pending'?`<button onclick="approve('${u.email}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
+          ${u.role==='vendor' && u.is_approved===false?`<button onclick="approve('${u.email}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''} <!-- FIX 9 -->
           <button onclick="removeUser('${u.email}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs">Delete</button>
         </div>
       </div>`;
@@ -277,8 +269,8 @@ function showTab(t){
   render();
 }
 
-async function approve(email){ const { error } = await supabaseClient.from('users').update({status:'approved'}).eq('email',email); if(error) alert(error.message); else { alert('Vendor Approved!'); loadAll(); } }
-async function approveDelivery(email){ const { error } = await supabaseClient.from('users').update({status:'approved'}).eq('email',email); if(error) alert(error.message); else { alert('Delivery Agent Approved!'); loadAll(); } }
+async function approve(email){ const { error } = await supabaseClient.from('users').update({is_approved:true}).eq('email',email); if(error) alert(error.message); else { alert('Vendor Approved!'); loadAll(); } } // FIX 10
+async function approveDelivery(email){ const { error } = await supabaseClient.from('users').update({is_approved:true}).eq('email',email); if(error) alert(error.message); else { alert('Delivery Agent Approved!'); loadAll(); } } // FIX 11
 async function removeUser(email){ if(!confirm('Delete this user?')) return; await supabaseClient.from('users').delete().eq('email',email); loadAll(); }
 async function markFailed(id){ const order = allOrders.find(o=>o.id===id); if(order && order.status!== 'failed_delivery' && order.status!== 'delivered'){ await supabaseClient.from('orders').update({status:'failed_delivery'}).eq('id',id); loadAll(); } }
 function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
