@@ -105,6 +105,8 @@ function togglePassword(id) {
 
 function selectRole(role){
   currentRole = role;
+  
+  // Reset all buttons
   document.getElementById('btnCustomer').classList.remove('border-green-600','bg-green-50');
   document.getElementById('btnVendor').classList.remove('border-green-600','bg-green-50');
   document.getElementById('btnDeliveryAgent').classList.remove('border-green-600','bg-green-50');
@@ -112,19 +114,43 @@ function selectRole(role){
   document.getElementById('btnVendor').classList.add('border-gray-200');
   document.getElementById('btnDeliveryAgent').classList.add('border-gray-200');
 
+  // Activate current button
   if(role === 'customer') document.getElementById('btnCustomer').classList.add('border-green-600','bg-green-50');
   if(role === 'vendor') document.getElementById('btnVendor').classList.add('border-green-600','bg-green-50');
   if(role === 'delivery_agent') document.getElementById('btnDeliveryAgent').classList.add('border-green-600','bg-green-50');
 
+  // CLEAR ALL INPUTS WHEN SWITCHING ROLES
+  document.getElementById('fullName').value = '';
+  document.getElementById('location').value = '';
+  document.getElementById('customerAddress').value = '';
+  document.getElementById('address').value = '';
+  document.getElementById('landmark').value = '';
+  document.getElementById('phone').value = '';
+  document.getElementById('email').value = '';
+  document.getElementById('password').value = '';
+  document.getElementById('bankName').value = '';
+  document.getElementById('accountNumber').value = '';
+  document.getElementById('accountName').value = '';
+  document.getElementById('guarantorName').value = '';
+  document.getElementById('guarantorPhone').value = '';
+  document.getElementById('guarantorAddress').value = '';
+  document.getElementById('passportPhoto').value = '';
+  document.getElementById('ninCard').value = '';
+  document.getElementById('guarantorPassport').value = '';
+  document.getElementById('guarantorNIN').value = '';
+
+  // Hide all fields first
   document.getElementById('customerAddressField').classList.add('hidden');
   document.getElementById('addressField').classList.add('hidden');
   document.getElementById('bankFields').classList.add('hidden');
   document.getElementById('deliveryFields').classList.add('hidden');
 
+  // Reset required
   ['customerAddress','address','bankName','accountNumber','accountName','guarantorName','guarantorPhone','guarantorAddress','passportPhoto','ninCard','guarantorPassport','guarantorNIN'].forEach(id=>{
     if(document.getElementById(id)) document.getElementById(id).required = false;
   });
 
+  // Show correct fields + set required
   if(role === 'customer'){
     document.getElementById('customerAddressField').classList.remove('hidden');
     document.getElementById('customerAddress').required = true;
