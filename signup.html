@@ -119,7 +119,6 @@ function checkVehicle(){
     btn.disabled = true;
     btn.classList.remove('bg-green-600');
     btn.classList.add('bg-gray-400','cursor-not-allowed');
-    // REMOVED: btn.innerText = "Vehicle Required";
   } else {
     btn.disabled = false;
     btn.classList.add('bg-green-600');
@@ -216,8 +215,10 @@ async function signup(e){
       g_nin = await uploadFile(document.getElementById('guarantorNIN').files[0], `delivery/${uid}/g_nin.jpg`);
     }
 
+    // FIXED: Removed id: data.user.id - let Supabase auto-generate
     const { error } = await supabaseClient.from('users').insert({
-      id: data.user.id, email, full_name: document.getElementById('fullName').value,
+      user_id: data.user.id, // ADDED: link to auth user
+      email, full_name: document.getElementById('fullName').value,
       location: document.getElementById('location').value, address: finalAddress,
       landmark: document.getElementById('landmark').value, phone: document.getElementById('phone').value,
       role: currentRole,
@@ -234,7 +235,7 @@ async function signup(e){
     if(error) throw error;
 
     msg.className = "text-center text-sm mt-2 text-green-600";
-    msg.innerText = "Account Created! Redirecting to Login...";
+    msg.innerText = "Account Created! Your account is pending approval.";
     setTimeout(() => { window.location.href='login.html'; }, 2000);
 
   } catch(err){
