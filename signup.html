@@ -147,9 +147,9 @@ function selectRole(role){
 
 async function uploadFile(file, path){
   if(!file) return '';
-  const { data, error } = await supabaseClient.storage.from('lgm-docs').upload(path, file);
+  const { data, error } = await supabaseClient.storage.from('delivery_docs').upload(path, file);
   if(error) throw error;
-  const { data: urlData } = supabaseClient.storage.from('lgm-docs').getPublicUrl(path);
+  const { data: urlData } = supabaseClient.storage.from('delivery_docs').getPublicUrl(path);
   return urlData.publicUrl;
 }
 
