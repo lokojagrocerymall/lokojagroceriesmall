@@ -74,12 +74,12 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// FIX 1: BLOCK UNAPPROVED USERS ON PAGE LOAD
+// FIX 1: BLOCK UNAPPROVED USERS ON PAGE LOAD - NO.SINGLE()
 supabaseClient.auth.getUser().then(async ({data: {user}}) => {
   if(user){
-    const { data: userData } = await supabaseClient.from('users').select('role, is_approved').eq('user_id', user.id).single();
+    const { data: userDataArray } = await supabaseClient.from('users').select('role, is_approved').eq('user_id', user.id);
+    const userData = userDataArray?.[0];
     
-    // If vendor/delivery and not approved, kick them out
     if(userData && userData.role!== 'customer' && userData.role!== 'admin' && userData.is_approved === false){
       await supabaseClient.auth.signOut();
       localStorage.removeItem('lgm_user');
@@ -169,15 +169,17 @@ async function deliveryLogin(){
   const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({ email, password });
   if(authError){ errorEl.innerText = "Login Error: " + authError.message; return; }
 
-  // FIX 3: GET PROFILE FROM users TABLE USING user_id NOT id
-  const { data: user, error: profileError } = await supabaseClient
-  .from('users')
-  .select('role, is_approved, full_name, user_id')
-  .eq('user_id', authData.user.id) // FIXED: was.eq('id',...)
-  .single();
+  // FIX 3: GET PROFILE FROM users TABLE - NO.SINGLE() TO PREVENT CRASH
+  const { data: users, error: profileError } = await supabaseClient
+ .from('users')
+ .select('role, is_approved, full_name, user_id')
+ .eq('user_id', authData.user.id); // FIXED
 
   if(profileError){ errorEl.innerText = "Profile Error: " + profileError.message; return; }
-  if(!user){ errorEl.innerText = "Profile not found"; return; }
+  if(!users || users.length === 0){ errorEl.innerText = "Profile not found"; return; }
+  if(users.length > 1){ errorEl.innerText = "Duplicate account found. Contact admin to clean it."; return; }
+  
+  const user = users[0]; // take first one
 
   // FIX 4: BLOCK IF NOT APPROVED
   if(user.role!== 'customer' && user.role!== 'admin' && user.is_approved === false){
