@@ -74,10 +74,10 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// FIX 1: BLOCK UNAPPROVED USERS ON PAGE LOAD - NO.SINGLE()
+// FIX 1: BLOCK UNAPPROVED USERS ON PAGE LOAD - CHANGED user_id to id
 supabaseClient.auth.getUser().then(async ({data: {user}}) => {
   if(user){
-    const { data: userDataArray } = await supabaseClient.from('users').select('role, is_approved').eq('user_id', user.id);
+    const { data: userDataArray } = await supabaseClient.from('users').select('role, is_approved').eq('id', user.id);
     const userData = userDataArray?.[0];
     
     if(userData && userData.role!== 'customer' && userData.role!== 'admin' && userData.is_approved === false){
@@ -165,23 +165,23 @@ async function deliveryLogin(){
 
   if(!email ||!password){ errorEl.innerText = "Please enter email and password"; return; }
 
-  // FIX 2: LOGIN WITH SUPABASE AUTH
+  // LOGIN WITH SUPABASE AUTH
   const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({ email, password });
   if(authError){ errorEl.innerText = "Login Error: " + authError.message; return; }
 
-  // FIX 3: GET PROFILE FROM users TABLE - NO.SINGLE() TO PREVENT CRASH
+  // FIX 2: GET PROFILE FROM users TABLE - CHANGED user_id to id
   const { data: users, error: profileError } = await supabaseClient
- .from('users')
- .select('role, is_approved, full_name, user_id')
- .eq('user_id', authData.user.id); // FIXED
+.from('users')
+.select('role, is_approved, full_name, id')
+.eq('id', authData.user.id);
 
   if(profileError){ errorEl.innerText = "Profile Error: " + profileError.message; return; }
   if(!users || users.length === 0){ errorEl.innerText = "Profile not found"; return; }
   if(users.length > 1){ errorEl.innerText = "Duplicate account found. Contact admin to clean it."; return; }
   
-  const user = users[0]; // take first one
+  const user = users[0];
 
-  // FIX 4: BLOCK IF NOT APPROVED
+  // BLOCK IF NOT APPROVED
   if(user.role!== 'customer' && user.role!== 'admin' && user.is_approved === false){
     await supabaseClient.auth.signOut();
     errorEl.className = "text-yellow-600 text-sm mt-3 text-center font-bold";
