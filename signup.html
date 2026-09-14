@@ -117,12 +117,12 @@ function checkVehicle(){
 
   if(currentRole === 'delivery_agent' && vehicle === 'no'){
     btn.disabled = true;
-    btn.classList.remove('bg-green-600');
+    btn.classList.remove('bg-green-600','bg-yellow-500');
     btn.classList.add('bg-gray-400','cursor-not-allowed');
   } else {
     btn.disabled = false;
     btn.classList.add('bg-green-600');
-    btn.classList.remove('bg-gray-400','cursor-not-allowed');
+    btn.classList.remove('bg-gray-400','cursor-not-allowed','bg-yellow-500');
   }
 }
 
@@ -229,18 +229,24 @@ async function signup(e){
       guarantor_address: document.getElementById('guarantorAddress').value || null,
       has_vehicle: document.querySelector('input[name="vehicle"]:checked')?.value || 'no',
       passport_url, nin_url, guarantor_passport_url: g_passport, guarantor_nin_url: g_nin,
-      is_approved: currentRole === 'customer'? true : false // CHANGED: Vendors & Delivery go to Pending
+      is_approved: currentRole === 'customer'? true : false // Vendors & Delivery go to Pending
     });
     if(error) throw error;
 
-    msg.className = "text-center text-sm mt-2 text-green-600";
+    msg.className = "text-center text-sm mt-2 text-green-600 font-bold";
     msg.innerText = "Account Created! Your account is pending approval.";
-    setTimeout(() => { window.location.href='login.html'; }, 2000);
+    
+    // STAY ON PAGE - NO REDIRECT
+    btn.innerText = "Awaiting Approval";
+    btn.classList.remove('bg-green-600');
+    btn.classList.add('bg-yellow-500');
 
   } catch(err){
     msg.className = "text-center text-sm mt-2 text-red-500";
     msg.innerText = err.message.includes("already registered")? "Error: This email is already registered." : "Error: " + err.message;
     btn.disabled = false; btn.innerText = "Continue";
+    btn.classList.remove('bg-yellow-500');
+    btn.classList.add('bg-green-600');
     checkVehicle();
   }
 }
