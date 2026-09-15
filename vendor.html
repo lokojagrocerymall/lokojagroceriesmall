@@ -105,12 +105,12 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let curUser=null; let allOrders=[]; let allProducts=[];
 
-// ROLE LOCK - ONLY VENDORS CAN ACCESS - FIXED WITH TRIM
+// ROLE LOCK - ONLY VENDORS CAN ACCESS
 const saved = localStorage.getItem('lgm_user');
 curUser = saved? JSON.parse(saved) : null;
 if(!curUser || String(curUser.role).toLowerCase().trim()!== 'vendor'){
   alert('Access Denied. Please login as Vendor');
-  location.href='/'; 
+  location.href='/';
 }
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 2 HOURS LOCKED
@@ -126,10 +126,10 @@ function setTab(name){
 }
 function logout(){ localStorage.removeItem('lgm_user'); window.location.href='/'; }
 
-// NEW TIMER FUNCTION FOR VENDOR
+// TIMER FUNCTION FOR VENDOR
 function formatVendorCountdown(startTime){
   if(!startTime) return '';
-  const end = new Date(startTime).getTime() + TWO_HOURS_MS; // 2 HOURS
+  const end = new Date(startTime).getTime() + TWO_HOURS_MS;
   const diff = end - new Date().getTime();
   if(diff <= 0) return `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#dc2626">❌ TIME UP - FAILED</div>`;
   const h = Math.floor(diff / 3600000);
@@ -143,7 +143,7 @@ function formatVendorCountdown(startTime){
 }
 
 async function init(){
-  document.getElementById('vName').innerText="Welcome, "+ (curUser.full_name || curUser.name || curUser.email.split('@')[0]); // FIX: NO MORE UNDEFINED
+  document.getElementById('vName').innerText="Welcome, "+ (curUser.full_name || curUser.name || curUser.email.split('@')[0]);
   document.getElementById('vEmail').innerText=curUser.email;
   document.getElementById('vBadge').innerText=curUser.is_approved? "✅ Approved Vendor • You keep 90%" : "⏳ Pending Approval";
   document.getElementById('profName').value=curUser.full_name || curUser.name;
@@ -182,7 +182,14 @@ async function addProduct(){
   const name=document.getElementById('pName').value;
   const price=document.getElementById('pPrice').value;
   if(!name ||!price) return alert('Fill name and price');
-  await supabaseClient.from('products').insert({name, price, stock:document.getElementById('pStock').value, category:document.getElementById('pCategory').value, vendor_email:curUser.email, image_url}); // FIX: SAVE vendor_email
+  await supabaseClient.from('products').insert({
+    name,
+    price,
+    stock:document.getElementById('pStock').value,
+    category:document.getElementById('pCategory').value,
+    vendor_email:curUser.email, // KEY: THIS LINKS TO FLUTTERWAVE SUBACCOUNT
+    image_url
+  });
   alert('Product Added!');
   ['pName','pPrice','pStock','pImage'].forEach(id=>document.getElementById(id).value='');
   loadProducts();
@@ -202,46 +209,43 @@ async function deleteProduct(id, name){
   loadProducts();
 }
 
-// FIX 1: LOAD ORDERS BY SEARCHING INSIDE ITEMS JSONB
+// LOAD ORDERS BY SEARCHING INSIDE ITEMS JSONB FOR vendor_email
 async function loadOrders(){
- const {data} = await supabaseClient.from('orders').select('*').eq('status','paid').contains('items', [{"vendor_email": curUser.email}]).order('created_at',{ascending:false});
- 
+ const {data} = await supabaseClient.from('orders').select('*').contains('items', [{"vendor_email": curUser.email}]).order('created_at',{ascending:false});
+
  // Filter only items that belong to this vendor
  allOrders = (data||[]).map(o=>{
    return {...o, items: (o.items||[]).filter(i=>i.vendor_email === curUser.email)}
  }).filter(o=>o.items.length > 0);
 
- let h=""; 
+ let h="";
  if(allOrders.length === 0) h = '<p>📭 No orders yet.</p>';
  else allOrders.forEach(o=>{
    let status = o.status||'paid';
    let myTotal = o.items.reduce((s,i)=>s + i.price*i.qty, 0);
    let myCut = Math.round(myTotal * 0.9);
    let vendorBtn = ''; let countdown = '';
-   
+
    if(status === 'paid'){
      vendorBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_phone}')" style="background:#2563eb;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">🚚 Start Delivery - 2hr Timer</button>`;
    }
    if(status === 'on the way' && o.delivery_started_at){
-     let end = new Date(o.delivery_started_at).getTime() + TWO_HOURS_MS;
-     let left = end - new Date().getTime();
-     if(left <= 0){ markFailed(o.id); }
-     else { countdown = formatVendorCountdown(o.delivery_started_at); }
+     countdown = formatVendorCountdown(o.delivery_started_at);
    }
    if(status === 'failed_delivery'){
      vendorBtn = `<button disabled style="background:#d1d5db;color:#6b7280;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">❌ Delivery Failed</button>`;
    }
-   
+
    h+=`<div class='card'>
      <div style="display:flex;justify-content:space-between"><b>Order ${o.tx_ref}</b><span class="status status-${status}">${status.replace('_',' ')}</span></div>
      <div class="small">Customer: ${o.customer_name} • ${o.customer_phone}</div>
      <div class="small">Address: ${o.customer_address}</div>
      <div style="margin-top:8px"><b>Your Items:</b> ${o.items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
-     <div style="margin-top:4px"><b>Your Cut 90%:</b> <span class="text-green-600 font-bold">₦${myCut.toLocaleString()}</span></div>
+     <div style="margin-top:4px"><b>Your Cut 90%:</b> <span style="color:#16a34a;font-weight:700">₦${myCut.toLocaleString()}</span></div>
      ${countdown}${vendorBtn}
    </div>`;
  });
- 
+
  document.getElementById('ordersList').innerHTML=h;
  document.getElementById('oCount').innerText=allOrders.length;
 
@@ -268,9 +272,7 @@ async function startDelivery(id, customerPhone){
   await supabaseClient.from('orders').update({ status: 'on the way', delivery_started_at: new Date().toISOString() }).eq('id',id);
   sendWhatsApp(customerPhone, id); loadOrders();
 }
-async function markFailed(id){
-  await supabaseClient.from('orders').update({status:'failed_delivery'}).eq('id',id); loadOrders();
-}
+
 function sendWhatsApp(phone, orderId){
   if(!phone) return;
   let msg = `Hi! Your LGM Order #${orderId} is On The Way 🚚 Delivery within 2 hours from ${curUser.full_name || curUser.name}.`;
@@ -295,7 +297,7 @@ async function requestWithdrawal(){
   document.getElementById('wAmount').value=''; loadWallet();
 }
 
-async function saveProfile(){ 
+async function saveProfile(){
   await supabaseClient.from('users').update({full_name: document.getElementById('profName').value}).eq('email', curUser.email);
   curUser.full_name = document.getElementById('profName').value;
   localStorage.setItem('lgm_user', JSON.stringify(curUser));
