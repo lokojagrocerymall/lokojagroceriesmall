@@ -23,12 +23,12 @@
 </div>
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'null');
-if(!curUser ||!curUser.email){
-  alert('Please login first');
+if(!curUser ||!curUser.email || String(curUser.role).toLowerCase().trim()!=='delivery_agent'){
+  alert('Access Denied. Please login as Delivery Agent');
   location.href='index.html';
 }
 document.getElementById('name').innerText = curUser.name || curUser.email;
@@ -57,10 +57,10 @@ function formatPickedUpTime(startTime){
 async function loadRiderStats(){
   try{
     const {data} = await supabaseClient.from('orders')
-    .select('customer_rating')
-    .eq('delivery_agent_email', curUser.email)
-    .eq('status', 'delivered')
-    .not('customer_rating', 'is', null);
+   .select('customer_rating')
+   .eq('delivery_agent_email', curUser.email)
+   .eq('status', 'delivered')
+   .not('customer_rating', 'is', null);
     const ratings = data?.map(d=>d.customer_rating) || [];
     const avg = ratings.length > 0? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '0';
     document.getElementById('riderStats').innerHTML = `
@@ -75,19 +75,20 @@ async function loadRiderStats(){
 
 async function fetchOrders(){
   try{
-    // RULE 1: AVAILABLE ORDERS = status=paid AND no agent has picked it yet
+    // RULE 1: AVAILABLE ORDERS = MUST BE PAID AND payment_status=true AND no agent picked yet
     const { data:availableOrders } = await supabaseClient.from('orders')
-    .select('*')
-    .eq('status','paid')
-    .is('delivery_agent_email', null)
-    .order('created_at',{ascending:false});
+   .select('*')
+   .eq('status','paid')
+   .eq('payment_status', true) // CRITICAL FIX: ONLY PAID ORDERS
+   .is('delivery_agent_email', null)
+   .order('created_at',{ascending:false});
 
     // RULE 2: MY ACTIVE ORDERS = status=on the way AND assigned to ME
     const { data:myActive } = await supabaseClient.from('orders')
-    .select('*')
-    .eq('status','on the way')
-    .eq('delivery_agent_email', curUser.email)
-    .order('created_at',{ascending:false});
+   .select('*')
+   .eq('status','on the way')
+   .eq('delivery_agent_email', curUser.email)
+   .order('created_at',{ascending:false});
 
     const orderMap = new Map();
     [...(availableOrders||[]),...(myActive||[])].forEach(o => orderMap.set(o.id, o));
@@ -145,11 +146,11 @@ async function loadCompleted(){
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const { data:completed } = await supabaseClient.from('orders')
-    .select('*')
-    .eq('status','delivered')
-    .eq('delivery_agent_email', curUser.email)
-    .gte('delivered_at', sevenDaysAgo.toISOString())
-    .order('delivered_at',{ascending:false});
+   .select('*')
+   .eq('status','delivered')
+   .eq('delivery_agent_email', curUser.email)
+   .gte('delivered_at', sevenDaysAgo.toISOString())
+   .order('delivered_at',{ascending:false});
     if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }
     else {
       document.getElementById('completed').innerHTML = completed.map(o=>{
