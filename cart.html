@@ -39,7 +39,7 @@ const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FLW_PUBLIC_KEY = "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X";
 
-// FIX 1: BUTTON LOCK TO PREVENT DOUBLE ORDERS
+// BUTTON LOCK TO PREVENT DOUBLE ORDERS
 let isSubmitting = false;
 let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
 
@@ -75,7 +75,6 @@ function changeQty(idx, delta){ cart[idx].qty+=delta; if(cart[idx].qty<=0) cart.
 function removeItem(idx){ cart.splice(idx,1); loadCart(); }
 
 async function payWithFlutterwave(){
-  // FIX 2: STOP DOUBLE TAP
   if(isSubmitting) return;
   isSubmitting = true;
   const btn = document.getElementById('orderBtn');
@@ -94,6 +93,25 @@ async function payWithFlutterwave(){
   const email = phone.replace(/[^0-9]/g,'') + "@lgm.customer";
   const tx_ref = "LGM-" + Date.now();
 
+  // === FIX: BUILD SPLIT ACCOUNTS ===
+  document.getElementById('orderMsg').innerHTML='<span style="color:blue">🔄 Preparing split payment...</span>';
+  let subaccounts = [];
+  let vendorEmails = [...new Set(cart.map(i=>i.vendor_email).filter(Boolean))]; // get unique vendors
+
+  for(let vEmail of vendorEmails){
+    const {data: vendor} = await supabaseClient.from('users').select('flw_subaccount_id').eq('email', vEmail).single();
+    let vendorItems = cart.filter(i=>i.vendor_email===vEmail);
+    let vendorCut = vendorItems.reduce((s,i)=>s + Math.round(i.price * i.qty * 0.9), 0); // 90%
+
+    if(vendor?.flw_subaccount_id && vendorCut > 0){
+      subaccounts.push({
+        id: vendor.flw_subaccount_id,
+        transaction_charge_type: "flat",
+        transaction_charge: vendorCut
+      })
+    }
+  }
+
   FlutterwaveCheckout({
     public_key: FLW_PUBLIC_KEY,
     tx_ref: tx_ref,
@@ -101,22 +119,21 @@ async function payWithFlutterwave(){
     currency: "NGN",
     payment_options: "card,ussd,banktransfer,opay",
     customer: { email: email, phone_number: phone, name: name },
+    subaccounts: subaccounts, // <-- MAGIC SPLIT
     customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery" },
     callback: async function(data){
       document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order & reducing stock...</span>';
       try{
-        // FIX 3: SAVE VENDOR_EMAIL PER ITEM FOR MULTI-VENDOR
         const orderData = {
           customer_name: name, customer_phone: phone, customer_address: addr,
           customer_email: email, total: total, total_amount: total,
-          delivery_fee: delivery, items: cart, // cart now has vendor_email inside
-          status: 'paid', payment_method: 'flutterwave',
-          transaction_id: String(data.transaction_id || tx_ref), tx_ref: tx_ref
+          delivery_fee: delivery, items: cart, status: 'paid',
+          payment_method: 'flutterwave', transaction_id: String(data.transaction_id || tx_ref), tx_ref: tx_ref
         };
         const { error } = await supabaseClient.from('orders').insert([orderData]);
         if(error){ throw error; }
 
-        // === FIX 4: AUTO-REDUCE STOCK ===
+        // AUTO-REDUCE STOCK
         document.getElementById('orderMsg').innerHTML='<span style="color:blue">📦 Reducing stock...</span>';
         for(let item of cart){
           try{
@@ -140,7 +157,7 @@ async function payWithFlutterwave(){
         isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now with Flutterwave - <span id="payAmount">₦0</span>`;
       }
     },
-    onclose: function(){ 
+    onclose: function(){
       document.getElementById('orderMsg').innerText='Payment closed';
       isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now with Flutterwave - <span id="payAmount">₦0</span>`;
     }
