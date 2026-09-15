@@ -201,13 +201,14 @@ async function deleteProduct(id, name){
   alert('Product Deleted'); loadProducts();
 }
 
-// FIXED: LOAD ORDERS BY FILTERING JSONB ITEMS
+// FIXED: ONLY LOAD PAID ORDERS
 async function loadOrders(){
   const {data: allOrdersData, error} = await supabaseClient
-   .from('orders')
-   .select('*')
-   .eq('status', 'paid')
-   .order('created_at',{ascending:false});
+  .from('orders')
+  .select('*')
+  .eq('status', 'paid') // FIX 1: ONLY PAID
+  .eq('payment_status', true) // FIX 2: MUST BE PAID
+  .order('created_at',{ascending:false});
 
   if(error){ console.log(error); return; }
 
