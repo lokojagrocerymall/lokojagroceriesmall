@@ -297,6 +297,7 @@ function renderCart(){
   document.getElementById('placeOrderBtn').classList.remove('hidden');
 }
 
+// FIXED: Flutterwave now opens card modal properly
 async function payWithFlutterwave(e){
   e.preventDefault();
   if(isSubmitting) return;
@@ -340,16 +341,19 @@ async function payWithFlutterwave(e){
     tx_ref: tx_ref,
     amount: total,
     currency: "NGN",
-    payment_options: "card,ussd,banktransfer,opay",
+    payment_options: "card", // FIX 1: Only card in TEST mode
+    redirect_url: window.location.href, // FIX 2: Forces modal to open
     customer: { email: user.email, phone_number: checkoutPhone, name: displayName },
     subaccounts: subaccounts,
     customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery" },
     callback: async function(data){
-      document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order...</span>';
-      if(data.status === "successful"){
+      // FIX 3: Only save if transaction_id exists. Prevents fake success
+      if(data.status === "successful" && data.transaction_id){
+        document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order...</span>';
         await saveOrderAfterPayment(data.tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total);
       } else {
-        alert('Payment ' + data.status);
+        alert('Payment not completed');
+        document.getElementById('orderMsg').innerHTML='<span style="color:red">❌ Payment cancelled</span>';
         isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
       }
     },
