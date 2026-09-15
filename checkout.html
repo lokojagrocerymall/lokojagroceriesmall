@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout - Lokoja Grocery Mall</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://checkout.flutterwave.com/v3.js"></script>
+<style>*{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:16px}
+.card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:12px}
+h2{margin:0 0 12px 0} input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
+.btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;font-size:16px}
+.small{font-size:12px;color:#6b7280}</style>
+</head>
+<body>
+
+<div class="card">
+<h2>📦 Checkout</h2>
+<div id="cartSummary"></div>
+</div>
+
+<div class="card">
+<h3>Delivery Details</h3>
+<input id="cName" placeholder="Full Name">
+<input id="cPhone" placeholder="Phone Number 080...">
+<input id="cAddress" placeholder="Delivery Address in Lokoja">
+<button class="btn" onclick="payWithFlutterwave()">Pay Now With Flutterwave</button>
+<p class="small">Vendor gets 90%, Platform 10% + ₦5,000 delivery</p>
+</div>
+
+<script>
+const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const FLW_PUBLIC_KEY = "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
+let curUser = JSON.parse(localStorage.getItem('lgm_user'));
+let delivery = 5000; let total = 0;
+
+function showCart(){
+  if(cart.length === 0){ document.getElementById('cartSummary').innerHTML = "<p>Cart is empty</p>"; return; }
+  let h = ''; total = 0;
+  cart.forEach(item=>{ 
+    total += item.price * item.qty; 
+    h += `<div>${item.name} x${item.qty} - ₦${(item.price*item.qty).toLocaleString()}</div>`;
+  });
+  h += `<hr><div>Delivery: ₦${delivery.toLocaleString()}</div>`;
+  h += `<div><b>Total: ₦${(total+delivery).toLocaleString()}</b></div>`;
+  document.getElementById('cartSummary').innerHTML = h;
+}
+showCart();
+
+function payWithFlutterwave(){
+  if(!curUser){ alert('Please login first'); window.location.href='index.html#login'; return; }
+  const name = document.getElementById('cName').value.trim();
+  const phone = document.getElementById('cPhone').value.trim();
+  const address = document.getElementById('cAddress').value.trim();
+  if(!name ||!phone ||!address) return alert('Fill all fields');
+
+  const vendorSubaccounts = {
+    "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
+    "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
+  }
+  const vendorTotals = {};
+  cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + item.price*item.qty; });
+  
+  const subaccounts = Object.keys(vendorTotals)
+    .map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"percentage", transaction_charge:90}))
+    .filter(s=>s.id);
+
+  FlutterwaveCheckout({
+    public_key: FLW_PUBLIC_KEY,
+    tx_ref: "lgm_" + Date.now(),
+    amount: total + delivery,
+    currency: "NGN",
+    customer: { email: curUser.email, name: name, phone_number: phone },
+    customizations: { title: "Lokoja Grocery Mall" },
+    subaccounts: subaccounts,
+    callback: function(response) {
+      if(response.status === "successful"){
+        saveOrder(response.tx_ref, name, phone, address, total+delivery);
+      } else { alert('Payment cancelled'); }
+    }
+  });
+}
+
+async function saveOrder(tx_ref, name, phone, address, grandTotal){
+  const {data:order} = await supabaseClient.from('orders').insert({
+    tx_ref, customer_id:curUser.id, customer_name:name, customer_email:curUser.email,
+    customer_phone:phone, customer_address:address, items:cart, subtotal:total,
+    delivery_fee:delivery, total:grandTotal, payment_status:true, status:'paid'
+  }).select().single();
+
+  const vendors = [...new Set(cart.map(i=>i.vendor_id).filter(Boolean))];
+  for(let vid of vendors){
+    let vendorItems = cart.filter(i=>i.vendor_id===vid);
+    await supabaseClient.from('vendor_orders').insert({
+      order_id:order.id, vendor_id:vid, vendor_email:vendorItems[0].vendor_email,
+      items:vendorItems, subtotal:vendorItems.reduce((s,i)=>s+i.price*i.qty,0), status:'new'
+    });
+  }
+
+  await supabaseClient.from('delivery_assignments').insert({
+    order_id:order.id, status:'pending_pickup', customer_id: curUser.id,
+    customer_address:address, customer_phone:phone, 
+    items_summary:cart.map(i=>`${i.name}x${i.qty}`).join(', ')
+  });
+
+  localStorage.removeItem('lgm_cart');
+  alert('Payment Successful! Order #'+order.id);
+  window.location.href = 'customer.html';
+}
+</script>
+</body>
+</html>
