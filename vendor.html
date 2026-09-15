@@ -33,7 +33,7 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 </head>
 <body>
 <div class="nav">
-<a href="index.html" class="nav-home">🏠 Store / Home</a>
+<a href="/" class="nav-home">🏠 Store / Home</a>
 <button class="nav-logout" onclick="logout()">Logout</button>
 </div>
 <div class="card"><b id="vName">Welcome...</b><div id="vEmail" class="small"></div><div id="vBadge" class="small" style="color:green"></div></div>
@@ -101,19 +101,19 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 
 <script>
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let curUser=null; let allOrders=[]; let allProducts=[];
 
-// ROLE LOCK - ONLY VENDORS CAN ACCESS
+// ROLE LOCK - ONLY VENDORS CAN ACCESS - FIXED WITH TRIM
 const saved = localStorage.getItem('lgm_user');
 curUser = saved? JSON.parse(saved) : null;
-if(!curUser || curUser.role!== 'vendor'){
+if(!curUser || String(curUser.role).toLowerCase().trim()!== 'vendor'){
   alert('Access Denied. Please login as Vendor');
-  location.href='login.html';
+  location.href='/'; // FIXED: Go to homepage instead of login.html
 }
 
-const TWO_HOURS_MS = 3 * 60 * 60 * 1000; // 2 HOURS LOCKED
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 2 HOURS LOCKED
 
 function setTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -124,7 +124,7 @@ function setTab(name){
   if(name==='products') loadProducts();
   if(name==='wallet') loadWallet();
 }
-function logout(){ localStorage.removeItem('lgm_user'); window.location.href='login.html'; }
+function logout(){ localStorage.removeItem('lgm_user'); window.location.href='/'; } // FIXED
 
 // NEW TIMER FUNCTION FOR VENDOR
 function formatVendorCountdown(startTime){
@@ -217,7 +217,7 @@ async function loadOrders(){
      let left = end - new Date().getTime();
      if(left <= 0){ markFailed(o.id); }
      else {
-       countdown = formatVendorCountdown(o.delivery_started_at); // USE NEW FUNCTION
+       countdown = formatVendorCountdown(o.delivery_started_at);
      }
    }
    if(status === 'failed_delivery'){
