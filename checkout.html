@@ -40,16 +40,21 @@ let delivery = 5000; let total = 0;
 function showCart(){
   if(cart.length === 0){ document.getElementById('cartSummary').innerHTML = "<p>Cart is empty</p>"; return; }
   let h = ''; total = 0;
-  cart.forEach(item=>{ total += item.price * item.qty; });
-  document.getElementById('cartSummary').innerHTML = `<div><b>Total: ₦${(total+delivery).toLocaleString()}</b></div>`;
+  cart.forEach(item=>{ 
+    total += item.price * item.qty; 
+    h += `<div>${item.name} x${item.qty} - ₦${(item.price*item.qty).toLocaleString()}</div>`;
+  });
+  h += `<hr><div>Delivery: ₦${delivery.toLocaleString()}</div>`;
+  h += `<div><b>Total: ₦${(total+delivery).toLocaleString()}</b></div>`;
+  document.getElementById('cartSummary').innerHTML = h;
 }
 showCart();
 
-async function payWithFlutterwave(){
+function payWithFlutterwave(){
   if(!curUser){ alert('Please login first'); window.location.href='index.html#login'; return; }
-  const name = document.getElementById('cName').value;
-  const phone = document.getElementById('cPhone').value;
-  const address = document.getElementById('cAddress').value;
+  const name = document.getElementById('cName').value.trim();
+  const phone = document.getElementById('cPhone').value.trim();
+  const address = document.getElementById('cAddress').value.trim();
   if(!name ||!phone ||!address) return alert('Fill all fields');
 
   const vendorSubaccounts = {
@@ -58,54 +63,73 @@ async function payWithFlutterwave(){
   }
   const vendorTotals = {};
   cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + item.price*item.qty; });
-  const subaccounts = Object.keys(vendorTotals).map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"percentage", transaction_charge:90}));
+  
+  const subaccounts = Object.keys(vendorTotals)
+    .map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"percentage", transaction_charge:90}))
+    .filter(s=>s.id); // IMPORTANT: remove if subaccount is missing
+
+  if(subaccounts.length === 0) return alert('No vendor subaccount found');
+
+  const grandTotal = total + delivery;
 
   FlutterwaveCheckout({
     public_key: FLW_PUBLIC_KEY,
     tx_ref: "lgm_" + Date.now(),
-    amount: total + delivery,
+    amount: grandTotal,
     currency: "NGN",
     customer: { email: curUser.email, name: name, phone_number: phone },
+    customizations: { title: "Lokoja Grocery Mall", description: "Multi-Vendor Order" },
     subaccounts: subaccounts,
-    callback: async function(response) {
+    callback: function(response) { // NOT async here
+      console.log(response);
       if(response.status === "successful"){
-        await saveOrder(response.tx_ref, name, phone, address, total+delivery);
-      } else { alert('Payment failed'); }
+        saveOrder(response.tx_ref, name, phone, address, grandTotal); // call async function
+      } else { 
+        alert('Payment failed or cancelled'); 
+      }
+    },
+    onclose: function() {
+      // alert('Payment window closed');
     }
   });
 }
 
 async function saveOrder(tx_ref, name, phone, address, grandTotal){
-  // 1. ADMIN ORDERS
-  const {data:order} = await supabaseClient.from('orders').insert({
-    tx_ref, customer_id:curUser.id, customer_name:name, customer_email:curUser.email,
-    customer_phone:phone, customer_address:address, items:cart, subtotal:total,
-    delivery_fee:delivery, total:grandTotal, payment_status:true, status:'paid'
-  }).select().single();
+  try{
+    // 1. ADMIN ORDERS
+    const {data:order, error} = await supabaseClient.from('orders').insert({
+      tx_ref, customer_id:curUser.id, customer_name:name, customer_email:curUser.email,
+      customer_phone:phone, customer_address:address, items:cart, subtotal:total,
+      delivery_fee:delivery, total:grandTotal, payment_status:true, status:'paid'
+    }).select().single();
+    if(error) throw error;
 
-  // 2. VENDOR ORDERS
-  const vendors = [...new Set(cart.map(i=>i.vendor_id))];
-  for(let vid of vendors){
-    let vendorItems = cart.filter(i=>i.vendor_id===vid);
-    await supabaseClient.from('vendor_orders').insert({
-      order_id:order.id, vendor_id:vid, vendor_email:vendorItems[0].vendor_email,
-      items:vendorItems, subtotal:vendorItems.reduce((s,i)=>s+i.price*i.qty,0), status:'new'
+    // 2. VENDOR ORDERS
+    const vendors = [...new Set(cart.map(i=>i.vendor_id).filter(Boolean))];
+    for(let vid of vendors){
+      let vendorItems = cart.filter(i=>i.vendor_id===vid);
+      await supabaseClient.from('vendor_orders').insert({
+        order_id:order.id, vendor_id:vid, vendor_email:vendorItems[0].vendor_email,
+        items:vendorItems, subtotal:vendorItems.reduce((s,i)=>s+i.price*i.qty,0), status:'new'
+      });
+    }
+
+    // 3. DELIVERY TASK
+    await supabaseClient.from('delivery_assignments').insert({
+      order_id:order.id, 
+      status:'pending_pickup',
+      customer_id: curUser.id,
+      customer_address:address, 
+      customer_phone:phone, 
+      items_summary:cart.map(i=>`${i.name}x${i.qty}`).join(', ')
     });
+
+    localStorage.removeItem('lgm_cart');
+    alert('Payment Successful! Order #'+order.id);
+    window.location.href = 'customer.html';
+  }catch(e){
+    alert('Order Save Failed: '+e.message);
   }
-
-  // 3. DELIVERY TASK - AGENT CANNOT MARK DELIVERED
-  await supabaseClient.from('delivery_assignments').insert({
-    order_id:order.id, 
-    status:'pending_pickup', // Agent: pending_pickup > picked > out_for_delivery
-    customer_id: curUser.id, // So customer can mark delivered
-    customer_address:address, 
-    customer_phone:phone, 
-    items_summary:cart.map(i=>`${i.name}x${i.qty}`).join(', ')
-  });
-
-  localStorage.removeItem('lgm_cart');
-  alert('Payment Successful! Order #'+order.id);
-  window.location.href = 'customer.html';
 }
 </script>
 </body>
