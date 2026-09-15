@@ -74,14 +74,12 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// FIX 1: BUTTON LOCK TO PREVENT DOUBLE ORDERS
 let isSubmitting = false;
 
-// FIX 2: BLOCK UNAPPROVED USERS ON PAGE LOAD
+// BLOCK UNAPPROVED USERS ON PAGE LOAD
 supabaseClient.auth.getUser().then(async ({data: {user}}) => {
   if(user){
     const { data: userData } = await supabaseClient.from('users').select('role, is_approved').eq('id', user.id).maybeSingle();
-
     if(userData && userData.role!== 'customer' && userData.role!== 'admin' && userData.is_approved === false){
       await supabaseClient.auth.signOut();
       localStorage.removeItem('lgm_user');
@@ -104,8 +102,7 @@ function updateCart(){
 }
 
 async function loadProducts(){
-  const { data, error } = await supabaseClient.from('products').select('*').eq('is_approved', true).order('created_at',{ascending:false}).limit(50); // Only show approved products
-  console.log('LOAD:', data, error);
+  const { data, error } = await supabaseClient.from('products').select('*').eq('is_approved', true).order('created_at',{ascending:false}).limit(50);
   if(error){
     document.getElementById('productsGrid').innerHTML=`<div class="col-span-2 text-center text-sm text-red-400 py-10">Error: ${error.message}</div>`;
     return;
@@ -142,12 +139,23 @@ updateCart();
 loadProducts();
 </script>
 
-<!-- LOGIN MODAL -->
+<!-- LOGIN MODAL WITH VIEW/HIDE + FORGOT PASSWORD -->
 <div id="deliveryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-sm mx-4">
+  <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-sm mx-4">
     <h1 class="text-2xl font-bold text-center text-green-700 mb-6">🔐 LGM Login</h1>
-    <input id="d_email" type="email" placeholder="Email" class="w-full p-3 border rounded-lg mb-3">
-    <input id="d_password" type="password" placeholder="Password" class="w-full p-3 border rounded-lg mb-4">
+    <input id="d_email" type="email" placeholder="Email" class="w-full p-3 border rounded-lg mb-3" required>
+
+    <!-- PASSWORD WITH EYE ICON -->
+    <div class="relative mb-3">
+      <input id="d_password" type="password" placeholder="Password" class="w-full p-3 border rounded-lg pr-10" required>
+      <button type="button" onclick="togglePassword()" class="absolute right-3 top-3.5 text-xl">👁️</button>
+    </div>
+
+    <!-- FORGOT PASSWORD LINK -->
+    <div class="text-right mb-4">
+      <button type="button" onclick="forgotPassword()" class="text-xs text-green-600 font-bold hover:underline">Forgot Password?</button>
+    </div>
+
     <button onclick="deliveryLogin()" id="loginBtn" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold">Login</button>
     <button onclick="hideDeliveryLogin()" class="w-full mt-2 text-gray-600">Cancel</button>
     <p id="d_error" class="text-red-500 text-sm mt-3 text-center"></p>
@@ -155,13 +163,45 @@ loadProducts();
 </div>
 
 <script>
+let passVisible = false;
+
 function showDeliveryLogin(){
   document.getElementById('deliveryModal').classList.remove('hidden');
   if(localStorage.getItem('openLogin') === '1'){
     localStorage.removeItem('openLogin');
   }
 }
-function hideDeliveryLogin(){ document.getElementById('deliveryModal').classList.add('hidden'); }
+function hideDeliveryLogin(){
+  document.getElementById('deliveryModal').classList.add('hidden');
+  document.getElementById('d_error').innerText = '';
+}
+
+// VIEW / HIDE PASSWORD
+function togglePassword(){
+  const passInput = document.getElementById('d_password');
+  passVisible =!passVisible;
+  passInput.type = passVisible? 'text' : 'password';
+}
+
+// FORGOT PASSWORD
+async function forgotPassword(){
+  const email = document.getElementById('d_email').value.trim();
+  const errorEl = document.getElementById('d_error');
+  if(!email){ errorEl.innerText = "Please enter your email first"; return; }
+
+  if(!confirm(`Send password reset link to ${email}?`)) return;
+
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://y-mall.vercel.app/'
+  });
+
+  if(error){
+    errorEl.innerText = 'Error: ' + error.message;
+  } else {
+    errorEl.className = "text-green-600 text-sm mt-3 text-center";
+    errorEl.innerText = 'Reset link sent! Check your inbox.';
+  }
+}
 
 async function deliveryLogin(){
   const errorEl = document.getElementById('d_error');
@@ -180,21 +220,16 @@ async function deliveryLogin(){
 
     const userId = authData.user.id;
 
-    let { data: user, error: profileError } = await supabaseClient
-  .from('users')
-  .select('*')
-  .eq('id', userId)
-  .maybeSingle();
+    let { data: user } = await supabaseClient.from('users').select('*').eq('id', userId).maybeSingle();
 
     if(!user){
-      const { data: newUser, error: insertError } = await supabaseClient.from('users').insert({
+      const { data: newUser } = await supabaseClient.from('users').insert({
         id: userId,
         email: authData.user.email,
         full_name: authData.user_metadata?.full_name || 'User',
         role: authData.user_metadata?.role || 'customer',
         is_approved: true
       }).select().single();
-      if(insertError) throw insertError;
       user = newUser;
     }
 
