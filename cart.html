@@ -27,7 +27,7 @@
 <input id="custName" placeholder="Full Name" class="w-full border rounded-xl p-3 mb-2 text-sm">
 <input id="custPhone" placeholder="Phone e.g. 080..." class="w-full border rounded-xl p-3 mb-2 text-sm">
 <input id="custAddress" placeholder="Address in Lokoja" class="w-full border rounded-xl p-3 mb-3 text-sm">
-<div class="bg-blue-50 border border-blue-200 p-3 rounded-xl text-xs mb-3">🔒 Secure payment by <b>Flutterwave</b></div>
+<div class="bg-blue-50 border-blue-200 p-3 rounded-xl text-xs mb-3">🔒 Secure payment by <b>Flutterwave</b></div>
 <button onclick="payWithFlutterwave()" id="orderBtn" class="w-full bg-[#f5a623] text-white rounded-xl p-4 font-black">💳 Pay Now with Flutterwave - <span id="payAmount">₦0</span></button>
 <div id="orderMsg" class="text-sm text-center mt-2"></div>
 </div>
@@ -35,19 +35,22 @@
 
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FLW_PUBLIC_KEY = "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X";
 
+// FIX 1: BUTTON LOCK TO PREVENT DOUBLE ORDERS
+let isSubmitting = false;
 let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
+
 async function loadCart(){
   const listDiv = document.getElementById('cartList');
   if(cart.length===0){ listDiv.innerHTML='<div class="bg-white rounded-xl p-10 text-center text-gray-400">🛒 Cart empty<br><a href="index.html" class="text-green-600 font-bold">Go shopping</a></div>'; updateTotals(); return; }
   try{
     const ids = cart.map(c=>c.id);
-    const { data:products } = await supabaseClient.from('products').select('id,image,image_url').in('id', ids);
-    const imgMap = {}; (products||[]).forEach(p=>{ imgMap[p.id]=p.image||p.image_url||''; });
-    cart = cart.map(c=>({...c, image: c.image || imgMap[c.id] || ''}));
+    const { data:products } = await supabaseClient.from('products').select('id,image_url,vendor_email').in('id', ids);
+    const prodMap = {}; (products||[]).forEach(p=>{ prodMap[p.id]=p; });
+    cart = cart.map(c=>({...c, image: c.image || prodMap[c.id]?.image || prodMap[c.id]?.image_url || '', vendor_email: prodMap[c.id]?.vendor_email || ''}));
   }catch(e){}
   let html='';
   cart.forEach((item, idx)=>{
@@ -56,6 +59,7 @@ async function loadCart(){
   });
   listDiv.innerHTML=html; updateTotals();
 }
+
 function updateTotals(){
   let sub=0, count=0; cart.forEach(i=>{ sub+=i.price*i.qty; count+=i.qty; });
   const delivery = Math.round(sub*0.05); const total = sub+delivery;
@@ -66,20 +70,30 @@ function updateTotals(){
   document.getElementById('payAmount').innerText='₦'+total.toLocaleString();
   localStorage.setItem('lgm_cart', JSON.stringify(cart));
 }
+
 function changeQty(idx, delta){ cart[idx].qty+=delta; if(cart[idx].qty<=0) cart.splice(idx,1); loadCart(); }
 function removeItem(idx){ cart.splice(idx,1); loadCart(); }
 
 async function payWithFlutterwave(){
+  // FIX 2: STOP DOUBLE TAP
+  if(isSubmitting) return;
+  isSubmitting = true;
+  const btn = document.getElementById('orderBtn');
+  btn.disabled = true;
+  btn.innerText = 'Processing Payment...';
+
   const name=document.getElementById('custName').value.trim();
   const phone=document.getElementById('custPhone').value.trim();
   const addr=document.getElementById('custAddress').value.trim();
-  if(!name||!phone||!addr) return alert('Fill Full Name, Phone, Address');
-  if(cart.length===0) return alert('Cart empty');
+  if(!name||!phone||!addr){ alert('Fill Full Name, Phone, Address'); isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now with Flutterwave - <span id="payAmount">₦0</span>`; return; }
+  if(cart.length===0){ alert('Cart empty'); isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now with Flutterwave - <span id="payAmount">₦0</span>`; return; }
+
   const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
   const delivery=Math.round(sub*0.05);
   const total=sub+delivery;
   const email = phone.replace(/[^0-9]/g,'') + "@lgm.customer";
   const tx_ref = "LGM-" + Date.now();
+
   FlutterwaveCheckout({
     public_key: FLW_PUBLIC_KEY,
     tx_ref: tx_ref,
@@ -91,17 +105,18 @@ async function payWithFlutterwave(){
     callback: async function(data){
       document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order & reducing stock...</span>';
       try{
+        // FIX 3: SAVE VENDOR_EMAIL PER ITEM FOR MULTI-VENDOR
         const orderData = {
           customer_name: name, customer_phone: phone, customer_address: addr,
           customer_email: email, total: total, total_amount: total,
-          delivery_fee: delivery, items: cart, vendor_email: 'agbemjames@gmail.com',
+          delivery_fee: delivery, items: cart, // cart now has vendor_email inside
           status: 'paid', payment_method: 'flutterwave',
           transaction_id: String(data.transaction_id || tx_ref), tx_ref: tx_ref
         };
         const { error } = await supabaseClient.from('orders').insert([orderData]);
-        if(error){ document.getElementById('orderMsg').innerHTML='<span style="color:red">❌ '+error.message+'</span>'; alert(error.message); return; }
+        if(error){ throw error; }
 
-        // === FIX 1: AUTO-REDUCE STOCK ===
+        // === FIX 4: AUTO-REDUCE STOCK ===
         document.getElementById('orderMsg').innerHTML='<span style="color:blue">📦 Reducing stock...</span>';
         for(let item of cart){
           try{
@@ -109,15 +124,12 @@ async function payWithFlutterwave(){
             let current = prod?.stock_qty?? prod?.stock?? prod?.quantity?? 0;
             let newQty = Math.max(0, Number(current) - Number(item.qty));
             await supabaseClient.from('products').update({
-              stock_qty: newQty,
-              stock: newQty,
-              quantity: newQty
+              stock_qty: newQty, stock: newQty, quantity: newQty
             }).eq('id', item.id);
           }catch(e){ console.log('stock err for', item.id, e.message); }
         }
 
         const waMsg = `🚨 NEW PAID ORDER - Lokoja Mall%0ARef: ${tx_ref}%0AName: ${name}%0APhone: ${phone}%0AAddr: ${addr}%0ATotal: ₦${total.toLocaleString()}%0AItems: ${cart.map(i=>i.name+' x'+i.qty).join(', ')}`;
-        // Fix WhatsApp - don't auto open to avoid SMS invite bug, show button instead
         document.getElementById('orderMsg').innerHTML+=`<br><a href="https://wa.me/2348104282311?text=${waMsg}" target="_blank" style="display:inline-block;margin-top:10px;background:#25D366;color:white;padding:10px 15px;border-radius:10px;font-weight:bold;text-decoration:none">📱 Open WhatsApp Alert</a>`;
 
         localStorage.removeItem('lgm_cart');
@@ -125,9 +137,13 @@ async function payWithFlutterwave(){
         setTimeout(()=>{ window.location.href='vendor.html'; },2500);
       }catch(e){
         document.getElementById('orderMsg').innerHTML='<span style="color:red">❌ '+e.message+'</span>';
+        isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now with Flutterwave - <span id="payAmount">₦0</span>`;
       }
     },
-    onclose: function(){ document.getElementById('orderMsg').innerText='Payment closed'; }
+    onclose: function(){ 
+      document.getElementById('orderMsg').innerText='Payment closed';
+      isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now with Flutterwave - <span id="payAmount">₦0</span>`;
+    }
   });
 }
 loadCart();
