@@ -6,7 +6,7 @@
 <title>Lokoja Grocery Mall - Fresh Groceries</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://checkout.flutterwave.com/v3.js"></script> <!-- ADDED -->
+<script src="https://checkout.flutterwave.com/v3.js"></script>
 <style>body{font-family:system-ui,-apple-system;background:#f8fafc}</style>
 </head>
 <body>
@@ -37,7 +37,7 @@
   <a href="signup.html" class="block py-2 text-green-600">➕ Sign Up</a>
 </div>
 
-<!-- ADDED: CHECKOUT SECTION -->
+<!-- CHECKOUT SECTION -->
 <div id="checkoutSection" class="hidden p-4">
   <div class="bg-white rounded-2xl p-4 shadow-sm mb-3">
     <h2 class="font-black text-[16px] mb-3">📦 Checkout</h2>
@@ -54,7 +54,7 @@
   </div>
 </div>
 
-<!-- YOUR ORIGINAL HOME SECTION -->
+<!-- HOME SECTION -->
 <div id="homeSection">
 <div class="mx-4 mt-4 bg-gradient-to-br from-green-600 to-green-800 rounded-[20px] p-6 text-white text-center">
   <div class="inline-block bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs font-bold mb-3">📍 Lokoja, Kogi State</div>
@@ -93,12 +93,10 @@
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
-const FLW_PUBLIC_KEY = "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X"; // ADDED
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let isSubmitting = false;
 let delivery = 5000; let total = 0;
-let curUser = JSON.parse(localStorage.getItem('lgm_user'));
 
 // BLOCK UNAPPROVED USERS ON PAGE LOAD
 supabaseClient.auth.getUser().then(async ({data: {user}}) => {
@@ -125,7 +123,6 @@ function updateCart(){
   document.getElementById('cartCount').innerText=total;
 }
 
-// ADDED: SHOW CHECKOUT FUNCTION
 function showCheckout(){
   document.getElementById('homeSection').classList.add('hidden');
   document.getElementById('checkoutSection').classList.remove('hidden');
@@ -146,8 +143,9 @@ function showCart(){
   document.getElementById('cartSummary').innerHTML = h;
 }
 
-// ADDED: FLUTTERWAVE PAYMENT
+// FLUTTERWAVE PAYMENT - KEY IS HARDCODED NOW
 function payWithFlutterwave(){
+  const curUser = JSON.parse(localStorage.getItem('lgm_user'));
   if(!curUser){ alert('Please login first'); showDeliveryLogin(); return; }
   const name = document.getElementById('cName').value.trim();
   const phone = document.getElementById('cPhone').value.trim();
@@ -163,32 +161,38 @@ function payWithFlutterwave(){
   cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + item.price*item.qty; });
 
   const subaccounts = Object.keys(vendorTotals)
-  .map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"percentage", transaction_charge:90}))
-  .filter(s=>s.id);
+.map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"percentage", transaction_charge:90}))
+.filter(s=>s.id);
 
   FlutterwaveCheckout({
-    public_key: FLW_PUBLIC_KEY,
+    public_key: "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X", // YOUR KEY IS HERE
     tx_ref: "lgm_" + Date.now(),
     amount: total + delivery,
     currency: "NGN",
     customer: { email: curUser.email, name: name, phone_number: phone },
-    customizations: { title: "Lokoja Grocery Mall" },
+    customizations: { title: "Lokoja Grocery Mall - TEST MODE" },
     subaccounts: subaccounts,
     callback: function(response) {
+      console.log("FLW Response:", response);
       if(response.status === "successful"){
         saveOrder(response.tx_ref, name, phone, address, total+delivery);
-      } else { alert('Payment cancelled'); }
+      } else { alert('Payment ' + response.status); }
+    },
+    onclose: function() {
+      alert('Payment window closed');
     }
   });
 }
 
 async function saveOrder(tx_ref, name, phone, address, grandTotal){
+  const curUser = JSON.parse(localStorage.getItem('lgm_user'));
   const cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
-  const {data:order} = await supabaseClient.from('orders').insert({
+  const {data:order, error} = await supabaseClient.from('orders').insert({
     tx_ref, customer_id:curUser.id, customer_name:name, customer_email:curUser.email,
     customer_phone:phone, customer_address:address, items:cart, subtotal:total,
     delivery_fee:delivery, total:grandTotal, payment_status:true, status:'paid'
   }).select().single();
+  if(error){ alert('DB Error: '+error.message); return; }
 
   const vendors = [...new Set(cart.map(i=>i.vendor_id).filter(Boolean))];
   for(let vid of vendors){
@@ -206,7 +210,7 @@ async function saveOrder(tx_ref, name, phone, address, grandTotal){
   });
 
   localStorage.removeItem('lgm_cart');
-  alert('Payment Successful! Order #'+order.id);
+  alert('✅ Payment Successful! Order #'+order.id);
   window.location.href = 'customer.html';
 }
 
@@ -251,7 +255,7 @@ loadProducts();
 if(window.location.hash === '#checkout') showCheckout();
 </script>
 
-<!-- LOGIN MODAL WITH VIEW/HIDE + FORGOT PASSWORD -->
+<!-- LOGIN MODAL -->
 <div id="deliveryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
   <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-sm mx-4">
     <h1 class="text-2xl font-bold text-center text-green-700 mb-6">🔐 LGM Login</h1>
@@ -283,7 +287,7 @@ async function forgotPassword(){
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: 'https://y-mall.vercel.app/' });
   if(error){ errorEl.innerText = 'Error: ' + error.message; }
   else { errorEl.className = "text-green-600 text-sm mt-3 text-center"; errorEl.innerText = 'Reset link sent! Check your inbox.'; }
-} // FIXED: ADDED CLOSING BRACE
+}
 
 async function deliveryLogin(){
   const errorEl = document.getElementById('d_error');
@@ -333,7 +337,7 @@ async function deliveryLogin(){
     errorEl.innerText = "Error: " + err.message;
     btn.disabled = false;
   }
-} // FIXED: ADDED CLOSING BRACE
+}
 
 window.addEventListener('load', () => { if(window.location.hash === '#login'){ showDeliveryLogin(); } });
 </script>
