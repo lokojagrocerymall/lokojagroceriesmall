@@ -110,7 +110,7 @@ const saved = localStorage.getItem('lgm_user');
 curUser = saved? JSON.parse(saved) : null;
 if(!curUser || String(curUser.role).toLowerCase().trim()!== 'vendor'){
   alert('Access Denied. Please login as Vendor');
-  location.href='/'; // FIXED: Go to homepage instead of login.html
+  location.href='/'; 
 }
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 2 HOURS LOCKED
@@ -124,7 +124,7 @@ function setTab(name){
   if(name==='products') loadProducts();
   if(name==='wallet') loadWallet();
 }
-function logout(){ localStorage.removeItem('lgm_user'); window.location.href='/'; } // FIXED
+function logout(){ localStorage.removeItem('lgm_user'); window.location.href='/'; }
 
 // NEW TIMER FUNCTION FOR VENDOR
 function formatVendorCountdown(startTime){
@@ -143,10 +143,10 @@ function formatVendorCountdown(startTime){
 }
 
 async function init(){
-  document.getElementById('vName').innerText="Welcome, "+curUser.name;
+  document.getElementById('vName').innerText="Welcome, "+ (curUser.full_name || curUser.name || curUser.email.split('@')[0]); // FIX: NO MORE UNDEFINED
   document.getElementById('vEmail').innerText=curUser.email;
   document.getElementById('vBadge').innerText=curUser.is_approved? "✅ Approved Vendor • You keep 90%" : "⏳ Pending Approval";
-  document.getElementById('profName').value=curUser.name;
+  document.getElementById('profName').value=curUser.full_name || curUser.name;
   document.getElementById('profEmail').value=curUser.email;
   loadProducts(); loadOrders(); loadWallet();
 }
@@ -182,7 +182,7 @@ async function addProduct(){
   const name=document.getElementById('pName').value;
   const price=document.getElementById('pPrice').value;
   if(!name ||!price) return alert('Fill name and price');
-  await supabaseClient.from('products').insert({name, price, stock:document.getElementById('pStock').value, category:document.getElementById('pCategory').value, vendor_email:curUser.email, image_url});
+  await supabaseClient.from('products').insert({name, price, stock:document.getElementById('pStock').value, category:document.getElementById('pCategory').value, vendor_email:curUser.email, image_url}); // FIX: SAVE vendor_email
   alert('Product Added!');
   ['pName','pPrice','pStock','pImage'].forEach(id=>document.getElementById(id).value='');
   loadProducts();
@@ -202,13 +202,23 @@ async function deleteProduct(id, name){
   loadProducts();
 }
 
+// FIX 1: LOAD ORDERS BY SEARCHING INSIDE ITEMS JSONB
 async function loadOrders(){
- const {data} = await supabaseClient.from('orders').select('*').order('created_at',{ascending:false});
- allOrders = data.filter(o=> (o.vendor_email||'').toLowerCase()===curUser.email.toLowerCase());
+ const {data} = await supabaseClient.from('orders').select('*').eq('status','paid').contains('items', [{"vendor_email": curUser.email}]).order('created_at',{ascending:false});
+ 
+ // Filter only items that belong to this vendor
+ allOrders = (data||[]).map(o=>{
+   return {...o, items: (o.items||[]).filter(i=>i.vendor_email === curUser.email)}
+ }).filter(o=>o.items.length > 0);
 
- let h=""; allOrders.forEach(o=>{
+ let h=""; 
+ if(allOrders.length === 0) h = '<p>📭 No orders yet.</p>';
+ else allOrders.forEach(o=>{
    let status = o.status||'paid';
+   let myTotal = o.items.reduce((s,i)=>s + i.price*i.qty, 0);
+   let myCut = Math.round(myTotal * 0.9);
    let vendorBtn = ''; let countdown = '';
+   
    if(status === 'paid'){
      vendorBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_phone}')" style="background:#2563eb;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">🚚 Start Delivery - 2hr Timer</button>`;
    }
@@ -216,20 +226,26 @@ async function loadOrders(){
      let end = new Date(o.delivery_started_at).getTime() + TWO_HOURS_MS;
      let left = end - new Date().getTime();
      if(left <= 0){ markFailed(o.id); }
-     else {
-       countdown = formatVendorCountdown(o.delivery_started_at);
-     }
+     else { countdown = formatVendorCountdown(o.delivery_started_at); }
    }
    if(status === 'failed_delivery'){
      vendorBtn = `<button disabled style="background:#d1d5db;color:#6b7280;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">❌ Delivery Failed</button>`;
    }
-   h+=`<div class='card'><div style="display:flex;justify-content:space-between"><b>Order #${o.id}</b><span class="status status-${status}">${status.replace('_',' ')}</span></div>
-   ₦${Number(o.total||0).toLocaleString()}<br><span class='small'>${o.customer_name} • ${o.customer_phone}<br>${o.customer_address}</span>${countdown}${vendorBtn}</div>`;
+   
+   h+=`<div class='card'>
+     <div style="display:flex;justify-content:space-between"><b>Order ${o.tx_ref}</b><span class="status status-${status}">${status.replace('_',' ')}</span></div>
+     <div class="small">Customer: ${o.customer_name} • ${o.customer_phone}</div>
+     <div class="small">Address: ${o.customer_address}</div>
+     <div style="margin-top:8px"><b>Your Items:</b> ${o.items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
+     <div style="margin-top:4px"><b>Your Cut 90%:</b> <span class="text-green-600 font-bold">₦${myCut.toLocaleString()}</span></div>
+     ${countdown}${vendorBtn}
+   </div>`;
  });
- document.getElementById('ordersList').innerHTML=h || '<p>📭 No orders yet.</p>';
+ 
+ document.getElementById('ordersList').innerHTML=h;
  document.getElementById('oCount').innerText=allOrders.length;
 
- let totalEarnings=0; allOrders.filter(o=>o.status!=='failed_delivery').forEach(o=> totalEarnings += Number(o.total||0)*0.9);
+ let totalEarnings=0; allOrders.forEach(o=> totalEarnings += o.items.reduce((s,i)=>s + i.price*i.qty, 0)*0.9);
  document.getElementById('wallet').innerText='₦'+Math.round(totalEarnings).toLocaleString();
  document.getElementById('walletBig').innerText='₦'+Math.round(totalEarnings).toLocaleString();
 
@@ -237,8 +253,8 @@ async function loadOrders(){
  const startWeek=new Date(now); startWeek.setDate(now.getDate()-7);
  const startMonth=new Date(now); startMonth.setDate(1); startMonth.setHours(0,0,0,0);
  let t=0,w=0,m=0;
- allOrders.filter(o=>o.status!=='failed_delivery').forEach(o=>{
-   const d=new Date(o.created_at); const earn=Number(o.total||0)*0.9;
+ allOrders.forEach(o=>{
+   const d=new Date(o.created_at); const earn= o.items.reduce((s,i)=>s + i.price*i.qty, 0)*0.9;
    if(d>=startDay) t+=earn;
    if(d>=startWeek) w+=earn;
    if(d>=startMonth) m+=earn;
@@ -257,7 +273,7 @@ async function markFailed(id){
 }
 function sendWhatsApp(phone, orderId){
   if(!phone) return;
-  let msg = `Hi! Your LGM Order #${orderId} is On The Way 🚚 Delivery within 2 hours from ${curUser.name}.`;
+  let msg = `Hi! Your LGM Order #${orderId} is On The Way 🚚 Delivery within 2 hours from ${curUser.full_name || curUser.name}.`;
   let formattedPhone = phone.startsWith('0')? '234' + phone.slice(1) : phone;
   window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
@@ -279,8 +295,13 @@ async function requestWithdrawal(){
   document.getElementById('wAmount').value=''; loadWallet();
 }
 
-function saveProfile(){ alert('Profile Updated!') }
-setInterval(loadOrders, 1000); // REFRESH EVERY 1 SECOND FOR LIVE TIMER
+async function saveProfile(){ 
+  await supabaseClient.from('users').update({full_name: document.getElementById('profName').value}).eq('email', curUser.email);
+  curUser.full_name = document.getElementById('profName').value;
+  localStorage.setItem('lgm_user', JSON.stringify(curUser));
+  alert('Profile Updated!'); init();
+}
+setInterval(loadOrders, 5000); // REFRESH EVERY 5 SECONDS
 </script>
 </body>
 </html>
