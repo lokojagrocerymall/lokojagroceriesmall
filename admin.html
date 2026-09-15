@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Lokoja Grocery Mall</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100">
+<header class="bg-white p-4 flex justify-between items-center shadow sticky top-0">
+  <b class="text-green-700">Admin Dashboard</b>
+  <button onclick="localStorage.removeItem('lgm_user'); location.href='login.html';" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Logout</button>
+</header>
+
+<div class="p-4 max-w-5xl mx-auto">
+  <div class="grid grid-cols-3 gap-3 mb-4">
+    <div class="bg-white p-3 rounded-xl shadow text-center">
+      <div class="text-xs text-gray-400">Gross Sales</div>
+      <div class="text-xl font-black" id="sales">₦0</div>
+    </div>
+    <div class="bg-white p-3 rounded-xl shadow text-center">
+      <div class="text-xs text-gray-400">Platform Income</div>
+      <div class="text-xl font-black text-green-600" id="income">₦0</div>
+    </div>
+    <div class="bg-white p-3 rounded-xl shadow text-center">
+      <div class="text-xs text-gray-400">Pending</div>
+      <div class="text-xl font-black text-orange-600" id="pendingCount">0</div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow">
+    <div class="flex border-b">
+      <button onclick="showTab('pending')" id="btnP" class="flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600">Pending (<span id="cP">0</span>)</button>
+      <button onclick="showTab('vendors')" id="btnV" class="flex-1 p-3 font-bold text-gray-400">Vendors (<span id="cV">0</span>)</button>
+      <button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-gray-400">Orders (<span id="cO">0</span>)</button>
+    </div>
+    <div id="list" class="p-4 text-sm">Loading...</div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let users=[], orders=[], tab='pending';
+let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
+if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='login.html'; }
+
+async function load(){
+  const {data:u} = await supabaseClient.from('users').select('*');
+  users = u||[];
+  const {data:o} = await supabaseClient.from('orders').select('*');
+  orders = o||[];
+
+  let vendors = users.filter(x=>x.role==='vendor');
+  let pending = vendors.filter(x=>x.is_approved===false || x.is_approved===null);
+
+  document.getElementById('cP').innerText = pending.length;
+  document.getElementById('cV').innerText = vendors.length;
+  document.getElementById('cO').innerText = orders.length;
+  document.getElementById('pendingCount').innerText = pending.length;
+
+  let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
+  document.getElementById('sales').innerText = '₦'+Math.round(gross).toLocaleString();
+  document.getElementById('income').innerText = '₦'+Math.round(gross*0.15).toLocaleString();
+
+  render();
+}
+
+function render(){
+  let data=[];
+  if(tab==='pending') data = users.filter(x=>x.role==='vendor' && (x.is_approved===false || x.is_approved===null));
+  if(tab==='vendors') data = users.filter(x=>x.role==='vendor');
+  if(tab==='orders') data = orders;
+
+  if(data.length===0){ document.getElementById('list').innerHTML = `<div class="text-center text-gray-400 py-10">No ${tab} yet</div>`; return; }
+
+  let html='';
+  if(tab==='pending' || tab==='vendors'){
+    data.forEach(u=>{
+      html += `<div class="border rounded-lg p-3 mb-2">
+        <div class="font-bold">${u.full_name}</div>
+        <div class="text-xs text-gray-500">${u.email} • ${u.phone} • ${u.location}</div>
+        <div class="text-xs mt-1">Status: ${u.is_approved?'Approved':'Pending'}</div>
+        ${!u.is_approved?`<button onclick="approve('${u.email}')" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
+      </div>`;
+    });
+  }
+  if(tab==='orders'){
+    data.forEach(o=>{
+      html += `<div class="border rounded-lg p-3 mb-2">
+        <div class="font-bold">Order #${o.id}</div>
+        <div class="text-xs">Customer: ${o.customer_email}</div>
+        <div class="text-xs">Total: ₦${Number(o.total||0).toLocaleString()} | Status: ${o.status}</div>
+      </div>`;
+    });
+  }
+  document.getElementById('list').innerHTML = html;
+}
+
+function showTab(t){
+  tab=t;
+  ['btnP','btnV','btnO'].forEach(id=>document.getElementById(id).classList.remove('text-green-600','border-b-2','border-green-600'));
+  ['btnP','btnV','btnO'].forEach(id=>document.getElementById(id).classList.add('text-gray-400'));
+  document.getElementById('btn'+t[0].toUpperCase()+t.slice(1,2)).classList.add('text-green-600','border-b-2','border-green-600');
+  render();
+}
+
+async function approve(email){
+  await supabaseClient.from('users').update({is_approved:true}).eq('email',email);
+  alert('Vendor Approved!');
+  load();
+}
+
+load(); setInterval(load,5000);
+</script>
+</body>
+</html>
