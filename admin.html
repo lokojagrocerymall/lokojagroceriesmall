@@ -52,7 +52,7 @@ body{background:#f3f4f6;font-family:system-ui}
 
   <div class="bg-white rounded-2xl shadow overflow-hidden">
     <div class="flex gap-4 p-4 border-b text-sm font-bold overflow-x-auto">
-      <button onclick="showTab('new')" id="tabN" class="tab-btn text-red-600 border-b-2 border-red-600 pb-1">🔔 New Orders (<span id="cN">0</span>)</button>
+      <button onclick="showTab('new')" id="tabN" class="tab-btn text-gray-400">🔔 New Orders (<span id="cN">0</span>)</button>
       <button onclick="showTab('active')" id="tabA" class="tab-btn text-gray-400">🚚 Active (<span id="cA">0</span>)</button>
       <button onclick="showTab('orders')" id="tabO" class="tab-btn text-gray-400">All Orders (<span id="cO">0</span>)</button>
       <button onclick="showTab('vendors')" id="tabV" class="tab-btn text-gray-400">Vendors (<span id="cV">0</span>)</button>
@@ -69,7 +69,7 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let allUsers=[]; let allOrders=[]; let curTab='new'; let countdownInterval;
+let allUsers=[]; let allOrders=[]; let curTab='pending'; let countdownInterval; // CHANGED TO PENDING
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ location.href='login.html'; }
 
@@ -271,7 +271,7 @@ function showTab(t){
 }
 
 async function approve(email){ const { error } = await supabaseClient.from('users').update({is_approved:true}).eq('email',email); if(error) alert(error.message); else { alert('Vendor Approved!'); loadAll(); } }
-async function approveDelivery(email){ const { error } = await supabaseClient.from('users').update({is_approved:true}).eq('email',email); if(error) alert(error.message); else { alert('Delivery Agent Approved!'); loadAll(); } }
+async function approveDelivery(email){ const { error } = await supabaseClient.from('users').update({is_approved:true}).eq('email',email); if(error) alert(error.message); else { alert('Delivery Agent Approved!'); loadAll(); }
 async function removeUser(email){ if(!confirm('Delete this user?')) return; await supabaseClient.from('users').delete().eq('email',email); loadAll(); }
 async function markFailed(id){ const order = allOrders.find(o=>o.id===id); if(order && order.status!== 'failed_delivery' && order.status!== 'delivered'){ await supabaseClient.from('orders').update({status:'failed_delivery'}).eq('id',id); loadAll(); } }
 function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
