@@ -1,7 +1,13 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Delivery Dashboard</title><script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @keyframes pulse-red {0%,100%{background:#fee2e2;border-color:#ef4444}50%{background:#fecaca;border-color:#dc2626}}
+ .alert-card{animation:pulse-red 1s infinite;border:2px solid #ef4444!important}
+ .badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900}
+</style>
+</head>
 <body class="bg-gray-100">
 <header class="bg-white p-4 shadow flex justify-between items-center sticky top-0 z-10">
   <b class="text-green-700">🚚 Delivery Dashboard</b>
@@ -15,7 +21,7 @@
 
   <div id="riderStats"></div>
 
-  <h2 class="font-bold mb-3">Available Orders + My Active Deliveries</h2>
+  <h2 class="font-bold mb-3">Available Orders + My Active Deliveries <span id="orderBadge"></span></h2>
   <div id="orders" class="mb-6">Loading...</div>
 
   <h2 class="font-bold mb-3 text-gray-600">Completed Deliveries - Last 7 Days</h2>
@@ -37,6 +43,7 @@ document.getElementById('email').innerText = curUser.email;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 let isCalling = false;
 let ordersCache = [];
+let lastAvailableCount = 0;
 
 function formatCountdown(startTime){
   if(!startTime) return '';
@@ -54,13 +61,18 @@ function formatPickedUpTime(startTime){
   return new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
 }
 
+function triggerAlert(msg){
+  new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
+  if(navigator.vibrate) navigator.vibrate([200,100,200]);
+}
+
 async function loadRiderStats(){
   try{
     const {data} = await supabaseClient.from('orders')
-   .select('customer_rating')
-   .eq('delivery_agent_email', curUser.email)
-   .eq('status', 'delivered')
-   .not('customer_rating', 'is', null);
+  .select('customer_rating')
+  .eq('delivery_agent_email', curUser.email)
+  .eq('status', 'delivered')
+  .not('customer_rating', 'is', null);
     const ratings = data?.map(d=>d.customer_rating) || [];
     const avg = ratings.length > 0? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '0';
     document.getElementById('riderStats').innerHTML = `
@@ -77,18 +89,25 @@ async function fetchOrders(){
   try{
     // RULE 1: AVAILABLE ORDERS = MUST BE PAID AND payment_status=true AND no agent picked yet
     const { data:availableOrders } = await supabaseClient.from('orders')
-   .select('*')
-   .eq('status','paid')
-   .eq('payment_status', true) // CRITICAL FIX: ONLY PAID ORDERS
-   .is('delivery_agent_email', null)
-   .order('created_at',{ascending:false});
+  .select('*')
+  .eq('status','paid')
+  .eq('payment_status', true) // CRITICAL FIX: ONLY PAID ORDERS
+  .is('delivery_agent_email', null)
+  .order('created_at',{ascending:false});
+
+    // TRIGGER ALERT FOR NEW AVAILABLE ORDERS
+    if(availableOrders.length > lastAvailableCount && lastAvailableCount!== 0){
+      triggerAlert(`🚨 New Order #${availableOrders[0].id} is Available!`);
+    }
+    lastAvailableCount = availableOrders.length;
+    document.getElementById('orderBadge').innerHTML = availableOrders.length > 0? `<span class="badge">${availableOrders.length}</span>` : '';
 
     // RULE 2: MY ACTIVE ORDERS = status=on the way AND assigned to ME
     const { data:myActive } = await supabaseClient.from('orders')
-   .select('*')
-   .eq('status','on the way')
-   .eq('delivery_agent_email', curUser.email)
-   .order('created_at',{ascending:false});
+  .select('*')
+  .eq('status','on the way')
+  .eq('delivery_agent_email', curUser.email)
+  .order('created_at',{ascending:false});
 
     const orderMap = new Map();
     [...(availableOrders||[]),...(myActive||[])].forEach(o => orderMap.set(o.id, o));
@@ -106,7 +125,7 @@ function renderOrders(){
     const addr = o.customer_address || o.address || 'N/A';
     // CASE 1: AVAILABLE ORDER - ANY AGENT CAN PICK
     if(o.status === 'paid' &&!o.delivery_agent_email){
-      return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-green-400">
+      return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-green-400 alert-card">
         <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
         <div class="mt-2 p-2 bg-gray-50 rounded-lg">
           <p class="text-sm font-bold">👤 ${o.customer_name}</p>
@@ -146,11 +165,11 @@ async function loadCompleted(){
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const { data:completed } = await supabaseClient.from('orders')
-   .select('*')
-   .eq('status','delivered')
-   .eq('delivery_agent_email', curUser.email)
-   .gte('delivered_at', sevenDaysAgo.toISOString())
-   .order('delivered_at',{ascending:false});
+  .select('*')
+  .eq('status','delivered')
+  .eq('delivery_agent_email', curUser.email)
+  .gte('delivered_at', sevenDaysAgo.toISOString())
+  .order('delivered_at',{ascending:false});
     if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }
     else {
       document.getElementById('completed').innerHTML = completed.map(o=>{
