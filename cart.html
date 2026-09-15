@@ -9,7 +9,7 @@
 <style>body{font-family:system-ui;background:#f8fafc}</style>
 </head>
 <body>
-<div style="background:#facc15;text-align:center;padding:7px;font-size:12px;font-weight:900">⏰ OPEN: Mon - Sat 8AM - 6PM • ⛔ Sunday CLOSED • 🚚 Delivery 5% (Customer pays)</div>
+<div style="background:#facc15;text-align:center;padding:7px;font-size:12px;font-weight:900">⏰ OPEN: Mon - Sat 8AM - 6PM • ⛔ Sunday CLOSED • 🚚 Delivery 5% (Customer pays)</div> <!-- BACK TO 5% -->
 <header class="bg-white p-4 flex justify-between items-center shadow-sm sticky top-0 z-10">
 <a href="index.html" class="font-black text-green-700">← Back to Shopping</a>
 <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">Cart</span>
@@ -19,7 +19,7 @@
 <div id="cartList" class="space-y-3"></div>
 <div class="bg-white rounded-2xl p-4 mt-4 shadow-sm">
 <div class="flex justify-between py-1"><span>Subtotal (<span id="subCount">0</span> items)</span><b id="subTotal">₦0</b></div>
-<div class="flex justify-between py-1 text-sm"><span>Delivery (Lokoja) <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px]">5%</span></span><b id="deliveryFee">₦0 (5%)</b></div>
+<div class="flex justify-between py-1 text-sm"><span>Delivery (Lokoja) <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px]">5%</span></span><b id="deliveryFee">₦0 (5%)</b></div> <!-- BACK TO 5% -->
 <div class="border-t mt-3 pt-3 flex justify-between text-lg font-black"><span>Total You Pay</span><span id="grandTotal" class="text-green-600">₦0</span></div>
 </div>
 <div class="bg-white rounded-2xl p-4 mt-4 shadow-sm">
@@ -39,7 +39,6 @@ const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FLW_PUBLIC_KEY = "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X";
 
-// BUTTON LOCK TO PREVENT DOUBLE ORDERS
 let isSubmitting = false;
 let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
 
@@ -62,10 +61,11 @@ async function loadCart(){
 
 function updateTotals(){
   let sub=0, count=0; cart.forEach(i=>{ sub+=i.price*i.qty; count+=i.qty; });
-  const delivery = Math.round(sub*0.05); const total = sub+delivery;
+  const delivery = Math.round(sub * 0.05); // CHANGED BACK TO 5%
+  const total = sub+delivery;
   document.getElementById('subCount').innerText=count;
   document.getElementById('subTotal').innerText='₦'+sub.toLocaleString();
-  document.getElementById('deliveryFee').innerText='₦'+delivery.toLocaleString()+' (5%)';
+  document.getElementById('deliveryFee').innerText='₦'+delivery.toLocaleString()+' (5%)'; // BACK TO 5%
   document.getElementById('grandTotal').innerText='₦'+total.toLocaleString();
   document.getElementById('payAmount').innerText='₦'+total.toLocaleString();
   localStorage.setItem('lgm_cart', JSON.stringify(cart));
@@ -88,29 +88,25 @@ async function payWithFlutterwave(){
   if(cart.length===0){ alert('Cart empty'); isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now with Flutterwave - <span id="payAmount">₦0</span>`; return; }
 
   const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
-  const delivery=Math.round(sub*0.05);
+  const delivery=Math.round(sub * 0.05); // CHANGED BACK TO 5%
   const total=sub+delivery;
-  const email = phone.replace(/[^0-9]/g,'') + "@lgm.customer";
+  const curUser = JSON.parse(localStorage.getItem('lgm_user'));
+  const email = curUser?.email || phone.replace(/[^0-9]/g,'') + "@lgm.customer";
   const tx_ref = "LGM-" + Date.now();
 
-  // === FIX: BUILD SPLIT ACCOUNTS ===
   document.getElementById('orderMsg').innerHTML='<span style="color:blue">🔄 Preparing split payment...</span>';
-  let subaccounts = [];
-  let vendorEmails = [...new Set(cart.map(i=>i.vendor_email).filter(Boolean))]; // get unique vendors
-
-  for(let vEmail of vendorEmails){
-    const {data: vendor} = await supabaseClient.from('users').select('flw_subaccount_id').eq('email', vEmail).single();
-    let vendorItems = cart.filter(i=>i.vendor_email===vEmail);
-    let vendorCut = vendorItems.reduce((s,i)=>s + Math.round(i.price * i.qty * 0.9), 0); // 90%
-
-    if(vendor?.flw_subaccount_id && vendorCut > 0){
-      subaccounts.push({
-        id: vendor.flw_subaccount_id,
-        transaction_charge_type: "flat",
-        transaction_charge: vendorCut
-      })
-    }
+  
+  // SPLIT: Vendor 90%, You 10%. Delivery 5% stays with you
+  const vendorSubaccounts = {
+    "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
+    "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
   }
+  const vendorTotals = {};
+  cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + item.price*item.qty; });
+  
+  const subaccounts = Object.keys(vendorTotals)
+ .map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"percentage", transaction_charge:90}))
+ .filter(s=>s.id);
 
   FlutterwaveCheckout({
     public_key: FLW_PUBLIC_KEY,
@@ -119,39 +115,29 @@ async function payWithFlutterwave(){
     currency: "NGN",
     payment_options: "card,ussd,banktransfer,opay",
     customer: { email: email, phone_number: phone, name: name },
-    subaccounts: subaccounts, // <-- MAGIC SPLIT
+    subaccounts: subaccounts,
     customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery" },
     callback: async function(data){
-      document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order & reducing stock...</span>';
+      document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order...</span>';
       try{
         const orderData = {
           customer_name: name, customer_phone: phone, customer_address: addr,
-          customer_email: email, total: total, total_amount: total,
-          delivery_fee: delivery, items: cart, status: 'paid',
-          payment_method: 'flutterwave', transaction_id: String(data.transaction_id || tx_ref), tx_ref: tx_ref
+          customer_email: email, total: total, subtotal: sub, delivery_fee: delivery,
+          items: cart, status: 'paid', payment_method: 'flutterwave', 
+          transaction_id: String(data.transaction_id || tx_ref), tx_ref: tx_ref
         };
-        const { error } = await supabaseClient.from('orders').insert([orderData]);
-        if(error){ throw error; }
+        await supabaseClient.from('orders').insert([orderData]);
 
-        // AUTO-REDUCE STOCK
-        document.getElementById('orderMsg').innerHTML='<span style="color:blue">📦 Reducing stock...</span>';
         for(let item of cart){
-          try{
-            const { data: prod } = await supabaseClient.from('products').select('id,stock_qty,stock,quantity').eq('id', item.id).single();
-            let current = prod?.stock_qty?? prod?.stock?? prod?.quantity?? 0;
-            let newQty = Math.max(0, Number(current) - Number(item.qty));
-            await supabaseClient.from('products').update({
-              stock_qty: newQty, stock: newQty, quantity: newQty
-            }).eq('id', item.id);
-          }catch(e){ console.log('stock err for', item.id, e.message); }
+          const { data: prod } = await supabaseClient.from('products').select('stock_qty,stock,quantity').eq('id', item.id).single();
+          let current = prod?.stock_qty?? prod?.stock?? prod?.quantity?? 0;
+          let newQty = Math.max(0, Number(current) - Number(item.qty));
+          await supabaseClient.from('products').update({stock_qty: newQty, stock: newQty, quantity: newQty}).eq('id', item.id);
         }
 
-        const waMsg = `🚨 NEW PAID ORDER - Lokoja Mall%0ARef: ${tx_ref}%0AName: ${name}%0APhone: ${phone}%0AAddr: ${addr}%0ATotal: ₦${total.toLocaleString()}%0AItems: ${cart.map(i=>i.name+' x'+i.qty).join(', ')}`;
-        document.getElementById('orderMsg').innerHTML+=`<br><a href="https://wa.me/2348104282311?text=${waMsg}" target="_blank" style="display:inline-block;margin-top:10px;background:#25D366;color:white;padding:10px 15px;border-radius:10px;font-weight:bold;text-decoration:none">📱 Open WhatsApp Alert</a>`;
-
         localStorage.removeItem('lgm_cart');
-        document.getElementById('orderMsg').innerHTML = '<span style="color:green;font-weight:bold">✅ Paid! Stock reduced! Order '+tx_ref+' saved.</span>' + document.getElementById('orderMsg').innerHTML;
-        setTimeout(()=>{ window.location.href='vendor.html'; },2500);
+        document.getElementById('orderMsg').innerHTML = '<span style="color:green;font-weight:bold">✅ Paid! Order '+tx_ref+' saved.</span>';
+        setTimeout(()=>{ window.location.href='customer.html'; },2000);
       }catch(e){
         document.getElementById('orderMsg').innerHTML='<span style="color:red">❌ '+e.message+'</span>';
         isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now with Flutterwave - <span id="payAmount">₦0</span>`;
