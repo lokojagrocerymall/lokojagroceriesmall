@@ -2,40 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Lokoja Grocery Mall</title>
+<title>Admin Debug</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-gray-100">
-<header class="bg-white p-4 flex justify-between items-center shadow sticky top-0">
-  <b class="text-green-700">Admin Dashboard</b>
-  <button onclick="localStorage.removeItem('lgm_user'); location.href='login.html';" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Logout</button>
-</header>
-
-<div class="p-4 max-w-5xl mx-auto">
-  <div class="grid grid-cols-3 gap-3 mb-4">
-    <div class="bg-white p-3 rounded-xl shadow text-center">
-      <div class="text-xs text-gray-400">Gross Sales</div>
-      <div class="text-xl font-black" id="sales">₦0</div>
-    </div>
-    <div class="bg-white p-3 rounded-xl shadow text-center">
-      <div class="text-xs text-gray-400">Platform Income</div>
-      <div class="text-xl font-black text-green-600" id="income">₦0</div>
-    </div>
-    <div class="bg-white p-3 rounded-xl shadow text-center">
-      <div class="text-xs text-gray-400">Pending</div>
-      <div class="text-xl font-black text-orange-600" id="pendingCount">0</div>
-    </div>
-  </div>
-
-  <div class="bg-white rounded-xl shadow">
-    <div class="flex border-b">
-      <button onclick="showTab('pending')" id="btnP" class="flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600">Pending (<span id="cP">0</span>)</button>
-      <button onclick="showTab('vendors')" id="btnV" class="flex-1 p-3 font-bold text-gray-400">Vendors (<span id="cV">0</span>)</button>
-      <button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-gray-400">Orders (<span id="cO">0</span>)</button>
-    </div>
-    <div id="list" class="p-4 text-sm">Loading...</div>
-  </div>
+<body class="bg-gray-100 p-4">
+<div class="max-w-4xl mx-auto bg-white p-4 rounded-xl shadow">
+  <h1 class="font-bold text-xl mb-3">Admin Debug</h1>
+  <div id="status" class="bg-yellow-100 p-3 rounded text-xs">Starting...</div>
+  <pre id="data" class="bg-gray-900 text-green-400 p-3 rounded mt-3 text-[10px] overflow-x-auto"></pre>
 </div>
 
 <script>
@@ -43,38 +18,28 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let users=[], orders=[], tab='pending';
-let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
-if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='login.html'; }
+async function test(){
+  try{
+    document.getElementById('status').innerText = '1. Connecting to Supabase...';
+    
+    const {data:u, error:uErr} = await supabaseClient.from('users').select('*');
+    if(uErr) throw uErr;
+    document.getElementById('status').innerText = `2. Got ${u.length} users`;
+    
+    const {data:o, error:oErr} = await supabaseClient.from('orders').select('*');
+    if(oErr) throw oErr;
+    document.getElementById('status').innerText = `3. Got ${o.length} orders. Done!`;
 
-async function load(){
-  const {data:u} = await supabaseClient.from('users').select('*');
-  users = u||[];
-  const {data:o} = await supabaseClient.from('orders').select('*');
-  orders = o||[];
+    document.getElementById('data').innerText = 
+      "USERS:\n" + JSON.stringify(u,null,2) + 
+      "\n\nORDERS:\n" + JSON.stringify(o,null,2);
 
-  let vendors = users.filter(x=>x.role==='vendor');
-  let pending = vendors.filter(x=>x.is_approved===false || x.is_approved===null);
-
-  document.getElementById('cP').innerText = pending.length;
-  document.getElementById('cV').innerText = vendors.length;
-  document.getElementById('cO').innerText = orders.length;
-  document.getElementById('pendingCount').innerText = pending.length;
-
-  let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
-  document.getElementById('sales').innerText = '₦'+Math.round(gross).toLocaleString();
-  document.getElementById('income').innerText = '₦'+Math.round(gross*0.15).toLocaleString();
-
-  render();
+  }catch(e){
+    document.getElementById('status').innerText = 'ERROR: ' + e.message;
+    document.getElementById('status').className = 'bg-red-200 p-3 rounded text-xs';
+  }
 }
-
-function render(){
-  let data=[];
-  if(tab==='pending') data = users.filter(x=>x.role==='vendor' && (x.is_approved===false || x.is_approved===null));
-  if(tab==='vendors') data = users.filter(x=>x.role==='vendor');
-  if(tab==='orders') data = orders;
-
-  if(data.length===0){ document.getElementById('list').innerHTML = `<div class="text-center text-gray-400 py-10">No ${tab} yet</div>`; return; }
-
-  let html='';
-  if(tab==='pending' ||
+test();
+</script>
+</body>
+</html>
