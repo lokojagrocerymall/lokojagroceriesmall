@@ -9,7 +9,7 @@
 <body class="bg-gray-100">
 <header class="bg-white p-4 flex justify-between items-center shadow sticky top-0">
   <b class="text-green-700">Admin Dashboard</b>
-  <button onclick="localStorage.removeItem('lgm_user'); location.href='login.html';" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Logout</button>
+  <button onclick="localStorage.removeItem('lgm_user'); location.href='/';" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Logout</button>
 </header>
 
 <div class="p-4 max-w-5xl mx-auto">
@@ -29,9 +29,10 @@
   </div>
 
   <div class="bg-white rounded-xl shadow">
-    <div class="flex border-b">
+    <div class="flex border-b overflow-x-auto">
       <button onclick="showTab('pending')" id="btnP" class="flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600">Pending (<span id="cP">0</span>)</button>
       <button onclick="showTab('vendors')" id="btnV" class="flex-1 p-3 font-bold text-gray-400">Vendors (<span id="cV">0</span>)</button>
+      <button onclick="showTab('agents')" id="btnA" class="flex-1 p-3 font-bold text-gray-400">Agents (<span id="cA">0</span>)</button> <!-- NEW -->
       <button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-gray-400">Orders (<span id="cO">0</span>)</button>
     </div>
     <div id="list" class="p-4 text-sm">Loading...</div>
@@ -45,7 +46,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let users=[], orders=[], tab='pending';
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
-if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='login.html'; }
+if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='/'; } // FIXED
 
 async function load(){
   document.getElementById('list').innerHTML = 'Loading...';
@@ -59,12 +60,16 @@ async function load(){
     orders = o||[];
 
     let vendors = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor');
-    let pending = vendors.filter(x=>x.is_approved===false || x.is_approved===null);
+    let agents = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
+    let pendingV = vendors.filter(x=>x.is_approved===false || x.is_approved===null);
+    let pendingA = agents.filter(x=>x.is_approved===false || x.is_approved===null);
+    let totalPending = pendingV.length + pendingA.length;
 
-    document.getElementById('cP').innerText = pending.length;
+    document.getElementById('cP').innerText = totalPending;
     document.getElementById('cV').innerText = vendors.length;
+    document.getElementById('cA').innerText = agents.length;
     document.getElementById('cO').innerText = orders.length;
-    document.getElementById('pendingCount').innerText = pending.length;
+    document.getElementById('pendingCount').innerText = totalPending;
 
     let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
     document.getElementById('sales').innerText = '₦'+Math.round(gross).toLocaleString();
@@ -77,19 +82,21 @@ async function load(){
 
 function render(){
   let data=[];
-  if(tab==='pending') data = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor' && (x.is_approved===false || x.is_approved===null));
+  if(tab==='pending') data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' || String(x.role).toLowerCase().trim()==='delivery_agent') && (x.is_approved===false || x.is_approved===null));
   if(tab==='vendors') data = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor');
+  if(tab==='agents') data = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent'); // NEW
   if(tab==='orders') data = orders;
 
   if(data.length===0){ document.getElementById('list').innerHTML = `<div class="text-center text-gray-400 py-10">No ${tab} yet</div>`; return; }
 
   let html='';
-  if(tab==='pending' || tab==='vendors'){
+  if(tab==='pending' || tab==='vendors' || tab==='agents'){
     data.forEach(u=>{
+      let roleBadge = String(u.role).toLowerCase().trim()==='delivery_agent' ? `<span class="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px]">AGENT</span>` : `<span class="bg-green-500 text-white px-2 py-0.5 rounded text-[10px]">VENDOR</span>`;
       html += `<div class="border rounded-lg p-3 mb-2">
-        <div class="font-bold">${u.full_name}</div>
+        <div class="font-bold">${u.full_name} ${roleBadge}</div>
         <div class="text-xs text-gray-500">${u.email} • ${u.phone} • ${u.location}</div>
-        <div class="text-xs mt-1">role: "${u.role}" | Approved: ${u.is_approved}</div>
+        <div class="text-xs mt-1">Approved: ${u.is_approved}</div>
         ${!u.is_approved?`<button onclick="approve('${u.email}')" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
       </div>`;
     });
@@ -110,16 +117,18 @@ function showTab(t){
   tab=t;
   document.getElementById('btnP').className = 'flex-1 p-3 font-bold text-gray-400';
   document.getElementById('btnV').className = 'flex-1 p-3 font-bold text-gray-400';
+  document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-gray-400'; // NEW
   document.getElementById('btnO').className = 'flex-1 p-3 font-bold text-gray-400';
   if(t==='pending') document.getElementById('btnP').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
   if(t==='vendors') document.getElementById('btnV').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
+  if(t==='agents') document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600'; // NEW
   if(t==='orders') document.getElementById('btnO').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
   render();
 }
 
 async function approve(email){
   await supabaseClient.from('users').update({is_approved:true}).eq('email',email);
-  alert('Vendor Approved!');
+  alert('Approved!');
   load();
 }
 
