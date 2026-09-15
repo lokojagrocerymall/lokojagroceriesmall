@@ -16,6 +16,12 @@
 .wallet{background:#16a34a;color:#fff}
 .tabs{display:flex;gap:18px;border-bottom:1px solid #e5e7eb;margin:14px 0;font-weight:700;font-size:14px;overflow-x:auto}
 .tab{padding-bottom:8px;color:#9ca3af;cursor:pointer;white-space:nowrap}.active{color:#16a34a;border-bottom:3px solid #16a34a}
+
+/* NEW ALERT CSS */
+@keyframes pulse-red {0%,100%{background:#fee2e2;border-color:#ef4444}50%{background:#fecaca;border-color:#dc2626}}
+.alert-tab{animation:pulse-red 1s infinite;border:2px solid #ef4444!important;border-radius:8px}
+.badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900}
+
 input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
 .btn{width:100%;background:#16a34a;color:#fff;padding:14px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
 .btn-sm{padding:8px 12px;border-radius:8px;border:0;font-weight:700;font-size:12px;cursor:pointer;margin-right:6px}
@@ -103,7 +109,7 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let curUser=null; let allOrders=[]; let allProducts=[];
+let curUser=null; let allOrders=[]; let allProducts=[]; let lastOrderCount=0;
 
 // ROLE LOCK - ONLY VENDORS CAN ACCESS
 const saved = localStorage.getItem('lgm_user');
@@ -120,7 +126,10 @@ function setTab(name){
   document.getElementById('tab-'+name).classList.add('active');
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active-view'));
   document.getElementById('view-'+name).classList.add('active-view');
-  if(name==='orders') loadOrders();
+  if(name==='orders'){
+    document.getElementById('tab-orders').classList.remove('alert-tab'); // RESET ALERT
+    loadOrders();
+  }
   if(name==='products') loadProducts();
   if(name==='wallet') loadWallet();
 }
@@ -136,6 +145,11 @@ function formatVendorCountdown(startTime){
   const s = Math.floor((diff % 60000) / 1000);
   const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
   return `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#d97706">⏰ Auto-Fail in: ${h}h ${m}m ${s}s<br><span style="font-size:11px;color:#6b7280">Picked up at: ${pickedUpTime}</span></div>`;
+}
+
+function triggerAlert(){
+  new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
+  if(navigator.vibrate) navigator.vibrate([200,100,200]);
 }
 
 async function init(){
@@ -201,24 +215,29 @@ async function deleteProduct(id, name){
   alert('Product Deleted'); loadProducts();
 }
 
-// FIXED: ONLY LOAD PAID ORDERS
+// FIXED: VIEW ONLY + ALERT
 async function loadOrders(){
   const {data: allOrdersData, error} = await supabaseClient
-  .from('orders')
-  .select('*')
-  .eq('status', 'paid') // FIX 1: ONLY PAID
-  .eq('payment_status', true) // FIX 2: MUST BE PAID
-  .order('created_at',{ascending:false});
+ .from('orders')
+ .select('*')
+ .eq('status', 'paid')
+ .eq('payment_status', true)
+ .order('created_at',{ascending:false});
 
   if(error){ console.log(error); return; }
 
-  // FILTER: Only orders that have at least 1 item with this vendor_email
   allOrders = (allOrdersData||[]).filter(o =>
     o.items && o.items.some(i => i.vendor_email === curUser.email)
   ).map(o => {
-    // ONLY SHOW THIS VENDOR'S ITEMS
     return {...o, items: o.items.filter(i => i.vendor_email === curUser.email)}
   });
+
+  // TRIGGER ALERT FOR NEW ORDERS
+  if(allOrders.length > lastOrderCount && lastOrderCount!== 0){
+    triggerAlert();
+    document.getElementById('tab-orders').classList.add('alert-tab');
+  }
+  lastOrderCount = allOrders.length;
 
   let h="";
   if(allOrders.length === 0) h = '<p>📭 No orders yet.</p>';
@@ -226,16 +245,10 @@ async function loadOrders(){
     let status = o.status||'paid';
     let myTotal = o.items.reduce((s,i)=>s + i.price*i.qty, 0);
     let myCut = Math.round(myTotal * 0.9);
-    let vendorBtn = ''; let countdown = '';
+    let countdown = '';
 
-    if(status === 'paid'){
-      vendorBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_phone}')" style="background:#2563eb;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">🚚 Start Delivery - 2hr Timer</button>`;
-    }
     if(status === 'on the way' && o.delivery_started_at){
       countdown = formatVendorCountdown(o.delivery_started_at);
-    }
-    if(status === 'failed_delivery'){
-      vendorBtn = `<button disabled style="background:#d1d5db;color:#6b7280;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">❌ Delivery Failed</button>`;
     }
 
     h+=`<div class='card'>
@@ -244,7 +257,8 @@ async function loadOrders(){
       <div class="small">Address: ${o.customer_address}</div>
       <div style="margin-top:8px"><b>Your Items:</b> ${o.items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
       <div style="margin-top:4px"><b>Your Cut 90%:</b> <span style="color:#16a34a;font-weight:700">₦${myCut.toLocaleString()}</span></div>
-      ${countdown}${vendorBtn}
+      ${countdown}
+      <!-- REMOVED START DELIVERY BUTTON. VIEW ONLY -->
     </div>`;
   });
 
@@ -270,18 +284,6 @@ async function loadOrders(){
   document.getElementById('salesMonth').innerText='₦'+Math.round(m).toLocaleString();
 }
 
-async function startDelivery(id, customerPhone){
-  await supabaseClient.from('orders').update({ status: 'on the way', delivery_started_at: new Date().toISOString() }).eq('id',id);
-  sendWhatsApp(customerPhone, id); loadOrders();
-}
-
-function sendWhatsApp(phone, orderId){
-  if(!phone) return;
-  let msg = `Hi! Your LGM Order #${orderId} is On The Way 🚚 Delivery within 2 hours from ${curUser.full_name || curUser.name}.`;
-  let formattedPhone = phone.startsWith('0')? '234' + phone.slice(1) : phone;
-  window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-}
-
 async function loadWallet(){
   const {data} = await supabaseClient.from('withdrawals').select('*').eq('vendor_email', curUser.email).order('created_at',{ascending:false});
   let h='<b>Withdrawal History:</b><br>';
@@ -305,7 +307,7 @@ async function saveProfile(){
   localStorage.setItem('lgm_user', JSON.stringify(curUser));
   alert('Profile Updated!'); init();
 }
-setInterval(loadOrders, 5000);
+setInterval(loadOrders, 10000);
 </script>
 </body>
 </html>
