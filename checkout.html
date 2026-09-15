@@ -66,78 +66,84 @@ async function payWithFlutterwave(){
   const address = document.getElementById('cAddress').value;
   if(!name ||!phone ||!address) return alert('Fill all fields');
 
-  // 1. VENDOR SUBACCOUNT MAP
   const vendorSubaccounts = {
     "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
     "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
   }
 
-  // 2. BUILD SUBACCOUNTS FROM CART - GROUP BY VENDOR
   const vendorTotals = {};
   cart.forEach(item => {
     if(!item.vendor_email) return;
-    if(!vendorTotals[item.vendor_email]){
-      vendorTotals[item.vendor_email] = 0;
-    }
+    if(!vendorTotals[item.vendor_email]){ vendorTotals[item.vendor_email] = 0; }
     vendorTotals[item.vendor_email] += item.price * item.qty;
   });
 
   const subaccounts = Object.keys(vendorTotals).map(email => ({
     id: vendorSubaccounts[email],
     transaction_charge_type: "percentage",
-    transaction_charge: 90 // Vendor gets 90%
+    transaction_charge: 90
   }));
 
   if(subaccounts.length === 0) return alert('No vendor found in cart');
 
   const grandTotal = total + delivery;
 
-  // 3. CALL FLUTTERWAVE
   FlutterwaveCheckout({
     public_key: FLW_PUBLIC_KEY,
     tx_ref: "lgm_" + Date.now(),
     amount: grandTotal,
     currency: "NGN",
-    customer: {
-      email: curUser.email,
-      name: name,
-      phone_number: phone
-    },
-    customizations: {
-      title: "Lokoja Grocery Mall",
-      description: "Multi-Vendor Order",
-      logo: "https://y-mall.vercel.app/logo.png"
-    },
-    subaccounts: subaccounts, // THIS DOES THE SPLIT
+    customer: { email: curUser.email, name: name, phone_number: phone },
+    customizations: { title: "Lokoja Grocery Mall", description: "Multi-Vendor Order", logo: "https://y-mall.vercel.app/logo.png" },
+    subaccounts: subaccounts,
     callback: function(response) {
       if(response.status === "successful"){
         saveOrder(response.tx_ref, name, phone, address, grandTotal);
-      } else {
-        alert('Payment failed or cancelled');
-      }
+      } else { alert('Payment failed or cancelled'); }
     },
     onclose: function() {}
   });
 }
 
 async function saveOrder(tx_ref, name, phone, address, grandTotal){
+  // 1. SAVE MAIN ORDER
   const {data, error} = await supabaseClient.from('orders').insert({
     tx_ref: tx_ref,
+    customer_id: curUser.id,
     customer_name: name,
     customer_email: curUser.email,
     customer_phone: phone,
     customer_address: address,
-    items: cart, // IMPORTANT: cart must have vendor_email in each item
+    customer_whatsapp: phone,
+    items: cart,
+    subtotal: total,
+    delivery_fee: delivery,
     total: grandTotal,
+    payment_status: true,
     status: 'paid',
     created_at: new Date().toISOString()
   }).select();
 
   if(error){ alert('Order failed: '+error.message); return; }
 
-  // Send WhatsApp to each vendor
-  const vendors = [...new Set(cart.map(i=>i.vendor_email).filter(Boolean))];
-  vendors.forEach(vEmail => {
+  // 2. SPLIT TO VENDOR_ORDERS
+  const vendors = [...new Set(cart.map(i=>i.vendor_id).filter(Boolean))];
+  for(let vid of vendors){
+    let vendorItems = cart.filter(i=>i.vendor_id===vid);
+    let vendorSubtotal = vendorItems.reduce((s,i)=>s+i.price*i.qty,0);
+    await supabaseClient.from('vendor_orders').insert({
+      order_id: data[0].id,
+      vendor_id: vid,
+      vendor_email: vendorItems[0].vendor_email,
+      items: vendorItems,
+      subtotal: vendorSubtotal,
+      status: 'new'
+    });
+  }
+
+  // 3. WHATSAPP ALERT
+  const vendorEmails = [...new Set(cart.map(i=>i.vendor_email).filter(Boolean))];
+  vendorEmails.forEach(vEmail => {
     let vendorItems = cart.filter(i=>i.vendor_email===vEmail);
     let vendorTotal = vendorItems.reduce((s,i)=>s+i.price*i.qty,0)*0.9;
     let msg = `New LGM Order #${data[0].id}\nYour Cut 90%: ₦${Math.round(vendorTotal).toLocaleString()}\nCustomer: ${name}\nPhone: ${phone}\nItems: ${vendorItems.map(i=>`${i.name} x${i.qty}`).join(', ')}`;
