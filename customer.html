@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Account - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://checkout.flutterwave.com/v3.js"></script></head> <!-- ADDED FLUTTERWAVE -->
+<script src="https://checkout.flutterwave.com/v3.js"></script></head>
 <body class="bg-gray-100">
 <header class="bg-white p-4 flex justify-between items-center shadow sticky top-0 z-10">
   <b class="text-green-700">My Account</b>
@@ -31,7 +31,7 @@
 
   <!-- CART WITH DELIVERY FORM -->
   <div id="view-cart" class="view hidden">
-    <form onsubmit="payWithFlutterwave(event)" class="bg-white p-4 rounded-2xl shadow"> <!-- CHANGED TO PAY -->
+    <form onsubmit="payWithFlutterwave(event)" class="bg-white p-4 rounded-2xl shadow">
       <h3 class="font-bold mb-3">Your Cart</h3>
       <div id="cartList">Cart is empty</div>
 
@@ -67,9 +67,9 @@
         <div class="flex justify-between text-sm"><span>Subtotal</span><span id="subTotal">₦0</span></div>
         <div class="flex justify-between text-sm text-gray-600"><span>Delivery Fee 5%</span><span id="deliveryFee">₦0</span></div>
         <div class="flex justify-between font-bold text-lg border-t pt-2"><span>Total</span><span id="cartTotal">₦0</span></div>
-        <button type="submit" id="placeOrderBtn" class="w-full bg-[#f5a623] text-white py-3 rounded-full font-bold mt-3 hidden">💳 Pay Now With Flutterwave - <span id="payAmount">₦0</span></button> <!-- CHANGED -->
+        <button type="submit" id="placeOrderBtn" class="w-full bg-[#f5a623] text-white py-3 rounded-full font-bold mt-3 hidden">💳 Pay Now With Flutterwave - <span id="payAmount">₦0</span></button>
       </div>
-      <div id="orderMsg" class="text-sm text-center mt-2"></div> <!-- ADDED FOR PAYMENT STATUS -->
+      <div id="orderMsg" class="text-sm text-center mt-2"></div>
     </form>
   </div>
 
@@ -97,10 +97,9 @@ let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
 let allProducts = [];
 let tempRating = {};
 let isUserInteracting = false;
-let isSubmitting = false; // ADDED
+let isSubmitting = false;
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
-
 const LOKOJA_AREAS = [
   "200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs",
   "Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC",
@@ -142,11 +141,16 @@ function showTab(t){
   if(t==='orders') loadOrders();
 }
 
-function formatCustomerCountdown(startTime){
+// UPDATED: Now checks for timer expiry and auto-marks failed
+function formatCustomerCountdown(orderId, startTime){
   if(!startTime) return '';
   const end = new Date(startTime).getTime() + THREE_HOURS_MS;
   const diff = end - new Date().getTime();
-  if(diff <= 0) return `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b class="text-red-600">⏰ Delivery window expired. Rider will call you</b></div>`;
+
+  if(diff <= 0) {
+    autoMarkFailed(orderId);
+    return `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b class="text-red-600">⏰ Delivery Failed. Admin will contact you</b></div>`;
+  }
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
@@ -156,6 +160,14 @@ function formatCustomerCountdown(startTime){
             <p class="text-xs text-gray-500">Picked up at: ${pickedUpTime}</p>
             <b class="text-red-600">⏰ Arriving in: ${h}h ${m}m ${s}s</b>
           </div>`;
+}
+
+async function autoMarkFailed(orderId){
+  if(window.failedCalled?.[orderId]) return;
+  window.failedCalled = window.failedCalled || {};
+  window.failedCalled[orderId] = true;
+  await supabaseClient.from('orders').update({ status: 'failed' }).eq('id', orderId);
+  loadOrders();
 }
 
 function buildRatingUI(o){
@@ -230,7 +242,7 @@ function renderCart(){
     document.getElementById('subTotal').innerText='₦0';
     document.getElementById('deliveryFee').innerText='₦0';
     document.getElementById('cartTotal').innerText='₦0';
-    document.getElementById('payAmount').innerText='₦0'; // ADDED
+    document.getElementById('payAmount').innerText='₦0';
     document.getElementById('deliveryForm').classList.add('hidden');
     document.getElementById('placeOrderBtn').classList.add('hidden');
     return;
@@ -260,12 +272,11 @@ function renderCart(){
   document.getElementById('subTotal').innerText='₦'+subtotal.toLocaleString();
   document.getElementById('deliveryFee').innerText='₦'+delivery.toLocaleString();
   document.getElementById('cartTotal').innerText='₦'+total.toLocaleString();
-  document.getElementById('payAmount').innerText='₦'+total.toLocaleString(); // ADDED
+  document.getElementById('payAmount').innerText='₦'+total.toLocaleString();
   document.getElementById('deliveryForm').classList.remove('hidden');
   document.getElementById('placeOrderBtn').classList.remove('hidden');
 }
 
-// REPLACED checkout() WITH PAYMENT FIRST
 async function payWithFlutterwave(e){
   e.preventDefault();
   if(isSubmitting) return;
@@ -293,7 +304,6 @@ async function payWithFlutterwave(e){
 
   document.getElementById('orderMsg').innerHTML='<span style="color:blue">🔄 Opening Flutterwave...</span>';
 
-  // SPLIT PAYMENT: Vendor 90%
   const vendorSubaccounts = {
     "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
     "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
@@ -306,7 +316,7 @@ async function payWithFlutterwave(e){
 .filter(s=>s.id);
 
   FlutterwaveCheckout({
-    public_key: "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X", // YOUR KEY
+    public_key: "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X",
     tx_ref: tx_ref,
     amount: total,
     currency: "NGN",
@@ -361,30 +371,56 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
   }
 }
 
+// FULLY UPDATED: Handles paid, picked, delivered, failed
 async function loadOrders(){
   const {data} = await supabaseClient.from('orders')
-  .select('*')
-  .eq('customer_email', user.email)
-  .eq('status','paid')
-  .eq('payment_status', true)
-  .order('created_at',{ascending:false});
+ .select('*')
+ .eq('customer_email', user.email)
+ .in('status',['paid','picked','delivered','failed'])
+ .eq('payment_status', true)
+ .order('created_at',{ascending:false});
+
   let html='';
   data?.forEach(o=>{
-    let color = o.status==='delivered'? 'text-green-600' : o.status==='on the way'? 'text-orange-500' : o.status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
-    let agentInfo = o.delivery_agent_name? `<div class="text-xs text-blue-600 font-bold">🚚 Rider: ${o.delivery_agent_name}</div>` : '';
+    let statusText = '';
+    let statusColor = 'text-blue-600';
+
+    if(o.status === 'paid'){
+      statusText = 'Watch out, an agent will attend to you in the next 5 minutes';
+      statusColor = 'text-blue-600';
+    }
+    if(o.status === 'picked'){
+      statusText = 'Order On The Way, Please Be Available';
+      statusColor = 'text-orange-500';
+    }
+    if(o.status === 'delivered'){
+      statusText = 'Delivered';
+      statusColor = 'text-green-600';
+    }
+    if(o.status === 'failed'){
+      statusText = 'Delivery Failed. Admin will contact you';
+      statusColor = 'text-red-600';
+    }
+
+    let agentInfo = '';
+    if(o.status === 'picked' && o.delivery_agent_name){
+      agentInfo = `<div class="bg-blue-50 p-2 rounded-lg mt-2">
+        <b class="text-blue-700">On The Way for Delivery</b>
+        <div class="text-xs">🚚 Rider: ${o.delivery_agent_name}</div>
+        <div class="text-xs">📞 ${o.delivery_agent_phone}</div>
+      </div>`;
+    }
 
     html += `<div class="bg-white p-3 rounded-2xl shadow">
-      <div class="flex justify-between"><b>Order #${o.id}</b><span class="${color} font-bold capitalize">${o.status.replace('_',' ')}</span></div>
+      <div class="flex justify-between"><b>Order #${o.id}</b><span class="${statusColor} font-bold capitalize">${o.status}</span></div>
       <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
       <div class="text-xs text-gray-500 mt-1">📍 ${o.customer_address}</div>
       <div class="text-xs text-gray-500">📱 WhatsApp: ${o.customer_whatsapp || o.customer_phone}</div>
       <div class="text-xs text-gray-500">📞 Phone: ${o.customer_phone}</div>
       ${agentInfo}
-      ${o.status==='on the way'? `
-        ${formatCustomerCountdown(o.delivery_started_at)}
-        <div class="text-xs text-orange-500 mt-1">🚚 Your order is on the way. Please be available</div>
-        <button onclick="markDelivered(${o.id})" class="w-full mt-2 bg-green-600 text-white py-2 rounded-full font-bold">✓ Mark Delivered</button>
-      ` : ''}
+      <div class="bg-gray-50 p-2 rounded-lg mt-2 text-center font-bold text-sm">${statusText}</div>
+      ${o.status==='picked'? formatCustomerCountdown(o.id, o.picked_at) : ''}
+      ${o.status==='picked'? `<button onclick="markDelivered(${o.id})" class="w-full mt-2 bg-green-600 text-white py-2 rounded-full font-bold">✓ Mark Delivered</button>` : ''}
       ${buildRatingUI(o)}
       <div class="text-xs text-gray-400 mt-2">${new Date(o.created_at).toLocaleString()}</div>
     </div>`;
