@@ -71,19 +71,22 @@
 
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// FIX 1: BLOCK UNAPPROVED USERS ON PAGE LOAD
+// FIX 1: BUTTON LOCK TO PREVENT DOUBLE ORDERS
+let isSubmitting = false;
+
+// FIX 2: BLOCK UNAPPROVED USERS ON PAGE LOAD
 supabaseClient.auth.getUser().then(async ({data: {user}}) => {
   if(user){
     const { data: userData } = await supabaseClient.from('users').select('role, is_approved').eq('id', user.id).maybeSingle();
-    
+
     if(userData && userData.role!== 'customer' && userData.role!== 'admin' && userData.is_approved === false){
       await supabaseClient.auth.signOut();
       localStorage.removeItem('lgm_user');
       alert("⏳ Your account is Pending Approval");
-      window.location.href = 'index.html#login'; // FIXED
+      window.location.href = 'index.html#login';
     }
   }
 })
@@ -101,7 +104,7 @@ function updateCart(){
 }
 
 async function loadProducts(){
-  const { data, error } = await supabaseClient.from('products').select('*').order('created_at',{ascending:false}).limit(50);
+  const { data, error } = await supabaseClient.from('products').select('*').eq('is_approved', true).order('created_at',{ascending:false}).limit(50); // Only show approved products
   console.log('LOAD:', data, error);
   if(error){
     document.getElementById('productsGrid').innerHTML=`<div class="col-span-2 text-center text-sm text-red-400 py-10">Error: ${error.message}</div>`;
@@ -152,9 +155,8 @@ loadProducts();
 </div>
 
 <script>
-function showDeliveryLogin(){ 
+function showDeliveryLogin(){
   document.getElementById('deliveryModal').classList.remove('hidden');
-  // Auto-open if redirected from signup
   if(localStorage.getItem('openLogin') === '1'){
     localStorage.removeItem('openLogin');
   }
@@ -173,25 +175,22 @@ async function deliveryLogin(){
   if(!email ||!password){ errorEl.innerText = "Please enter email and password"; btn.disabled = false; return; }
 
   try{
-    // 1. LOGIN WITH SUPABASE AUTH
     const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({ email, password });
     if(authError) throw authError;
 
     const userId = authData.user.id;
 
-    // 2. GET PROFILE FROM users TABLE - use maybeSingle
     let { data: user, error: profileError } = await supabaseClient
-   .from('users')
-   .select('*')
-   .eq('id', userId)
-   .maybeSingle(); // FIX: was.single()
+  .from('users')
+  .select('*')
+  .eq('id', userId)
+  .maybeSingle();
 
-    // 3. AUTO-CREATE PROFILE IF MISSING
     if(!user){
       const { data: newUser, error: insertError } = await supabaseClient.from('users').insert({
         id: userId,
         email: authData.user.email,
-        full_name: authData.user.user_metadata?.full_name || 'User',
+        full_name: authData.user_metadata?.full_name || 'User',
         role: authData.user_metadata?.role || 'customer',
         is_approved: true
       }).select().single();
@@ -199,7 +198,6 @@ async function deliveryLogin(){
       user = newUser;
     }
 
-    // 4. BLOCK IF NOT APPROVED
     if(user.role!== 'customer' && user.role!== 'admin' && user.is_approved === false){
       await supabaseClient.auth.signOut();
       errorEl.className = "text-yellow-600 text-sm mt-3 text-center font-bold";
@@ -226,7 +224,6 @@ async function deliveryLogin(){
   }
 }
 
-// Auto-open login modal if #login in URL
 window.addEventListener('load', () => {
   if(window.location.hash === '#login'){
     showDeliveryLogin();
