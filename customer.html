@@ -37,20 +37,14 @@
       <!-- DELIVERY DETAILS - FILL EVERY TIME -->
       <div id="deliveryForm" class="border-t pt-3 mt-3 space-y-3 hidden">
         <h4 class="font-bold text-green-600">🚚 Delivery Details</h4>
-
-        <!-- 1. DELIVERY ADDRESS -->
         <div>
           <label class="text-sm font-semibold text-gray-700">Delivery Address</label>
           <input id="checkoutAddress" type="text" placeholder="House No, Street, Area" required class="w-full p-3 border rounded-lg mt-1">
         </div>
-
-        <!-- 2. NEAREST BUS STOP -->
         <div>
           <label class="text-sm font-semibold text-gray-700">Nearest Bus Stop / Landmark</label>
           <input id="checkoutLandmark" type="text" placeholder="e.g. Zenith Bank Junction" required class="w-full p-3 border rounded-lg mt-1">
         </div>
-
-        <!-- 3. LOCATION DROPDOWN -->
         <div>
           <label class="text-sm font-semibold text-gray-700">Location in Lokoja</label>
           <select id="checkoutLocation" onchange="toggleCustomLocation()" required class="w-full p-3 border rounded-lg mt-1 bg-white">
@@ -58,14 +52,10 @@
           </select>
           <input id="customLocation" type="text" placeholder="Type your location if not listed" class="w-full p-3 border rounded-lg mt-2 hidden">
         </div>
-
-        <!-- 4. WHATSAPP NUMBER -->
         <div>
           <label class="text-sm font-semibold text-gray-700">WhatsApp Number</label>
           <input id="checkoutWhatsApp" type="tel" placeholder="080..." required class="w-full p-3 border rounded-lg mt-1">
         </div>
-
-        <!-- 5. PHONE NUMBER -->
         <div>
           <label class="text-sm font-semibold text-gray-700">Phone Number <span class="text-gray-400 text-xs">(If different from WhatsApp)</span></label>
           <input id="checkoutPhone" type="tel" placeholder="080..." required class="w-full p-3 border rounded-lg mt-1">
@@ -88,7 +78,7 @@
 
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const user = JSON.parse(localStorage.getItem('lgm_user')||'{}');
@@ -106,7 +96,7 @@ let allProducts = [];
 let tempRating = {};
 let isUserInteracting = false;
 
-const THREE_HOURS_MS = 4 * 60 * 60 * 1000;
+const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // FIXED: Was 4hrs
 
 const LOKOJA_AREAS = [
   "200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs",
@@ -123,7 +113,7 @@ window.onload = () => {
   LOKOJA_AREAS.forEach(area => {
     select.innerHTML += `<option value="${area}">${area}</option>`;
   });
-  showTab('shop');
+  showTab('shop')
 }
 
 function toggleCustomLocation(){
@@ -286,23 +276,32 @@ async function checkout(e){
   const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
   const delivery = Math.round(subtotal * 0.05);
   const total = subtotal + delivery;
-  const vendor = allProducts[0]?.vendor_email || 'test@vendor.com';
+
+  // FIX: SAVE ITEMS AS JSONB WITH VENDOR_EMAIL
+  const itemsWithVendor = cart.map(i => ({
+    id: i.id,
+    name: i.name,
+    price: i.price,
+    qty: i.qty,
+    vendor_email: i.vendor_email
+  }));
 
   const { error } = await supabaseClient.from('orders').insert({
     customer_name: displayName,
     customer_email: user.email,
-    customer_phone: checkoutPhone, // NEW: Separate phone
-    customer_whatsapp: checkoutWhatsApp, // NEW: Separate whatsapp
+    customer_phone: checkoutPhone,
+    customer_whatsapp: checkoutWhatsApp,
     customer_address: `${finalLocation} | ${checkoutAddress} | Landmark: ${checkoutLandmark}`,
-    vendor_email: vendor,
+    vendor_email: itemsWithVendor[0]?.vendor_email || 'test@vendor.com', // For backward compat
+    items: itemsWithVendor, // NEW: Save items JSONB
     total: total,
-    status: 'paid'
+    status: 'paid', // Order is active immediately
+    payment_status: true // NEW: Confirm payment
   });
   if(error) alert(error.message);
   else {
     alert(`Order Placed! Total: ₦${total.toLocaleString()}`);
     cart=[]; localStorage.removeItem('lgm_cart');
-    // Reset form
     document.getElementById('checkoutLocation').value = '';
     document.getElementById('customLocation').value = '';
     document.getElementById('checkoutAddress').value = '';
@@ -314,16 +313,25 @@ async function checkout(e){
 }
 
 async function loadOrders(){
-  const {data} = await supabaseClient.from('orders').select('*').eq('customer_email', user.email).order('created_at',{ascending:false});
+  // FIX: ONLY LOAD PAID ORDERS
+  const {data} = await supabaseClient.from('orders')
+   .select('*')
+   .eq('customer_email', user.email)
+   .eq('status','paid') // NEW
+   .eq('payment_status', true) // NEW
+   .order('created_at',{ascending:false});
   let html='';
   data?.forEach(o=>{
     let color = o.status==='delivered'? 'text-green-600' : o.status==='on the way'? 'text-orange-500' : o.status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
+    let agentInfo = o.delivery_agent_name? `<div class="text-xs text-blue-600 font-bold">🚚 Rider: ${o.delivery_agent_name}</div>` : '';
+
     html += `<div class="bg-white p-3 rounded-2xl shadow">
       <div class="flex justify-between"><b>Order #${o.id}</b><span class="${color} font-bold capitalize">${o.status.replace('_',' ')}</span></div>
       <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
       <div class="text-xs text-gray-500 mt-1">📍 ${o.customer_address}</div>
       <div class="text-xs text-gray-500">📱 WhatsApp: ${o.customer_whatsapp || o.customer_phone}</div>
       <div class="text-xs text-gray-500">📞 Phone: ${o.customer_phone}</div>
+      ${agentInfo}
       ${o.status==='on the way'? `
         ${formatCustomerCountdown(o.delivery_started_at)}
         <div class="text-xs text-orange-500 mt-1">🚚 Your order is on the way. Please be available</div>
