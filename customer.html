@@ -2,7 +2,13 @@
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Account - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://checkout.flutterwave.com/v3.js"></script></head>
+<script src="https://checkout.flutterwave.com/v3.js"></script>
+<style>
+  @keyframes pulse-red {0%,100%{background:#fee2e2;border-color:#ef4444}50%{background:#fecaca;border-color:#dc2626}}
+.alert-tab{animation:pulse-red 1s infinite;border:2px solid #ef4444!important;border-radius:8px}
+.badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900}
+</style>
+</head>
 <body class="bg-gray-100">
 <header class="bg-white p-4 flex justify-between items-center shadow sticky top-0 z-10">
   <b class="text-green-700">My Account</b>
@@ -98,6 +104,7 @@ let allProducts = [];
 let tempRating = {};
 let isUserInteracting = false;
 let isSubmitting = false;
+let lastOrderStatus = {}; // TRACK STATUS CHANGES
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 const LOKOJA_AREAS = [
@@ -136,9 +143,12 @@ function showTab(t){
   document.querySelectorAll('[id^=tab]').forEach(b=>{b.classList.remove('text-green-600','border-b-2','border-green-600'); b.classList.add('text-gray-400')});
   document.getElementById('view-'+t).classList.remove('hidden');
   document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('text-green-600','border-b-2','border-green-600');
+  if(t==='orders'){
+    document.getElementById('tabOrders').classList.remove('alert-tab'); // RESET ALERT
+    loadOrders();
+  }
   if(t==='shop') loadProducts();
   if(t==='cart') renderCart();
-  if(t==='orders') loadOrders();
 }
 
 // UPDATED: Now checks for timer expiry and auto-marks failed
@@ -160,6 +170,16 @@ function formatCustomerCountdown(orderId, startTime){
             <p class="text-xs text-gray-500">Picked up at: ${pickedUpTime}</p>
             <b class="text-red-600">⏰ Arriving in: ${h}h ${m}m ${s}s</b>
           </div>`;
+}
+
+function triggerAlert(msg){
+  new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
+  if(navigator.vibrate) navigator.vibrate([200,100,200]);
+  if(Notification.permission === "granted"){
+    new Notification("LGM Update", { body: msg });
+  } else if(Notification.permission!== "denied"){
+    Notification.requestPermission();
+  }
 }
 
 async function autoMarkFailed(orderId){
@@ -371,14 +391,28 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
   }
 }
 
-// FULLY UPDATED: Handles paid, picked, delivered, failed
+// FULLY UPDATED: Handles paid, picked, delivered, failed + ALERTS
 async function loadOrders(){
   const {data} = await supabaseClient.from('orders')
- .select('*')
- .eq('customer_email', user.email)
- .in('status',['paid','picked','delivered','failed'])
- .eq('payment_status', true)
- .order('created_at',{ascending:false});
+.select('*')
+.eq('customer_email', user.email)
+.in('status',['paid','picked','delivered','failed'])
+.eq('payment_status', true)
+.order('created_at',{ascending:false});
+
+  // CHECK FOR STATUS CHANGES AND TRIGGER ALERT
+  data?.forEach(o=>{
+    if(lastOrderStatus[o.id] && lastOrderStatus[o.id]!== o.status){
+      if(o.status === 'picked') triggerAlert(`🚚 Order #${o.id} is On The Way!`);
+      if(o.status === 'delivered') triggerAlert(`✅ Order #${o.id} Delivered!`);
+    }
+    lastOrderStatus[o.id] = o.status;
+  });
+
+  let hasActive = data?.some(o=> o.status==='picked' || o.status==='paid');
+  const ordersTab = document.getElementById('tabOrders');
+  if(hasActive){ ordersTab.classList.add('alert-tab'); }
+  else { ordersTab.classList.remove('alert-tab'); }
 
   let html='';
   data?.forEach(o=>{
@@ -472,4 +506,6 @@ async function submitRating(id){
 }
 
 function logout(){ localStorage.removeItem('lgm_user'); localStorage.removeItem('lgm_cart'); location.href='login.html'; }
+
+setInterval(loadOrders, 10000); // AUTO REFRESH
 </script></body></html>
