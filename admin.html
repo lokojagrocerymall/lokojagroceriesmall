@@ -32,7 +32,7 @@
     <div class="flex border-b overflow-x-auto">
       <button onclick="showTab('pending')" id="btnP" class="flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600">Pending (<span id="cP">0</span>)</button>
       <button onclick="showTab('vendors')" id="btnV" class="flex-1 p-3 font-bold text-gray-400">Vendors (<span id="cV">0</span>)</button>
-      <button onclick="showTab('agents')" id="btnA" class="flex-1 p-3 font-bold text-gray-400">Agents (<span id="cA">0</span>)</button> <!-- NEW -->
+      <button onclick="showTab('agents')" id="btnA" class="flex-1 p-3 font-bold text-gray-400">Agents (<span id="cA">0</span>)</button>
       <button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-gray-400">Orders (<span id="cO">0</span>)</button>
     </div>
     <div id="list" class="p-4 text-sm">Loading...</div>
@@ -46,7 +46,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let users=[], orders=[], tab='pending';
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
-if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='/'; } // FIXED
+if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='/'; }
 
 async function load(){
   document.getElementById('list').innerHTML = 'Loading...';
@@ -55,7 +55,12 @@ async function load(){
     if(uErr) throw uErr;
     users = u||[];
     
-    const {data:o, error:oErr} = await supabaseClient.from('orders').select('*');
+    // FIX: ONLY LOAD PAID ORDERS. UNPAID ORDERS ARE INVISIBLE TO ADMIN
+    const {data:o, error:oErr} = await supabaseClient.from('orders')
+      .select('*')
+      .eq('status','paid')
+      .eq('payment_status', true)
+      .order('created_at',{ascending:false});
     if(oErr) throw oErr;
     orders = o||[];
 
@@ -84,8 +89,8 @@ function render(){
   let data=[];
   if(tab==='pending') data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' || String(x.role).toLowerCase().trim()==='delivery_agent') && (x.is_approved===false || x.is_approved===null));
   if(tab==='vendors') data = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor');
-  if(tab==='agents') data = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent'); // NEW
-  if(tab==='orders') data = orders;
+  if(tab==='agents') data = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
+  if(tab==='orders') data = orders; // THIS IS ALREADY FILTERED TO PAID ONLY
 
   if(data.length===0){ document.getElementById('list').innerHTML = `<div class="text-center text-gray-400 py-10">No ${tab} yet</div>`; return; }
 
@@ -103,10 +108,12 @@ function render(){
   }
   if(tab==='orders'){
     data.forEach(o=>{
+      let agentInfo = o.delivery_agent_name ? `<div class="text-xs text-blue-600 font-bold">Agent: ${o.delivery_agent_name}</div>` : `<div class="text-xs text-orange-600 font-bold">Waiting for Agent</div>`;
       html += `<div class="border rounded-lg p-3 mb-2">
-        <div class="font-bold">Order #${o.id}</div>
-        <div class="text-xs">Customer: ${o.customer_email}</div>
-        <div class="text-xs">Total: ₦${Number(o.total||0).toLocaleString()} | Status: ${o.status}</div>
+        <div class="flex justify-between"><div class="font-bold">Order #${o.id}</div><div class="font-bold text-green-700">₦${Number(o.total||0).toLocaleString()}</div></div>
+        <div class="text-xs">Customer: ${o.customer_name || o.customer_email}</div>
+        <div class="text-xs">Status: ${o.status}</div>
+        ${agentInfo}
       </div>`;
     });
   }
@@ -117,11 +124,11 @@ function showTab(t){
   tab=t;
   document.getElementById('btnP').className = 'flex-1 p-3 font-bold text-gray-400';
   document.getElementById('btnV').className = 'flex-1 p-3 font-bold text-gray-400';
-  document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-gray-400'; // NEW
+  document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-gray-400';
   document.getElementById('btnO').className = 'flex-1 p-3 font-bold text-gray-400';
   if(t==='pending') document.getElementById('btnP').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
   if(t==='vendors') document.getElementById('btnV').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
-  if(t==='agents') document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600'; // NEW
+  if(t==='agents') document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
   if(t==='orders') document.getElementById('btnO').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
   render();
 }
