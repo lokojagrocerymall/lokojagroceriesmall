@@ -6,6 +6,7 @@
 <title>Lokoja Grocery Mall - Fresh Groceries</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://checkout.flutterwave.com/v3.js"></script> <!-- ADDED -->
 <style>body{font-family:system-ui,-apple-system;background:#f8fafc}</style>
 </head>
 <body>
@@ -36,6 +37,25 @@
   <a href="signup.html" class="block py-2 text-green-600">➕ Sign Up</a>
 </div>
 
+<!-- ADDED: CHECKOUT SECTION -->
+<div id="checkoutSection" class="hidden p-4">
+  <div class="bg-white rounded-2xl p-4 shadow-sm mb-3">
+    <h2 class="font-black text-[16px] mb-3">📦 Checkout</h2>
+    <div id="cartSummary"></div>
+  </div>
+
+  <div class="bg-white rounded-2xl p-4 shadow-sm">
+    <h3 class="font-black text-[15px] mb-3">Delivery Details</h3>
+    <input id="cName" placeholder="Full Name" class="w-full p-3 border rounded-lg mb-3">
+    <input id="cPhone" placeholder="Phone Number 080..." class="w-full p-3 border rounded-lg mb-3">
+    <input id="cAddress" placeholder="Delivery Address in Lokoja" class="w-full p-3 border rounded-lg mb-3">
+    <button class="w-full bg-green-600 text-white py-3 rounded-xl font-black" onclick="payWithFlutterwave()">Pay Now With Flutterwave</button>
+    <p class="text-xs text-gray-500 mt-2 text-center">Vendor gets 90%, Platform 10% + ₦5,000 delivery</p>
+  </div>
+</div>
+
+<!-- YOUR ORIGINAL HOME SECTION -->
+<div id="homeSection">
 <div class="mx-4 mt-4 bg-gradient-to-br from-green-600 to-green-800 rounded-[20px] p-6 text-white text-center">
   <div class="inline-block bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs font-bold mb-3">📍 Lokoja, Kogi State</div>
   <h1 class="text-[26px] font-black leading-tight mb-4">Fresh groceries from local<br>vendors</h1>
@@ -63,6 +83,7 @@
     <div class="col-span-2 text-center text-sm text-gray-400 py-10">Loading products...</div>
   </div>
 </div>
+</div>
 
 <footer class="bg-white border-t p-6 text-center">
   <b class="text-[14px]">Lokoja Grocery Mall</b><br>
@@ -72,9 +93,12 @@
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
+const FLW_PUBLIC_KEY = "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X"; // ADDED
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let isSubmitting = false;
+let delivery = 5000; let total = 0;
+let curUser = JSON.parse(localStorage.getItem('lgm_user'));
 
 // BLOCK UNAPPROVED USERS ON PAGE LOAD
 supabaseClient.auth.getUser().then(async ({data: {user}}) => {
@@ -99,6 +123,91 @@ function updateCart(){
   let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
   let total=cart.reduce((s,i)=>s+i.qty,0);
   document.getElementById('cartCount').innerText=total;
+}
+
+// ADDED: SHOW CHECKOUT FUNCTION
+function showCheckout(){
+  document.getElementById('homeSection').classList.add('hidden');
+  document.getElementById('checkoutSection').classList.remove('hidden');
+  showCart();
+  window.scrollTo(0,0);
+}
+
+function showCart(){
+  let cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
+  if(cart.length === 0){ document.getElementById('cartSummary').innerHTML = "<p>Cart is empty</p>"; return; }
+  let h = ''; total = 0;
+  cart.forEach(item=>{ 
+    total += item.price * item.qty; 
+    h += `<div class="flex justify-between text-sm mb-1"><span>${item.name} x${item.qty}</span><span>₦${(item.price*item.qty).toLocaleString()}</span></div>`;
+  });
+  h += `<hr class="my-2"><div class="flex justify-between text-sm">Delivery: <span>₦${delivery.toLocaleString()}</span></div>`;
+  h += `<div class="flex justify-between font-black text-[15px] mt-1">Total: <span>₦${(total+delivery).toLocaleString()}</span></div>`;
+  document.getElementById('cartSummary').innerHTML = h;
+}
+
+// ADDED: FLUTTERWAVE PAYMENT
+function payWithFlutterwave(){
+  if(!curUser){ alert('Please login first'); showDeliveryLogin(); return; }
+  const name = document.getElementById('cName').value.trim();
+  const phone = document.getElementById('cPhone').value.trim();
+  const address = document.getElementById('cAddress').value.trim();
+  if(!name ||!phone ||!address) return alert('Fill all fields');
+
+  const vendorSubaccounts = {
+    "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
+    "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
+  }
+  const cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
+  const vendorTotals = {};
+  cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + item.price*item.qty; });
+  
+  const subaccounts = Object.keys(vendorTotals)
+   .map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"percentage", transaction_charge:90}))
+   .filter(s=>s.id);
+
+  FlutterwaveCheckout({
+    public_key: FLW_PUBLIC_KEY,
+    tx_ref: "lgm_" + Date.now(),
+    amount: total + delivery,
+    currency: "NGN",
+    customer: { email: curUser.email, name: name, phone_number: phone },
+    customizations: { title: "Lokoja Grocery Mall" },
+    subaccounts: subaccounts,
+    callback: function(response) {
+      if(response.status === "successful"){
+        saveOrder(response.tx_ref, name, phone, address, total+delivery);
+      } else { alert('Payment cancelled'); }
+    }
+  });
+}
+
+async function saveOrder(tx_ref, name, phone, address, grandTotal){
+  const cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
+  const {data:order} = await supabaseClient.from('orders').insert({
+    tx_ref, customer_id:curUser.id, customer_name:name, customer_email:curUser.email,
+    customer_phone:phone, customer_address:address, items:cart, subtotal:total,
+    delivery_fee:delivery, total:grandTotal, payment_status:true, status:'paid'
+  }).select().single();
+
+  const vendors = [...new Set(cart.map(i=>i.vendor_id).filter(Boolean))];
+  for(let vid of vendors){
+    let vendorItems = cart.filter(i=>i.vendor_id===vid);
+    await supabaseClient.from('vendor_orders').insert({
+      order_id:order.id, vendor_id:vid, vendor_email:vendorItems[0].vendor_email,
+      items:vendorItems, subtotal:vendorItems.reduce((s,i)=>s+i.price*i.qty,0), status:'new'
+    });
+  }
+
+  await supabaseClient.from('delivery_assignments').insert({
+    order_id:order.id, status:'pending_pickup', customer_id: curUser.id,
+    customer_address:address, customer_phone:phone, 
+    items_summary:cart.map(i=>`${i.name}x${i.qty}`).join(', ')
+  });
+
+  localStorage.removeItem('lgm_cart');
+  alert('Payment Successful! Order #'+order.id);
+  window.location.href = 'customer.html';
 }
 
 async function loadProducts(){
@@ -137,6 +246,9 @@ function addToCart(id,name,price,image){
 
 updateCart();
 loadProducts();
+
+// CHECK IF URL HAS #CHECKOUT
+if(window.location.hash === '#checkout') showCheckout();
 </script>
 
 <!-- LOGIN MODAL WITH VIEW/HIDE + FORGOT PASSWORD -->
@@ -144,18 +256,13 @@ loadProducts();
   <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-sm mx-4">
     <h1 class="text-2xl font-bold text-center text-green-700 mb-6">🔐 LGM Login</h1>
     <input id="d_email" type="email" placeholder="Email" class="w-full p-3 border rounded-lg mb-3" required>
-
-    <!-- PASSWORD WITH EYE ICON -->
     <div class="relative mb-3">
       <input id="d_password" type="password" placeholder="Password" class="w-full p-3 border rounded-lg pr-10" required>
       <button type="button" onclick="togglePassword()" class="absolute right-3 top-3.5 text-xl">👁️</button>
     </div>
-
-    <!-- FORGOT PASSWORD LINK -->
     <div class="text-right mb-4">
       <button type="button" onclick="forgotPassword()" class="text-xs text-green-600 font-bold hover:underline">Forgot Password?</button>
     </div>
-
     <button onclick="deliveryLogin()" id="loginBtn" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold">Login</button>
     <button onclick="hideDeliveryLogin()" class="w-full mt-2 text-gray-600">Cancel</button>
     <p id="d_error" class="text-red-500 text-sm mt-3 text-center"></p>
@@ -164,106 +271,12 @@ loadProducts();
 
 <script>
 let passVisible = false;
-
-function showDeliveryLogin(){
-  document.getElementById('deliveryModal').classList.remove('hidden');
-  if(localStorage.getItem('openLogin') === '1'){
-    localStorage.removeItem('openLogin');
-  }
-}
-function hideDeliveryLogin(){
-  document.getElementById('deliveryModal').classList.add('hidden');
-  document.getElementById('d_error').innerText = '';
-}
-
-// VIEW / HIDE PASSWORD
-function togglePassword(){
-  const passInput = document.getElementById('d_password');
-  passVisible =!passVisible;
-  passInput.type = passVisible? 'text' : 'password';
-}
-
-// FORGOT PASSWORD
-async function forgotPassword(){
-  const email = document.getElementById('d_email').value.trim();
-  const errorEl = document.getElementById('d_error');
-  if(!email){ errorEl.innerText = "Please enter your email first"; return; }
-
-  if(!confirm(`Send password reset link to ${email}?`)) return;
-
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://y-mall.vercel.app/'
-  });
-
-  if(error){
-    errorEl.innerText = 'Error: ' + error.message;
-  } else {
-    errorEl.className = "text-green-600 text-sm mt-3 text-center";
-    errorEl.innerText = 'Reset link sent! Check your inbox.';
-  }
-}
-
-async function deliveryLogin(){
-  const errorEl = document.getElementById('d_error');
-  const btn = document.getElementById('loginBtn');
-  errorEl.innerText = "Checking...";
-  btn.disabled = true;
-
-  const email = document.getElementById('d_email').value.trim().toLowerCase();
-  const password = document.getElementById('d_password').value.trim();
-
-  if(!email ||!password){ errorEl.innerText = "Please enter email and password"; btn.disabled = false; return; }
-
-  try{
-    const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({ email, password });
-    if(authError) throw authError;
-
-    const userId = authData.user.id;
-
-    let { data: user } = await supabaseClient.from('users').select('*').eq('id', userId).maybeSingle();
-
-    if(!user){
-      const { data: newUser } = await supabaseClient.from('users').insert({
-        id: userId,
-        email: authData.user.email,
-        full_name: authData.user_metadata?.full_name || 'User',
-        role: authData.user_metadata?.role || 'customer',
-        is_approved: true
-      }).select().single();
-      user = newUser;
-    }
-
-    if(user.role!== 'customer' && user.role!== 'admin' && user.is_approved === false){
-      await supabaseClient.auth.signOut();
-      errorEl.className = "text-yellow-600 text-sm mt-3 text-center font-bold";
-      errorEl.innerText = `⏳ Pending Approval\nHi ${user.full_name}, your account is awaiting admin approval.`;
-      btn.disabled = false;
-      return;
-    }
-
-    localStorage.setItem('lgm_user', JSON.stringify(user));
-    errorEl.className = "text-green-600 text-sm mt-3 text-center";
-    errorEl.innerText = "Login OK. Role: " + user.role + ". Redirecting...";
-
-    setTimeout(() => {
-      if(user.role === 'admin') location.href = 'admin.html';
-      else if(user.role === 'vendor') location.href = 'vendor.html';
-      else if(user.role === 'delivery_agent') location.href = 'delivery.html';
-      else location.href = 'customer.html';
-    }, 800);
-
-  } catch(err){
-    errorEl.className = "text-red-500 text-sm mt-3 text-center";
-    errorEl.innerText = "Error: " + err.message;
-    btn.disabled = false;
-  }
-}
-
-window.addEventListener('load', () => {
-  if(window.location.hash === '#login'){
-    showDeliveryLogin();
-  }
-});
+function showDeliveryLogin(){ document.getElementById('deliveryModal').classList.remove('hidden'); }
+function hideDeliveryLogin(){ document.getElementById('deliveryModal').classList.add('hidden'); document.getElementById('d_error').innerText = ''; }
+function togglePassword(){ const passInput = document.getElementById('d_password'); passVisible =!passVisible; passInput.type = passVisible? 'text' : 'password'; }
+async function forgotPassword(){ const email = document.getElementById('d_email').value.trim(); const errorEl = document.getElementById('d_error'); if(!email){ errorEl.innerText = "Please enter your email first"; return; } if(!confirm(`Send password reset link to ${email}?`)) return; const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: 'https://y-mall.vercel.app/' }); if(error){ errorEl.innerText = 'Error: ' + error.message; } else { errorEl.className = "text-green-600 text-sm mt-3 text-center"; errorEl.innerText = 'Reset link sent! Check your inbox.'; }
+async function deliveryLogin(){ const errorEl = document.getElementById('d_error'); const btn = document.getElementById('loginBtn'); errorEl.innerText = "Checking..."; btn.disabled = true; const email = document.getElementById('d_email').value.trim().toLowerCase(); const password = document.getElementById('d_password').value.trim(); if(!email ||!password){ errorEl.innerText = "Please enter email and password"; btn.disabled = false; return; } try{ const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({ email, password }); if(authError) throw authError; const userId = authData.user.id; let { data: user } = await supabaseClient.from('users').select('*').eq('id', userId).maybeSingle(); if(!user){ const { data: newUser } = await supabaseClient.from('users').insert({ id: userId, email: authData.user.email, full_name: authData.user_metadata?.full_name || 'User', role: authData.user_metadata?.role || 'customer', is_approved: true }).select().single(); user = newUser; } if(user.role!== 'customer' && user.role!== 'admin' && user.is_approved === false){ await supabaseClient.auth.signOut(); errorEl.className = "text-yellow-600 text-sm mt-3 text-center font-bold"; errorEl.innerText = `⏳ Pending Approval\nHi ${user.full_name}, your account is awaiting admin approval.`; btn.disabled = false; return; } localStorage.setItem('lgm_user', JSON.stringify(user)); errorEl.className = "text-green-600 text-sm mt-3 text-center"; errorEl.innerText = "Login OK. Role: " + user.role + ". Redirecting..."; setTimeout(() => { if(user.role === 'admin') location.href = 'admin.html'; else if(user.role === 'vendor') location.href = 'vendor.html'; else if(user.role === 'delivery_agent') location.href = 'delivery.html'; else location.href = 'customer.html'; }, 800); } catch(err){ errorEl.className = "text-red-500 text-sm mt-3 text-center"; errorEl.innerText = "Error: " + err.message; btn.disabled = false; }
+window.addEventListener('load', () => { if(window.location.hash === '#login'){ showDeliveryLogin(); } });
 </script>
 </body>
 </html>
