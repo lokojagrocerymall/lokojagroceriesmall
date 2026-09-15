@@ -67,11 +67,12 @@ async function load(){
     let pendingV = vendors.filter(x=>x.is_approved===false || x.is_approved===null);
     let pendingA = agents.filter(x=>x.is_approved===false || x.is_approved===null);
     let suspendedV = vendors.filter(x=>x.is_approved===false);
+    let suspendedA = agents.filter(x=>x.is_approved===false);
     let activeV = vendors.filter(x=>x.is_approved===true);
 
     document.getElementById('cP').innerText = pendingV.length + pendingA.length;
     document.getElementById('cV').innerText = activeV.length;
-    document.getElementById('cS').innerText = suspendedV.length;
+    document.getElementById('cS').innerText = suspendedV.length + suspendedA.length;
     document.getElementById('cA').innerText = agents.length;
     document.getElementById('cO').innerText = orders.length;
     document.getElementById('pendingCount').innerText = pendingV.length + pendingA.length;
@@ -130,8 +131,20 @@ function render(){
 
 function showTab(t){
   tab=t;
-  ['btnP','btnV','btnS','btnA','btnO'].forEach(id=>document.getElementById(id).className = 'flex-1 p-3 font-bold text-gray-400');
-  document.getElementById('btn'+t[0].toUpperCase()+t.slice(1)).className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
+  // Reset all tabs to gray
+  document.getElementById('btnP').className = 'flex-1 p-3 font-bold text-gray-400';
+  document.getElementById('btnV').className = 'flex-1 p-3 font-bold text-gray-400';
+  document.getElementById('btnS').className = 'flex-1 p-3 font-bold text-gray-400';
+  document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-gray-400';
+  document.getElementById('btnO').className = 'flex-1 p-3 font-bold text-gray-400';
+  
+  // Activate clicked tab
+  if(t==='pending') document.getElementById('btnP').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
+  if(t==='vendors') document.getElementById('btnV').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
+  if(t==='suspended') document.getElementById('btnS').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
+  if(t==='agents') document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
+  if(t==='orders') document.getElementById('btnO').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
+  
   render();
 }
 
