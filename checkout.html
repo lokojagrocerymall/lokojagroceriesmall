@@ -29,14 +29,14 @@ input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin
 <input id="cName" placeholder="Full Name">
 <input id="cPhone" placeholder="Phone Number 080...">
 <input id="cAddress" placeholder="Delivery Address in Lokoja">
-<button class="btn" onclick="payWithFlutterwave()">Pay Now - Split Payment</button>
+<button class="btn" onclick="payWithFlutterwave()">Pay Now ₦<span id="grandTotal">0</span></button>
 <p class="small">Secure payment. Vendor gets 90%, Platform takes 10% + ₦5,000 delivery</p>
 </div>
 
 <script>
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
-const FLW_PUBLIC_KEY = "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X"; // TEST KEY
+const FLW_PUBLIC_KEY = "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
@@ -53,14 +53,16 @@ function showCart(){
     let vendorName = item.vendor_email? item.vendor_email.split('@')[0] : 'Unknown';
     h += `<div class="order-item"><div>${item.name} x${item.qty} <span class="vendor-tag">${vendorName}</span></div><div>₦${subtotal.toLocaleString()}</div></div>`;
   });
+  let grand = total + delivery;
   h += `<div class="order-item"><div>Delivery Fee</div><div>₦${delivery.toLocaleString()}</div></div>`;
-  h += `<div class="total-row"><div>Total</div><div>₦${(total + delivery).toLocaleString()}</div></div>`;
+  h += `<div class="total-row"><div>Total</div><div>₦${grand.toLocaleString()}</div></div>`;
   document.getElementById('cartSummary').innerHTML = h;
+  document.getElementById('grandTotal').innerText = grand.toLocaleString();
 }
 showCart();
 
 async function payWithFlutterwave(){
-  if(!curUser){ alert('Please login first'); window.location.href='login.html'; return; }
+  if(!curUser){ alert('Please login first'); window.location.href='index.html#login'; return; }
   const name = document.getElementById('cName').value;
   const phone = document.getElementById('cPhone').value;
   const address = document.getElementById('cAddress').value;
@@ -82,9 +84,9 @@ async function payWithFlutterwave(){
     id: vendorSubaccounts[email],
     transaction_charge_type: "percentage",
     transaction_charge: 90
-  }));
+  })).filter(s => s.id); // remove if subaccount missing
 
-  if(subaccounts.length === 0) return alert('No vendor found in cart');
+  if(subaccounts.length === 0) return alert('No vendor subaccount found');
 
   const grandTotal = total + delivery;
 
@@ -106,52 +108,25 @@ async function payWithFlutterwave(){
 }
 
 async function saveOrder(tx_ref, name, phone, address, grandTotal){
-  // 1. SAVE MAIN ORDER
   const {data, error} = await supabaseClient.from('orders').insert({
-    tx_ref: tx_ref,
-    customer_id: curUser.id,
-    customer_name: name,
-    customer_email: curUser.email,
-    customer_phone: phone,
-    customer_address: address,
-    customer_whatsapp: phone,
-    items: cart,
-    subtotal: total,
-    delivery_fee: delivery,
-    total: grandTotal,
-    payment_status: true,
-    status: 'paid',
-    created_at: new Date().toISOString()
-  }).select();
-
+    tx_ref: tx_ref, customer_id: curUser.id, customer_name: name, customer_email: curUser.email,
+    customer_phone: phone, customer_address: address, items: cart, subtotal: total,
+    delivery_fee: delivery, total: grandTotal, payment_status: true, status: 'paid', created_at: new Date().toISOString()
+  }).select().single();
   if(error){ alert('Order failed: '+error.message); return; }
 
-  // 2. SPLIT TO VENDOR_ORDERS
+  // Split to vendors
   const vendors = [...new Set(cart.map(i=>i.vendor_id).filter(Boolean))];
   for(let vid of vendors){
     let vendorItems = cart.filter(i=>i.vendor_id===vid);
-    let vendorSubtotal = vendorItems.reduce((s,i)=>s+i.price*i.qty,0);
     await supabaseClient.from('vendor_orders').insert({
-      order_id: data[0].id,
-      vendor_id: vid,
-      vendor_email: vendorItems[0].vendor_email,
-      items: vendorItems,
-      subtotal: vendorSubtotal,
-      status: 'new'
+      order_id: data.id, vendor_id: vid, vendor_email: vendorItems[0].vendor_email,
+      items: vendorItems, subtotal: vendorItems.reduce((s,i)=>s+i.price*i.qty,0), status: 'new'
     });
   }
 
-  // 3. WHATSAPP ALERT
-  const vendorEmails = [...new Set(cart.map(i=>i.vendor_email).filter(Boolean))];
-  vendorEmails.forEach(vEmail => {
-    let vendorItems = cart.filter(i=>i.vendor_email===vEmail);
-    let vendorTotal = vendorItems.reduce((s,i)=>s+i.price*i.qty,0)*0.9;
-    let msg = `New LGM Order #${data[0].id}\nYour Cut 90%: ₦${Math.round(vendorTotal).toLocaleString()}\nCustomer: ${name}\nPhone: ${phone}\nItems: ${vendorItems.map(i=>`${i.name} x${i.qty}`).join(', ')}`;
-    window.open(`https://wa.me/234?text=${encodeURIComponent(msg)}`, '_blank');
-  });
-
   localStorage.removeItem('lgm_cart');
-  alert('Order Placed Successfully! Payment Split');
+  alert('Payment Successful! Order #'+data.id);
   window.location.href = 'customer.html';
 }
 </script>
