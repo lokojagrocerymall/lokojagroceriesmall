@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Account - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://checkout.flutterwave.com/v3.js"></script></head> <!-- ADDED FLUTTERWAVE -->
 <body class="bg-gray-100">
 <header class="bg-white p-4 flex justify-between items-center shadow sticky top-0 z-10">
   <b class="text-green-700">My Account</b>
@@ -30,7 +31,7 @@
 
   <!-- CART WITH DELIVERY FORM -->
   <div id="view-cart" class="view hidden">
-    <form onsubmit="checkout(event)" class="bg-white p-4 rounded-2xl shadow">
+    <form onsubmit="payWithFlutterwave(event)" class="bg-white p-4 rounded-2xl shadow"> <!-- CHANGED TO PAY -->
       <h3 class="font-bold mb-3">Your Cart</h3>
       <div id="cartList">Cart is empty</div>
 
@@ -66,8 +67,9 @@
         <div class="flex justify-between text-sm"><span>Subtotal</span><span id="subTotal">₦0</span></div>
         <div class="flex justify-between text-sm text-gray-600"><span>Delivery Fee 5%</span><span id="deliveryFee">₦0</span></div>
         <div class="flex justify-between font-bold text-lg border-t pt-2"><span>Total</span><span id="cartTotal">₦0</span></div>
-        <button type="submit" id="placeOrderBtn" class="w-full bg-green-600 text-white py-3 rounded-full font-bold mt-3 hidden">Place Order</button>
+        <button type="submit" id="placeOrderBtn" class="w-full bg-[#f5a623] text-white py-3 rounded-full font-bold mt-3 hidden">💳 Pay Now With Flutterwave - <span id="payAmount">₦0</span></button> <!-- CHANGED -->
       </div>
+      <div id="orderMsg" class="text-sm text-center mt-2"></div> <!-- ADDED FOR PAYMENT STATUS -->
     </form>
   </div>
 
@@ -95,8 +97,9 @@ let cart = JSON.parse(localStorage.getItem('lgm_cart')||'[]');
 let allProducts = [];
 let tempRating = {};
 let isUserInteracting = false;
+let isSubmitting = false; // ADDED
 
-const THREE_HOURS_MS = 3 * 60 * 60 * 1000; // FIXED: Was 4hrs
+const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
 const LOKOJA_AREAS = [
   "200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs",
@@ -227,6 +230,7 @@ function renderCart(){
     document.getElementById('subTotal').innerText='₦0';
     document.getElementById('deliveryFee').innerText='₦0';
     document.getElementById('cartTotal').innerText='₦0';
+    document.getElementById('payAmount').innerText='₦0'; // ADDED
     document.getElementById('deliveryForm').classList.add('hidden');
     document.getElementById('placeOrderBtn').classList.add('hidden');
     return;
@@ -256,34 +260,79 @@ function renderCart(){
   document.getElementById('subTotal').innerText='₦'+subtotal.toLocaleString();
   document.getElementById('deliveryFee').innerText='₦'+delivery.toLocaleString();
   document.getElementById('cartTotal').innerText='₦'+total.toLocaleString();
+  document.getElementById('payAmount').innerText='₦'+total.toLocaleString(); // ADDED
   document.getElementById('deliveryForm').classList.remove('hidden');
   document.getElementById('placeOrderBtn').classList.remove('hidden');
 }
 
-async function checkout(e){
+// REPLACED checkout() WITH PAYMENT FIRST
+async function payWithFlutterwave(e){
   e.preventDefault();
+  if(isSubmitting) return;
   if(cart.length===0) return alert('Cart is empty');
 
   const locationSelect = document.getElementById('checkoutLocation').value;
   const customLocation = document.getElementById('customLocation').value;
   const finalLocation = locationSelect === 'Other'? customLocation : locationSelect;
-
   const checkoutAddress = document.getElementById('checkoutAddress').value;
   const checkoutLandmark = document.getElementById('checkoutLandmark').value;
   const checkoutWhatsApp = document.getElementById('checkoutWhatsApp').value;
   const checkoutPhone = document.getElementById('checkoutPhone').value;
 
+  if(!finalLocation ||!checkoutAddress ||!checkoutLandmark ||!checkoutWhatsApp ||!checkoutPhone) return alert('Fill all delivery details');
+
   const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
   const delivery = Math.round(subtotal * 0.05);
   const total = subtotal + delivery;
+  const tx_ref = "LGM-" + Date.now();
 
-  // FIX: SAVE ITEMS AS JSONB WITH VENDOR_EMAIL
+  isSubmitting = true;
+  const btn = document.getElementById('placeOrderBtn');
+  btn.disabled = true;
+  btn.innerText = 'Processing Payment...';
+
+  document.getElementById('orderMsg').innerHTML='<span style="color:blue">🔄 Opening Flutterwave...</span>';
+
+  // SPLIT PAYMENT: Vendor 90%
+  const vendorSubaccounts = {
+    "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
+    "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
+  }
+  const vendorTotals = {};
+  cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + item.price*item.qty; });
+
+  const subaccounts = Object.keys(vendorTotals)
+.map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"percentage", transaction_charge:90}))
+.filter(s=>s.id);
+
+  FlutterwaveCheckout({
+    public_key: "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X", // YOUR KEY
+    tx_ref: tx_ref,
+    amount: total,
+    currency: "NGN",
+    payment_options: "card,ussd,banktransfer,opay",
+    customer: { email: user.email, phone_number: checkoutPhone, name: displayName },
+    subaccounts: subaccounts,
+    customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery" },
+    callback: async function(data){
+      document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order...</span>';
+      if(data.status === "successful"){
+        await saveOrderAfterPayment(data.tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total);
+      } else {
+        alert('Payment ' + data.status);
+        isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
+      }
+    },
+    onclose: function(){
+      document.getElementById('orderMsg').innerText='Payment closed';
+      isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
+    }
+  });
+}
+
+async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total){
   const itemsWithVendor = cart.map(i => ({
-    id: i.id,
-    name: i.name,
-    price: i.price,
-    qty: i.qty,
-    vendor_email: i.vendor_email
+    id: i.id, name: i.name, price: i.price, qty: i.qty, vendor_email: i.vendor_email
   }));
 
   const { error } = await supabaseClient.from('orders').insert({
@@ -292,34 +341,33 @@ async function checkout(e){
     customer_phone: checkoutPhone,
     customer_whatsapp: checkoutWhatsApp,
     customer_address: `${finalLocation} | ${checkoutAddress} | Landmark: ${checkoutLandmark}`,
-    vendor_email: itemsWithVendor[0]?.vendor_email || 'test@vendor.com', // For backward compat
-    items: itemsWithVendor, // NEW: Save items JSONB
+    vendor_email: itemsWithVendor[0]?.vendor_email || 'test@vendor.com',
+    items: itemsWithVendor,
+    subtotal: subtotal,
+    delivery_fee: delivery,
     total: total,
-    status: 'paid', // Order is active immediately
-    payment_status: true // NEW: Confirm payment
+    tx_ref: tx_ref,
+    status: 'paid',
+    payment_status: true,
+    payment_method: 'flutterwave'
   });
-  if(error) alert(error.message);
-  else {
-    alert(`Order Placed! Total: ₦${total.toLocaleString()}`);
-    cart=[]; localStorage.removeItem('lgm_cart');
-    document.getElementById('checkoutLocation').value = '';
-    document.getElementById('customLocation').value = '';
-    document.getElementById('checkoutAddress').value = '';
-    document.getElementById('checkoutLandmark').value = '';
-    document.getElementById('checkoutWhatsApp').value = '';
-    document.getElementById('checkoutPhone').value = '';
-    showTab('orders');
+
+  if(error) {
+    alert('DB Error: '+error.message);
+  } else {
+    localStorage.removeItem('lgm_cart'); cart = [];
+    document.getElementById('orderMsg').innerHTML = '<span style="color:green;font-weight:bold">✅ Paid! Order '+tx_ref+' saved.</span>';
+    setTimeout(()=>{ showTab('orders'); },2000);
   }
 }
 
 async function loadOrders(){
-  // FIX: ONLY LOAD PAID ORDERS
   const {data} = await supabaseClient.from('orders')
-   .select('*')
-   .eq('customer_email', user.email)
-   .eq('status','paid') // NEW
-   .eq('payment_status', true) // NEW
-   .order('created_at',{ascending:false});
+  .select('*')
+  .eq('customer_email', user.email)
+  .eq('status','paid')
+  .eq('payment_status', true)
+  .order('created_at',{ascending:false});
   let html='';
   data?.forEach(o=>{
     let color = o.status==='delivered'? 'text-green-600' : o.status==='on the way'? 'text-orange-500' : o.status==='failed_delivery'? 'text-red-600' : 'text-blue-600';
