@@ -29,9 +29,10 @@
   </div>
 
   <div class="bg-white rounded-xl shadow">
-    <div class="flex border-b overflow-x-auto">
+    <div class="flex border-b overflow-x-auto text-xs">
       <button onclick="showTab('pending')" id="btnP" class="flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600">Pending (<span id="cP">0</span>)</button>
-      <button onclick="showTab('vendors')" id="btnV" class="flex-1 p-3 font-bold text-gray-400">Vendors (<span id="cV">0</span>)</button>
+      <button onclick="showTab('vendors')" id="btnV" class="flex-1 p-3 font-bold text-gray-400">Active V (<span id="cV">0</span>)</button>
+      <button onclick="showTab('suspended')" id="btnS" class="flex-1 p-3 font-bold text-gray-400">Suspended (<span id="cS">0</span>)</button>
       <button onclick="showTab('agents')" id="btnA" class="flex-1 p-3 font-bold text-gray-400">Agents (<span id="cA">0</span>)</button>
       <button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-gray-400">Orders (<span id="cO">0</span>)</button>
     </div>
@@ -51,30 +52,29 @@ if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); loc
 async function load(){
   document.getElementById('list').innerHTML = 'Loading...';
   try{
-    const {data:u, error:uErr} = await supabaseClient.from('users').select('*');
-    if(uErr) throw uErr;
+    const {data:u} = await supabaseClient.from('users').select('*');
     users = u||[];
-    
-    // FIX: ONLY LOAD PAID ORDERS. UNPAID ORDERS ARE INVISIBLE TO ADMIN
-    const {data:o, error:oErr} = await supabaseClient.from('orders')
-      .select('*')
-      .eq('status','paid')
-      .eq('payment_status', true)
-      .order('created_at',{ascending:false});
-    if(oErr) throw oErr;
+
+    const {data:o} = await supabaseClient.from('orders')
+     .select('*')
+     .eq('status','paid')
+     .eq('payment_status', true)
+     .order('created_at',{ascending:false});
     orders = o||[];
 
     let vendors = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor');
     let agents = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
     let pendingV = vendors.filter(x=>x.is_approved===false || x.is_approved===null);
     let pendingA = agents.filter(x=>x.is_approved===false || x.is_approved===null);
-    let totalPending = pendingV.length + pendingA.length;
+    let suspendedV = vendors.filter(x=>x.is_approved===false);
+    let activeV = vendors.filter(x=>x.is_approved===true);
 
-    document.getElementById('cP').innerText = totalPending;
-    document.getElementById('cV').innerText = vendors.length;
+    document.getElementById('cP').innerText = pendingV.length + pendingA.length;
+    document.getElementById('cV').innerText = activeV.length;
+    document.getElementById('cS').innerText = suspendedV.length;
     document.getElementById('cA').innerText = agents.length;
     document.getElementById('cO').innerText = orders.length;
-    document.getElementById('pendingCount').innerText = totalPending;
+    document.getElementById('pendingCount').innerText = pendingV.length + pendingA.length;
 
     let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
     document.getElementById('sales').innerText = '₦'+Math.round(gross).toLocaleString();
@@ -88,27 +88,35 @@ async function load(){
 function render(){
   let data=[];
   if(tab==='pending') data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' || String(x.role).toLowerCase().trim()==='delivery_agent') && (x.is_approved===false || x.is_approved===null));
-  if(tab==='vendors') data = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor');
+  if(tab==='vendors') data = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor' && x.is_approved===true);
+  if(tab==='suspended') data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' || String(x.role).toLowerCase().trim()==='delivery_agent') && x.is_approved===false);
   if(tab==='agents') data = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
-  if(tab==='orders') data = orders; // THIS IS ALREADY FILTERED TO PAID ONLY
+  if(tab==='orders') data = orders;
 
   if(data.length===0){ document.getElementById('list').innerHTML = `<div class="text-center text-gray-400 py-10">No ${tab} yet</div>`; return; }
 
   let html='';
-  if(tab==='pending' || tab==='vendors' || tab==='agents'){
+  if(tab==='pending' || tab==='vendors' || tab==='suspended' || tab==='agents'){
     data.forEach(u=>{
-      let roleBadge = String(u.role).toLowerCase().trim()==='delivery_agent' ? `<span class="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px]">AGENT</span>` : `<span class="bg-green-500 text-white px-2 py-0.5 rounded text-[10px]">VENDOR</span>`;
+      let roleBadge = String(u.role).toLowerCase().trim()==='delivery_agent'? `<span class="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px]">AGENT</span>` : `<span class="bg-green-500 text-white px-2 py-0.5 rounded text-[10px]">VENDOR</span>`;
+      let actionBtn = '';
+      if(tab==='pending' || tab==='suspended'){
+        actionBtn = `<button onclick="updateStatus('${u.email}', true)" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve / Reactivate</button>`;
+      } else {
+        actionBtn = `<button onclick="updateStatus('${u.email}', false)" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>`;
+      }
+
       html += `<div class="border rounded-lg p-3 mb-2">
         <div class="font-bold">${u.full_name} ${roleBadge}</div>
         <div class="text-xs text-gray-500">${u.email} • ${u.phone} • ${u.location}</div>
-        <div class="text-xs mt-1">Approved: ${u.is_approved}</div>
-        ${!u.is_approved?`<button onclick="approve('${u.email}')" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
+        <div class="text-xs mt-1">Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended'}</b></div>
+        ${actionBtn}
       </div>`;
     });
   }
   if(tab==='orders'){
     data.forEach(o=>{
-      let agentInfo = o.delivery_agent_name ? `<div class="text-xs text-blue-600 font-bold">Agent: ${o.delivery_agent_name}</div>` : `<div class="text-xs text-orange-600 font-bold">Waiting for Agent</div>`;
+      let agentInfo = o.delivery_agent_name? `<div class="text-xs text-blue-600 font-bold">Agent: ${o.delivery_agent_name}</div>` : `<div class="text-xs text-orange-600 font-bold">Waiting for Agent</div>`;
       html += `<div class="border rounded-lg p-3 mb-2">
         <div class="flex justify-between"><div class="font-bold">Order #${o.id}</div><div class="font-bold text-green-700">₦${Number(o.total||0).toLocaleString()}</div></div>
         <div class="text-xs">Customer: ${o.customer_name || o.customer_email}</div>
@@ -122,20 +130,16 @@ function render(){
 
 function showTab(t){
   tab=t;
-  document.getElementById('btnP').className = 'flex-1 p-3 font-bold text-gray-400';
-  document.getElementById('btnV').className = 'flex-1 p-3 font-bold text-gray-400';
-  document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-gray-400';
-  document.getElementById('btnO').className = 'flex-1 p-3 font-bold text-gray-400';
-  if(t==='pending') document.getElementById('btnP').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
-  if(t==='vendors') document.getElementById('btnV').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
-  if(t==='agents') document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
-  if(t==='orders') document.getElementById('btnO').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
+  ['btnP','btnV','btnS','btnA','btnO'].forEach(id=>document.getElementById(id).className = 'flex-1 p-3 font-bold text-gray-400');
+  document.getElementById('btn'+t[0].toUpperCase()+t.slice(1)).className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
   render();
 }
 
-async function approve(email){
-  await supabaseClient.from('users').update({is_approved:true}).eq('email',email);
-  alert('Approved!');
+async function updateStatus(email, status){
+  let action = status? 'Approve' : 'Suspend';
+  if(!confirm(`${action} this account?`)) return;
+  await supabaseClient.from('users').update({is_approved: status}).eq('email',email);
+  alert(`Account ${action}d!`);
   load();
 }
 
