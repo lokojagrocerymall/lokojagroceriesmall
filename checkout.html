@@ -4,6 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Checkout - Lokoja Grocery Mall</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://checkout.flutterwave.com/v3.js"></script>
 <style>
 *{box-sizing:border-box}body{font-family:system-ui;background:#f8fafc;margin:0;padding:16px}
 .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:12px}
@@ -13,6 +14,7 @@ input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin
 .small{font-size:12px;color:#6b7280}
 .order-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6}
 .total-row{display:flex;justify-content:space-between;font-weight:800;font-size:18px;margin-top:8px}
+.vendor-tag{font-size:11px;background:#dcfce7;color:#166534;padding:2px 6px;border-radius:6px;margin-left:6px}
 </style>
 </head>
 <body>
@@ -27,64 +29,124 @@ input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin
 <input id="cName" placeholder="Full Name">
 <input id="cPhone" placeholder="Phone Number 080...">
 <input id="cAddress" placeholder="Delivery Address in Lokoja">
-<button class="btn" onclick="placeOrder()">Place Order</button>
-<p class="small">You will pay on delivery. Vendor gets 90%, Platform takes 10%</p>
+<button class="btn" onclick="payWithFlutterwave()">Pay Now - Split Payment</button>
+<p class="small">Secure payment. Vendor gets 90%, Platform takes 10% + ₦5,000 delivery</p>
 </div>
 
 <script>
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const FLW_PUBLIC_KEY = "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X"; // TEST KEY
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
 let curUser = JSON.parse(localStorage.getItem('lgm_user'));
+let delivery = 5000;
+let total = 0;
 
 function showCart(){
   if(cart.length === 0){ document.getElementById('cartSummary').innerHTML = "<p>Cart is empty</p>"; return; }
-  let h = ''; let total = 0;
+  let h = ''; total = 0;
   cart.forEach(item=>{
     let subtotal = item.price * item.qty;
     total += subtotal;
-    h += `<div class="order-item"><div>${item.name} x${item.qty}</div><div>₦${subtotal.toLocaleString()}</div></div>`;
+    let vendorName = item.vendor_email? item.vendor_email.split('@')[0] : 'Unknown';
+    h += `<div class="order-item"><div>${item.name} x${item.qty} <span class="vendor-tag">${vendorName}</span></div><div>₦${subtotal.toLocaleString()}</div></div>`;
   });
-  let delivery = 5000; // flat delivery fee
   h += `<div class="order-item"><div>Delivery Fee</div><div>₦${delivery.toLocaleString()}</div></div>`;
   h += `<div class="total-row"><div>Total</div><div>₦${(total + delivery).toLocaleString()}</div></div>`;
   document.getElementById('cartSummary').innerHTML = h;
 }
 showCart();
 
-async function placeOrder(){
+async function payWithFlutterwave(){
   if(!curUser){ alert('Please login first'); window.location.href='login.html'; return; }
   const name = document.getElementById('cName').value;
   const phone = document.getElementById('cPhone').value;
   const address = document.getElementById('cAddress').value;
-  if(!name || !phone || !address) return alert('Fill all fields');
+  if(!name ||!phone ||!address) return alert('Fill all fields');
 
-  let total = cart.reduce((sum,i)=> sum + (i.price * i.qty), 0) + 5000;
-  let vendor_email = cart[0].vendor_email; // assumes 1 vendor per cart for now
+  // 1. VENDOR SUBACCOUNT MAP
+  const vendorSubaccounts = {
+    "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
+    "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
+  }
 
+  // 2. BUILD SUBACCOUNTS FROM CART - GROUP BY VENDOR
+  const vendorTotals = {};
+  cart.forEach(item => {
+    if(!item.vendor_email) return;
+    if(!vendorTotals[item.vendor_email]){
+      vendorTotals[item.vendor_email] = 0;
+    }
+    vendorTotals[item.vendor_email] += item.price * item.qty;
+  });
+
+  const subaccounts = Object.keys(vendorTotals).map(email => ({
+    id: vendorSubaccounts[email],
+    transaction_charge_type: "percentage",
+    transaction_charge: 90 // Vendor gets 90%
+  }));
+
+  if(subaccounts.length === 0) return alert('No vendor found in cart');
+
+  const grandTotal = total + delivery;
+
+  // 3. CALL FLUTTERWAVE
+  FlutterwaveCheckout({
+    public_key: FLW_PUBLIC_KEY,
+    tx_ref: "lgm_" + Date.now(),
+    amount: grandTotal,
+    currency: "NGN",
+    customer: {
+      email: curUser.email,
+      name: name,
+      phone_number: phone
+    },
+    customizations: {
+      title: "Lokoja Grocery Mall",
+      description: "Multi-Vendor Order",
+      logo: "https://y-mall.vercel.app/logo.png"
+    },
+    subaccounts: subaccounts, // THIS DOES THE SPLIT
+    callback: function(response) {
+      if(response.status === "successful"){
+        saveOrder(response.tx_ref, name, phone, address, grandTotal);
+      } else {
+        alert('Payment failed or cancelled');
+      }
+    },
+    onclose: function() {}
+  });
+}
+
+async function saveOrder(tx_ref, name, phone, address, grandTotal){
   const {data, error} = await supabaseClient.from('orders').insert({
+    tx_ref: tx_ref,
     customer_name: name,
-    customer_email: curUser.email, // THIS IS KEY FOR CUSTOMER DASHBOARD
+    customer_email: curUser.email,
     customer_phone: phone,
     customer_address: address,
-    items: cart,
-    total: total,
-    vendor_email: vendor_email,
+    items: cart, // IMPORTANT: cart must have vendor_email in each item
+    total: grandTotal,
     status: 'paid',
     created_at: new Date().toISOString()
   }).select();
 
   if(error){ alert('Order failed: '+error.message); return; }
-  
-  // Send WhatsApp to vendor
-  let msg = `New Order #${data[0].id} ₦${total.toLocaleString()}\nCustomer: ${name}\nPhone: ${phone}\nAddress: ${address}`;
-  window.open(`https://wa.me/234?text=${encodeURIComponent(msg)}`, '_blank');
+
+  // Send WhatsApp to each vendor
+  const vendors = [...new Set(cart.map(i=>i.vendor_email).filter(Boolean))];
+  vendors.forEach(vEmail => {
+    let vendorItems = cart.filter(i=>i.vendor_email===vEmail);
+    let vendorTotal = vendorItems.reduce((s,i)=>s+i.price*i.qty,0)*0.9;
+    let msg = `New LGM Order #${data[0].id}\nYour Cut 90%: ₦${Math.round(vendorTotal).toLocaleString()}\nCustomer: ${name}\nPhone: ${phone}\nItems: ${vendorItems.map(i=>`${i.name} x${i.qty}`).join(', ')}`;
+    window.open(`https://wa.me/234?text=${encodeURIComponent(msg)}`, '_blank');
+  });
 
   localStorage.removeItem('lgm_cart');
-  alert('Order Placed Successfully!');
-  window.location.href = 'customer.html'; // Send customer to their dashboard
+  alert('Order Placed Successfully! Payment Split');
+  window.location.href = 'customer.html';
 }
 </script>
 </body>
