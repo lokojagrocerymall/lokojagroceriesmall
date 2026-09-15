@@ -66,19 +66,22 @@ body{background:#f3f4f6;font-family:system-ui}
 
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let allUsers=[]; let allOrders=[]; let curTab='pending'; let countdownInterval; // CHANGED TO PENDING
+let allUsers=[]; let allOrders=[]; let curTab='pending'; let countdownInterval;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ location.href='login.html'; }
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
 async function loadAll(){
-  const { data:users } = await supabaseClient.from('users').select('*').order('created_at',{ascending:false});
+  const { data:users, error: e1 } = await supabaseClient.from('users').select('*').order('created_at',{ascending:false});
+  if(e1) return console.error(e1);
   allUsers=users||[];
-  const { data:orders } = await supabaseClient.from('orders').select('*').order('created_at',{ascending:false});
+
+  const { data:orders, error: e2 } = await supabaseClient.from('orders').select('*').order('created_at',{ascending:false});
+  if(e2) return console.error(e2);
   allOrders=orders||[];
 
   let vendors = allUsers.filter(u=>u.role==='vendor');
@@ -271,7 +274,7 @@ function showTab(t){
 }
 
 async function approve(email){ const { error } = await supabaseClient.from('users').update({is_approved:true}).eq('email',email); if(error) alert(error.message); else { alert('Vendor Approved!'); loadAll(); } }
-async function approveDelivery(email){ const { error } = await supabaseClient.from('users').update({is_approved:true}).eq('email',email); if(error) alert(error.message); else { alert('Delivery Agent Approved!'); loadAll(); }
+async function approveDelivery(email){ const { error } = await supabaseClient.from('users').update({is_approved:true}).eq('email',email); if(error) alert(error.message); else { alert('Delivery Agent Approved!'); loadAll(); } // FIXED
 async function removeUser(email){ if(!confirm('Delete this user?')) return; await supabaseClient.from('users').delete().eq('email',email); loadAll(); }
 async function markFailed(id){ const order = allOrders.find(o=>o.id===id); if(order && order.status!== 'failed_delivery' && order.status!== 'delivered'){ await supabaseClient.from('orders').update({status:'failed_delivery'}).eq('id',id); loadAll(); } }
 function logout(){ localStorage.removeItem('lgm_user'); location.href='login.html'; }
