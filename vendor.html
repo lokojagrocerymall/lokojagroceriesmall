@@ -113,7 +113,7 @@ if(!curUser || String(curUser.role).toLowerCase().trim()!== 'vendor'){
   location.href='/';
 }
 
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 2 HOURS LOCKED
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
 function setTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -126,7 +126,6 @@ function setTab(name){
 }
 function logout(){ localStorage.removeItem('lgm_user'); window.location.href='/'; }
 
-// TIMER FUNCTION FOR VENDOR
 function formatVendorCountdown(startTime){
   if(!startTime) return '';
   const end = new Date(startTime).getTime() + TWO_HOURS_MS;
@@ -136,10 +135,7 @@ function formatVendorCountdown(startTime){
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
   const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
-  return `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#d97706">
-            ⏰ Auto-Fail in: ${h}h ${m}m ${s}s<br>
-            <span style="font-size:11px;color:#6b7280">Picked up at: ${pickedUpTime}</span>
-          </div>`;
+  return `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#d97706">⏰ Auto-Fail in: ${h}h ${m}m ${s}s<br><span style="font-size:11px;color:#6b7280">Picked up at: ${pickedUpTime}</span></div>`;
 }
 
 async function init(){
@@ -183,12 +179,9 @@ async function addProduct(){
   const price=document.getElementById('pPrice').value;
   if(!name ||!price) return alert('Fill name and price');
   await supabaseClient.from('products').insert({
-    name,
-    price,
-    stock:document.getElementById('pStock').value,
+    name, price, stock:document.getElementById('pStock').value,
     category:document.getElementById('pCategory').value,
-    vendor_email:curUser.email, // KEY: THIS LINKS TO FLUTTERWAVE SUBACCOUNT
-    image_url
+    vendor_email:curUser.email, image_url
   });
   alert('Product Added!');
   ['pName','pPrice','pStock','pImage'].forEach(id=>document.getElementById(id).value='');
@@ -205,67 +198,75 @@ async function editProduct(id){
 async function deleteProduct(id, name){
   if(!confirm(`Delete "${name}"? This cannot be undone.`)) return;
   await supabaseClient.from('products').delete().eq('id',id);
-  alert('Product Deleted');
-  loadProducts();
+  alert('Product Deleted'); loadProducts();
 }
 
-// LOAD ORDERS BY SEARCHING INSIDE ITEMS JSONB FOR vendor_email
+// FIXED: LOAD ORDERS BY FILTERING JSONB ITEMS
 async function loadOrders(){
- const {data} = await supabaseClient.from('orders').select('*').contains('items', [{"vendor_email": curUser.email}]).order('created_at',{ascending:false});
+  const {data: allOrdersData, error} = await supabaseClient
+   .from('orders')
+   .select('*')
+   .eq('status', 'paid')
+   .order('created_at',{ascending:false});
 
- // Filter only items that belong to this vendor
- allOrders = (data||[]).map(o=>{
-   return {...o, items: (o.items||[]).filter(i=>i.vendor_email === curUser.email)}
- }).filter(o=>o.items.length > 0);
+  if(error){ console.log(error); return; }
 
- let h="";
- if(allOrders.length === 0) h = '<p>📭 No orders yet.</p>';
- else allOrders.forEach(o=>{
-   let status = o.status||'paid';
-   let myTotal = o.items.reduce((s,i)=>s + i.price*i.qty, 0);
-   let myCut = Math.round(myTotal * 0.9);
-   let vendorBtn = ''; let countdown = '';
+  // FILTER: Only orders that have at least 1 item with this vendor_email
+  allOrders = (allOrdersData||[]).filter(o =>
+    o.items && o.items.some(i => i.vendor_email === curUser.email)
+  ).map(o => {
+    // ONLY SHOW THIS VENDOR'S ITEMS
+    return {...o, items: o.items.filter(i => i.vendor_email === curUser.email)}
+  });
 
-   if(status === 'paid'){
-     vendorBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_phone}')" style="background:#2563eb;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">🚚 Start Delivery - 2hr Timer</button>`;
-   }
-   if(status === 'on the way' && o.delivery_started_at){
-     countdown = formatVendorCountdown(o.delivery_started_at);
-   }
-   if(status === 'failed_delivery'){
-     vendorBtn = `<button disabled style="background:#d1d5db;color:#6b7280;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">❌ Delivery Failed</button>`;
-   }
+  let h="";
+  if(allOrders.length === 0) h = '<p>📭 No orders yet.</p>';
+  else allOrders.forEach(o=>{
+    let status = o.status||'paid';
+    let myTotal = o.items.reduce((s,i)=>s + i.price*i.qty, 0);
+    let myCut = Math.round(myTotal * 0.9);
+    let vendorBtn = ''; let countdown = '';
 
-   h+=`<div class='card'>
-     <div style="display:flex;justify-content:space-between"><b>Order ${o.tx_ref}</b><span class="status status-${status}">${status.replace('_',' ')}</span></div>
-     <div class="small">Customer: ${o.customer_name} • ${o.customer_phone}</div>
-     <div class="small">Address: ${o.customer_address}</div>
-     <div style="margin-top:8px"><b>Your Items:</b> ${o.items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
-     <div style="margin-top:4px"><b>Your Cut 90%:</b> <span style="color:#16a34a;font-weight:700">₦${myCut.toLocaleString()}</span></div>
-     ${countdown}${vendorBtn}
-   </div>`;
- });
+    if(status === 'paid'){
+      vendorBtn = `<button onclick="startDelivery(${o.id}, '${o.customer_phone}')" style="background:#2563eb;color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">🚚 Start Delivery - 2hr Timer</button>`;
+    }
+    if(status === 'on the way' && o.delivery_started_at){
+      countdown = formatVendorCountdown(o.delivery_started_at);
+    }
+    if(status === 'failed_delivery'){
+      vendorBtn = `<button disabled style="background:#d1d5db;color:#6b7280;border:0;padding:10px;border-radius:10px;font-weight:800;width:100%;margin-top:8px">❌ Delivery Failed</button>`;
+    }
 
- document.getElementById('ordersList').innerHTML=h;
- document.getElementById('oCount').innerText=allOrders.length;
+    h+=`<div class='card'>
+      <div style="display:flex;justify-content:space-between"><b>Order #${o.id}</b><span class="status status-${status}">${status.replace('_',' ')}</span></div>
+      <div class="small">Customer: ${o.customer_name} • ${o.customer_phone}</div>
+      <div class="small">Address: ${o.customer_address}</div>
+      <div style="margin-top:8px"><b>Your Items:</b> ${o.items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
+      <div style="margin-top:4px"><b>Your Cut 90%:</b> <span style="color:#16a34a;font-weight:700">₦${myCut.toLocaleString()}</span></div>
+      ${countdown}${vendorBtn}
+    </div>`;
+  });
 
- let totalEarnings=0; allOrders.forEach(o=> totalEarnings += o.items.reduce((s,i)=>s + i.price*i.qty, 0)*0.9);
- document.getElementById('wallet').innerText='₦'+Math.round(totalEarnings).toLocaleString();
- document.getElementById('walletBig').innerText='₦'+Math.round(totalEarnings).toLocaleString();
+  document.getElementById('ordersList').innerHTML=h;
+  document.getElementById('oCount').innerText=allOrders.length;
 
- const now=new Date(); const startDay=new Date(now); startDay.setHours(0,0,0,0);
- const startWeek=new Date(now); startWeek.setDate(now.getDate()-7);
- const startMonth=new Date(now); startMonth.setDate(1); startMonth.setHours(0,0,0,0);
- let t=0,w=0,m=0;
- allOrders.forEach(o=>{
-   const d=new Date(o.created_at); const earn= o.items.reduce((s,i)=>s + i.price*i.qty, 0)*0.9;
-   if(d>=startDay) t+=earn;
-   if(d>=startWeek) w+=earn;
-   if(d>=startMonth) m+=earn;
- });
- document.getElementById('salesToday').innerText='₦'+Math.round(t).toLocaleString();
- document.getElementById('salesWeek').innerText='₦'+Math.round(w).toLocaleString();
- document.getElementById('salesMonth').innerText='₦'+Math.round(m).toLocaleString();
+  let totalEarnings=0; allOrders.forEach(o=> totalEarnings += o.items.reduce((s,i)=>s + i.price*i.qty, 0)*0.9);
+  document.getElementById('wallet').innerText='₦'+Math.round(totalEarnings).toLocaleString();
+  document.getElementById('walletBig').innerText='₦'+Math.round(totalEarnings).toLocaleString();
+
+  const now=new Date(); const startDay=new Date(now); startDay.setHours(0,0,0,0);
+  const startWeek=new Date(now); startWeek.setDate(now.getDate()-7);
+  const startMonth=new Date(now); startMonth.setDate(1); startMonth.setHours(0,0,0,0);
+  let t=0,w=0,m=0;
+  allOrders.forEach(o=>{
+    const d=new Date(o.created_at); const earn= o.items.reduce((s,i)=>s + i.price*i.qty, 0)*0.9;
+    if(d>=startDay) t+=earn;
+    if(d>=startWeek) w+=earn;
+    if(d>=startMonth) m+=earn;
+  });
+  document.getElementById('salesToday').innerText='₦'+Math.round(t).toLocaleString();
+  document.getElementById('salesWeek').innerText='₦'+Math.round(w).toLocaleString();
+  document.getElementById('salesMonth').innerText='₦'+Math.round(m).toLocaleString();
 }
 
 async function startDelivery(id, customerPhone){
@@ -303,7 +304,7 @@ async function saveProfile(){
   localStorage.setItem('lgm_user', JSON.stringify(curUser));
   alert('Profile Updated!'); init();
 }
-setInterval(loadOrders, 5000); // REFRESH EVERY 5 SECONDS
+setInterval(loadOrders, 5000);
 </script>
 </body>
 </html>
