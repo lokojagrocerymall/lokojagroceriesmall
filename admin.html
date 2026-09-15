@@ -82,9 +82,9 @@ async function loadAll(){
   allOrders=orders||[];
 
   let vendors = allUsers.filter(u=>u.role==='vendor');
-  let pending = vendors.filter(v=>v.is_approved===false);
+  let pending = vendors.filter(v=>v.is_approved!==true);
   let delivery = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
-  let deliveryPending = delivery.filter(d=>d.is_approved===false);
+  let deliveryPending = delivery.filter(d=>d.is_approved!==true);
   let newOrders = allOrders.filter(o=>o.status==='paid');
   let activeOrders = allOrders.filter(o=>o.status==='on the way' || o.status==='processing');
 
@@ -128,7 +128,7 @@ function render(){
   if(curTab==='new') list = allOrders.filter(o=>o.status==='paid');
   if(curTab==='active') list = allOrders.filter(o=>o.status==='on the way' || o.status==='processing');
   if(curTab==='vendors') list = allUsers.filter(u=>u.role==='vendor');
-  if(curTab==='pending') list = [...allUsers.filter(u=>u.role==='vendor' && u.is_approved===false),...allUsers.filter(u=>u.role==='delivery' && u.is_approved===false)];
+  if(curTab==='pending') list = [...allUsers.filter(u=>u.role==='vendor' && u.is_approved!==true),...allUsers.filter(u=>u.role==='delivery' && u.is_approved!==true)];
   if(curTab==='customers') list = allUsers.filter(u=>u.role==='customer');
   if(curTab==='delivery') list = allUsers.filter(u=>u.role==='delivery' || u.role==='agent');
   if(curTab==='orders') list = allOrders;
@@ -192,13 +192,13 @@ function render(){
     });
   } else if(curTab==='delivery'){
     list.forEach(u=>{
-      let statusColor = u.is_approved===false? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
-      let borderColor = u.is_approved===false? 'border-yellow-400' : 'border-green-400';
+      let statusColor = u.is_approved!==true? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+      let borderColor = u.is_approved!==true? 'border-yellow-400' : 'border-green-400';
       html+=`<div class="border-2 ${borderColor} rounded-xl p-3 mb-3">
-        <div class="font-bold text-base">${u.full_name||u.name||u.email} <span class="px-2 py-0.5 text-xs rounded-full ${statusColor}">${u.is_approved===false?'pending':'approved'}</span></div>
+        <div class="font-bold text-base">${u.full_name||u.name||u.email} <span class="px-2 py-0.5 text-xs rounded-full ${statusColor}">${u.is_approved!==true?'pending':'approved'}</span></div>
         <div class="text-xs text-gray-500">${u.email} • ${u.whatsapp||''}</div>
         <div class="flex gap-2 mt-3">
-          ${u.is_approved===false?`<button onclick="approveDelivery('${u.email}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
+          ${u.is_approved!==true?`<button onclick="approveDelivery('${u.email}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
           <button onclick="removeUser('${u.email}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs">Delete</button>
         </div>
       </div>`;
@@ -208,12 +208,12 @@ function render(){
       html+=`<div class="border rounded-xl p-3 mb-3 flex justify-between items-center">
         <div>
           <div class="font-bold">${u.full_name||u.name||u.email}
-            <span class="text-xs ${u.is_approved===false?'text-orange-500':'text-green-600'}">${u.role==='vendor'? (u.is_approved===false?'(Pending)':'(Approved)') : ''}</span>
+            <span class="text-xs ${u.is_approved!==true?'text-orange-500':'text-green-600'}">${u.role==='vendor'? (u.is_approved!==true?'(Pending)':'(Approved)') : ''}</span>
           </div>
           <div class="text-xs text-gray-500">${u.email} • ${u.whatsapp||u.phone||''} • ${u.location||''}</div>
         </div>
         <div class="flex gap-2">
-          ${curTab==='pending' && u.is_approved===false?`<button onclick="approve('${u.email}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
+          ${curTab==='pending' && u.is_approved!==true?`<button onclick="approve('${u.email}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">Approve</button>`:''}
           ${curTab==='vendors' && u.role==='vendor'?`<button onclick="location.href='vendor-orders.html?email=${u.email}'" class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">Orders</button>`:''}
           <button onclick="removeUser('${u.email}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs">Delete</button>
         </div>
