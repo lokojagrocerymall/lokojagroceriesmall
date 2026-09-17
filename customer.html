@@ -35,13 +35,11 @@
     <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3">Loading products...</div>
   </div>
 
-  <!-- CART WITH DELIVERY FORM -->
   <div id="view-cart" class="view hidden">
     <form onsubmit="payWithFlutterwave(event)" class="bg-white p-4 rounded-2xl shadow">
       <h3 class="font-bold mb-3">Your Cart</h3>
       <div id="cartList">Cart is empty</div>
 
-      <!-- DELIVERY DETAILS - FILL EVERY TIME -->
       <div id="deliveryForm" class="border-t pt-3 mt-3 space-y-3 hidden">
         <h4 class="font-bold text-green-600">🚚 Delivery Details</h4>
         <div>
@@ -104,7 +102,7 @@ let allProducts = [];
 let tempRating = {};
 let isUserInteracting = false;
 let isSubmitting = false;
-let lastOrderStatus = {}; // TRACK STATUS CHANGES
+let lastOrderStatus = {};
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 const LOKOJA_AREAS = [
@@ -117,12 +115,52 @@ const LOKOJA_AREAS = [
   "Poly","Post Office","Shetima","Zenith Bank","Zango","Zone 8","Other"
 ];
 
-window.onload = () => {
+window.onload = async () => {
   const select = document.getElementById('checkoutLocation');
   LOKOJA_AREAS.forEach(area => {
     select.innerHTML += `<option value="${area}">${area}</option>`;
   });
-  showTab('shop')
+  await syncCartFromSupabase();
+  showTab('shop');
+}
+
+// === NEW: SYNC CART FROM SUPABASE - THIS FIXES CART (0) BUG ===
+async function syncCartFromSupabase(){
+  try{
+    const userData = JSON.parse(localStorage.getItem('lgm_user')||'{}');
+    if(!userData.id) return;
+
+    const { data: dbCart } = await supabaseClient.from('carts').select('*').eq('customer_id', userData.id);
+
+    if(dbCart && dbCart.length > 0){
+      // Use Supabase cart as source of truth
+      cart = dbCart.map(c => ({
+        id: c.product_id,
+        name: c.product_name,
+        price: Number(c.product_price),
+        image_url: c.product_image,
+        vendor_email: c.vendor_email,
+        vendor_id: c.vendor_id,
+        qty: c.qty
+      }));
+      localStorage.setItem('lgm_cart', JSON.stringify(cart));
+    } else if(cart.length > 0){
+      // Local cart exists but no DB cart - push local to DB
+      for(let item of cart){
+        await supabaseClient.from('carts').upsert({
+          customer_id: userData.id,
+          product_id: item.id,
+          product_name: item.name,
+          product_price: item.price,
+          product_image: item.image_url || item.image || '',
+          vendor_id: item.vendor_id || null,
+          vendor_email: item.vendor_email || null,
+          qty: item.qty
+        }, {onConflict: 'customer_id,product_id'});
+      }
+    }
+    saveCart(false);
+  }catch(e){ console.log("sync cart error:", e.message); saveCart(false); }
 }
 
 function toggleCustomLocation(){
@@ -144,19 +182,17 @@ function showTab(t){
   document.getElementById('view-'+t).classList.remove('hidden');
   document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('text-green-600','border-b-2','border-green-600');
   if(t==='orders'){
-    document.getElementById('tabOrders').classList.remove('alert-tab'); // RESET ALERT
+    document.getElementById('tabOrders').classList.remove('alert-tab');
     loadOrders();
   }
   if(t==='shop') loadProducts();
-  if(t==='cart') renderCart();
+  if(t==='cart') { syncCartFromSupabase().then(()=>renderCart()); }
 }
 
-// UPDATED: Now checks for timer expiry and auto-marks failed
 function formatCustomerCountdown(orderId, startTime){
   if(!startTime) return '';
   const end = new Date(startTime).getTime() + THREE_HOURS_MS;
   const diff = end - new Date().getTime();
-
   if(diff <= 0) {
     autoMarkFailed(orderId);
     return `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b class="text-red-600">⏰ Delivery Failed. Admin will contact you</b></div>`;
@@ -211,12 +247,12 @@ function buildRatingUI(o){
 }
 
 async function loadProducts(){
-  const {data} = await supabaseClient.from('products').select('*');
+  const {data} = await supabaseClient.from('products').select('*').eq('is_approved', true);
   allProducts = data||[];
   let html = '';
   allProducts.forEach(p=>{
     html += `<div class="bg-white p-3 rounded-2xl shadow">
-      <img src="${p.image_url || 'https://placehold.co/200x200/e5e7eb/6b7280?text=No+Img'}" class="w-full h-32 object-cover rounded-lg mb-2">
+      <img src="${p.image_url || p.image || 'https://placehold.co/200x200/e5e7eb/6b7280?text=No+Img'}" class="w-full h-32 object-cover rounded-lg mb-2">
       <b class="text-sm">${p.name}</b>
       <div class="text-xs text-gray-500">${p.vendor_email}</div>
       <div class="font-bold text-green-600">₦${Number(p.price).toLocaleString()}</div>
@@ -226,33 +262,68 @@ async function loadProducts(){
   document.getElementById('productGrid').innerHTML = html || 'No products yet';
 }
 
-function addToCart(id){
+// === FIXED addToCart - NOW SAVES TO SUPABASE ===
+async function addToCart(id){
   const product = allProducts.find(p=>p.id===id);
+  if(!product) return;
   const existing = cart.find(i=>i.id===id);
   if(existing) existing.qty++;
   else cart.push({...product, qty:1});
-  saveCart();
-  alert(product.name + ' added to cart');
+  saveCart(true);
+
+  // Save to Supabase
+  try{
+    const u = JSON.parse(localStorage.getItem('lgm_user')||'{}');
+    if(u.id){
+      await supabaseClient.from('carts').upsert({
+        customer_id: u.id,
+        product_id: product.id,
+        product_name: product.name,
+        product_price: product.price,
+        product_image: product.image_url || product.image || '',
+        vendor_id: product.vendor_id || null,
+        vendor_email: product.vendor_email || null,
+        qty: existing? existing.qty : 1
+      }, {onConflict: 'customer_id,product_id'});
+    }
+  }catch(e){ console.log("cart db save error", e.message); }
+
+  alert(product.name + ' added to cart - will show on all your devices!');
 }
 
-function saveCart(){
+function saveCart(syncCount = true){
   localStorage.setItem('lgm_cart', JSON.stringify(cart));
   document.getElementById('cartCount').innerText = cart.reduce((s,i)=>s+i.qty,0);
 }
 
-function updateQty(id, change){
+async function updateQty(id, change){
   const item = cart.find(i=>i.id===id);
   if(!item) return;
   item.qty += change;
   if(item.qty <= 0) cart = cart.filter(i=>i.id!==id);
   saveCart();
   renderCart();
+
+  try{
+    const u = JSON.parse(localStorage.getItem('lgm_user')||'{}');
+    if(u.id){
+      if(item.qty <= 0){
+        await supabaseClient.from('carts').delete().eq('customer_id', u.id).eq('product_id', id);
+      } else {
+        await supabaseClient.from('carts').update({qty: item.qty}).eq('customer_id', u.id).eq('product_id', id);
+      }
+    }
+  }catch(e){}
 }
 
-function removeItem(id){
+async function removeItem(id){
   cart = cart.filter(i=>i.id!==id);
   saveCart();
   renderCart();
+  try{
+    const u = JSON.parse(localStorage.getItem('lgm_user')||'{}');
+    if(u.id) await supabaseClient.from('carts').delete().eq('customer_id', u.id).eq('product_id', id);
+  }catch(e){}
 }
 
 function renderCart(){
@@ -297,7 +368,6 @@ function renderCart(){
   document.getElementById('placeOrderBtn').classList.remove('hidden');
 }
 
-// FIXED: Flutterwave now opens card modal properly
 async function payWithFlutterwave(e){
   e.preventDefault();
   if(isSubmitting) return;
@@ -333,7 +403,7 @@ async function payWithFlutterwave(e){
   cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + item.price*item.qty; });
 
   const subaccounts = Object.keys(vendorTotals)
-.map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"percentage", transaction_charge:90}))
+.map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"flat_subaccount", transaction_charge: Math.round(vendorTotals[email]*0.9)}))
 .filter(s=>s.id);
 
   FlutterwaveCheckout({
@@ -341,13 +411,12 @@ async function payWithFlutterwave(e){
     tx_ref: tx_ref,
     amount: total,
     currency: "NGN",
-    payment_options: "card", // FIX 1: Only card in TEST mode
-    redirect_url: window.location.href, // FIX 2: Forces modal to open
+    payment_options: "card",
+    redirect_url: window.location.href,
     customer: { email: user.email, phone_number: checkoutPhone, name: displayName },
-    subaccounts: subaccounts,
+    subaccounts: subaccounts.length>0? subaccounts : undefined,
     customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery" },
     callback: async function(data){
-      // FIX 3: Only save if transaction_id exists. Prevents fake success
       if(data.status === "successful" && data.transaction_id){
         document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order...</span>';
         await saveOrderAfterPayment(data.tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total);
@@ -370,6 +439,7 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
   }));
 
   const { error } = await supabaseClient.from('orders').insert({
+    customer_id: user.id,
     customer_name: displayName,
     customer_email: user.email,
     customer_phone: checkoutPhone,
@@ -382,29 +452,29 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
     total: total,
     tx_ref: tx_ref,
     status: 'paid',
-    payment_status: true,
-    payment_method: 'flutterwave'
+    payment_status: 'paid'
   });
 
   if(error) {
     alert('DB Error: '+error.message);
+    isSubmitting=false;
   } else {
-    localStorage.removeItem('lgm_cart'); cart = [];
+    // CLEAR BOTH CARTS
+    localStorage.removeItem('lgm_cart');
+    cart = [];
+    try{ await supabaseClient.from('carts').delete().eq('customer_id', user.id); }catch(e){}
     document.getElementById('orderMsg').innerHTML = '<span style="color:green;font-weight:bold">✅ Paid! Order '+tx_ref+' saved.</span>';
-    setTimeout(()=>{ showTab('orders'); },2000);
+    setTimeout(()=>{ showTab('orders'); isSubmitting=false; },1500);
   }
 }
 
-// FULLY UPDATED: Handles paid, picked, delivered, failed + ALERTS
 async function loadOrders(){
   const {data} = await supabaseClient.from('orders')
 .select('*')
 .eq('customer_email', user.email)
 .in('status',['paid','picked','delivered','failed'])
-.eq('payment_status', true)
 .order('created_at',{ascending:false});
 
-  // CHECK FOR STATUS CHANGES AND TRIGGER ALERT
   data?.forEach(o=>{
     if(lastOrderStatus[o.id] && lastOrderStatus[o.id]!== o.status){
       if(o.status === 'picked') triggerAlert(`🚚 Order #${o.id} is On The Way!`);
@@ -422,23 +492,10 @@ async function loadOrders(){
   data?.forEach(o=>{
     let statusText = '';
     let statusColor = 'text-blue-600';
-
-    if(o.status === 'paid'){
-      statusText = 'Watch out, an agent will attend to you in the next 5 minutes';
-      statusColor = 'text-blue-600';
-    }
-    if(o.status === 'picked'){
-      statusText = 'Order On The Way, Please Be Available';
-      statusColor = 'text-orange-500';
-    }
-    if(o.status === 'delivered'){
-      statusText = 'Delivered';
-      statusColor = 'text-green-600';
-    }
-    if(o.status === 'failed'){
-      statusText = 'Delivery Failed. Admin will contact you';
-      statusColor = 'text-red-600';
-    }
+    if(o.status === 'paid'){ statusText = 'Watch out, an agent will attend to you in the next 5 minutes'; statusColor = 'text-blue-600'; }
+    if(o.status === 'picked'){ statusText = 'Order On The Way, Please Be Available'; statusColor = 'text-orange-500'; }
+    if(o.status === 'delivered'){ statusText = 'Delivered'; statusColor = 'text-green-600'; }
+    if(o.status === 'failed'){ statusText = 'Delivery Failed. Admin will contact you'; statusColor = 'text-red-600'; }
 
     let agentInfo = '';
     if(o.status === 'picked' && o.delivery_agent_name){
@@ -511,5 +568,5 @@ async function submitRating(id){
 
 function logout(){ localStorage.removeItem('lgm_user'); localStorage.removeItem('lgm_cart'); location.href='login.html'; }
 
-setInterval(loadOrders, 10000); // AUTO REFRESH
+setInterval(()=>{ if(document.getElementById('view-orders') &&!document.getElementById('view-orders').classList.contains('hidden')) loadOrders(); }, 10000);
 </script></body></html>
