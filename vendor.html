@@ -18,6 +18,7 @@
 .tabs{display:flex;gap:18px;border-bottom:1px solid #e5e7eb;margin:14px 0;font-weight:700;font-size:14px;overflow-x:auto}
 .tab{padding-bottom:8px;color:#9ca3af;cursor:pointer;white-space:nowrap}.active{color:#16a34a;border-bottom:3px solid #16a34a}
 @keyframes pulse-red {0%,100%{background-color:#fee2e2;border-color:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,0.4)}50%{background-color:#fecaca;border-color:#dc2626;box-shadow:0 0 0 6px rgba(239,68,68,0)}}
+@keyframes timer-pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
 .alert-tab{animation:pulse-red 1s infinite;border:2px solid #ef4444!important;border-radius:8px!important;background:#fee2e2!important;color:#dc2626!important}
 .badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900}
 input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px}
@@ -128,10 +129,8 @@ function setTab(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active-view'));
   document.getElementById('view-'+name).classList.add('active-view');
   if(name==='orders'){
-    // Stop blinking when user opens orders
     const ot = document.getElementById('tab-orders');
     ot.classList.remove('alert-tab');
-    // Keep badge if still new, but stop animation - or clear? we clear animation only
     loadOrders();
   }
   if(name==='products') loadProducts();
@@ -139,17 +138,23 @@ function setTab(name){
 }
 function logout(){ localStorage.removeItem('lgm_user'); window.location.href='/'; }
 
+// === BOLD VISIBLE TIMER FOR VENDOR - SAME AS CUSTOMER ===
 function formatVendorCountdown(startTime){
-  if(!startTime) return '';
+  if(!startTime) return `<div style="background:#fff7ed;border:2px dashed #f97316;padding:10px;border-radius:12px;margin-top:10px;text-align:center;font-weight:900;color:#c2410c">⏰ Rider picked - timer starting...</div>`;
   const end = new Date(startTime).getTime() + TWO_HOURS_MS;
   const diff = end - new Date().getTime();
-  if(diff <= 0) return `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#dc2626">❌ TIME UP - FAILED</div>`;
+  if(diff <= 0) return `<div style="background:#fee2e2;border:3px solid #dc2626;color:#dc2626;padding:14px;border-radius:14px;margin-top:10px;text-align:center;font-weight:900;font-size:14px">❌ TIME UP - FAILED</div>`;
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
   const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
-  return `<div style="font-size:12px;margin-top:6px;font-weight:700;color:#d97706">⏰ Auto-Fail in: ${h}h ${m}m ${s}s<br><span style="font-size:11px;color:#6b7280">Picked at: ${pickedUpTime}</span></div>`;
+  return `<div style="background:linear-gradient(135deg,#ffffff,#fef3c7);border:3px solid #f59e0b;padding:14px;border-radius:16px;margin-top:10px;text-align:center;box-shadow:0 6px 20px rgba(245,158,11,0.35)">
+    <div style="font-size:10px;font-weight:900;letter-spacing:2px;color:#92400e;background:#fde68a;display:inline-block;padding:3px 10px;border-radius:20px">⏰ DELIVERY COUNTDOWN</div>
+    <div style="font-size:30px;font-weight:900;color:#dc2626;margin:6px 0;letter-spacing:1px;line-height:1;animation:timer-pulse 1s infinite">${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s</div>
+    <div style="font-size:11px;font-weight:800;color:#78350f">Picked at: ${pickedUpTime} • Auto-fail in 2hrs</div>
+  </div>`;
 }
+
 function triggerAlert(){
   try{ new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{}); }catch(e){}
   if(navigator.vibrate) navigator.vibrate([200,100,200]);
@@ -234,7 +239,6 @@ async function loadOrders(){
     o.items && o.items.some(i => i.vendor_email === curUser.email)
   ).map(o => ({...o, items: o.items.filter(i => i.vendor_email === curUser.email)}));
 
-  // === BLINKING FIX: ALWAYS CHECK NEW PAID ORDERS ===
   const newPaidCount = allOrders.filter(o=>o.status==='paid').length;
   const tabOrders = document.getElementById('tab-orders');
 
@@ -273,8 +277,9 @@ function renderVendorOrders(){
     let myTotal = o.items.reduce((s,i)=>s + i.price*i.qty, 0);
     let myCut = Math.round(myTotal * 0.9);
     let countdown = '';
-    if((status==='picked' || status==='on the way') && (o.picked_at || o.delivery_started_at)){
-      countdown = formatVendorCountdown(o.picked_at || o.delivery_started_at);
+    const startTime = o.picked_at || o.delivery_started_at;
+    if((status==='picked' || status==='on the way') && startTime){
+      countdown = `<div class="vendor-timer" data-start="${startTime}">${formatVendorCountdown(startTime)}</div>`;
     }
     let agentInfo = o.delivery_agent_name? `<div class="small" style="color:#2563eb;font-weight:700">🚚 ${o.delivery_agent_name} • ${o.delivery_agent_phone||''}</div>` : `<div class="small" style="color:#f59e0b;font-weight:700">⚠️ Waiting for rider</div>`;
     let statusClass = status.replace(/ /g,'-').toLowerCase();
@@ -329,6 +334,16 @@ async function saveProfile(){
   localStorage.setItem('lgm_user', JSON.stringify(curUser));
   alert('Profile Updated!'); init();
 }
+// LIVE COUNTING EVERY SECOND - BOLD TIMER
+setInterval(()=>{
+  document.querySelectorAll('.vendor-timer').forEach(el=>{
+    const start = el.getAttribute('data-start');
+    if(start && start!=='null' && start!=='undefined'){
+      el.innerHTML = formatVendorCountdown(start);
+    }
+  });
+},1000);
+
 setInterval(loadOrders, 10000);
 </script>
 </body>
