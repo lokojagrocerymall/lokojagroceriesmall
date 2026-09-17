@@ -16,8 +16,9 @@
 </header>
 <div class="p-4 max-w-2xl mx-auto">
   <div class="bg-white p-3 rounded-xl mb-4">
-    <p class="text-sm">Welcome, <b id="name"></b></p>
-    <p class="text-xs text-gray-400">Email: <span id="email"></span></p>
+    <p class="text-sm">Welcome, <b id="name">Loading...</b></p>
+    <p class="text-xs text-gray-600 font-bold">WhatsApp: <span id="phone">Loading...</span></p>
+    <p class="text-[10px] text-gray-400">Email: <span id="email"></span></p>
   </div>
 
   <div id="riderStats"></div>
@@ -38,13 +39,45 @@ if(!curUser ||!curUser.email || String(curUser.role).toLowerCase().trim()!=='del
   alert('Access Denied. Please login as Delivery Agent');
   location.href='index.html';
 }
-document.getElementById('name').innerText = curUser.name || curUser.email;
-document.getElementById('email').innerText = curUser.email;
 
 const TWO_HOURS_MS = 3 * 60 * 60 * 1000;
 let isCalling = false;
 let ordersCache = [];
 let lastAvailableCount = 0;
+let agentProfile = null;
+
+// === FIX: FETCH FULL NAME + WHATSAPP FROM USERS TABLE ===
+async function loadAgentProfile(){
+  try{
+    const {data} = await supabaseClient.from('users')
+     .select('full_name, phone, whatsapp, email')
+     .eq('email', curUser.email)
+     .single();
+
+    if(data){
+      agentProfile = data;
+      const fullName = data.full_name || curUser.name || curUser.email.split('@')[0];
+      const waNumber = data.phone || data.whatsapp || curUser.phone || 'No number';
+
+      document.getElementById('name').innerText = fullName;
+      document.getElementById('phone').innerText = waNumber;
+      document.getElementById('email').innerText = data.email;
+
+      // Save for pickup
+      curUser.name = fullName;
+      curUser.phone = waNumber;
+      localStorage.setItem('lgm_user', JSON.stringify(curUser));
+    } else {
+      document.getElementById('name').innerText = curUser.name || curUser.email;
+      document.getElementById('phone').innerText = curUser.phone || 'No number';
+      document.getElementById('email').innerText = curUser.email;
+    }
+  }catch(e){
+    console.log(e);
+    document.getElementById('name').innerText = curUser.name || curUser.email;
+    document.getElementById('email').innerText = curUser.email;
+  }
+}
 
 // === BOLD VISIBLE TIMER FOR DELIVERY ===
 function formatCountdown(startTime){
@@ -71,10 +104,10 @@ function triggerAlert(msg){
 async function loadRiderStats(){
   try{
     const {data} = await supabaseClient.from('orders')
- .select('customer_rating')
- .eq('delivery_agent_email', curUser.email)
- .eq('status', 'delivered')
- .not('customer_rating', 'is', null);
+.select('customer_rating')
+.eq('delivery_agent_email', curUser.email)
+.eq('status', 'delivered')
+.not('customer_rating', 'is', null);
     const ratings = data?.map(d=>d.customer_rating) || [];
     const avg = ratings.length > 0? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '0';
     document.getElementById('riderStats').innerHTML = `
@@ -90,11 +123,11 @@ async function loadRiderStats(){
 async function fetchOrders(){
   try{
     const { data:availableOrders } = await supabaseClient.from('orders')
- .select('*')
- .eq('status','paid')
- .eq('payment_status', true)
- .is('delivery_agent_email', null)
- .order('created_at',{ascending:false});
+.select('*')
+.eq('status','paid')
+.eq('payment_status', true)
+.is('delivery_agent_email', null)
+.order('created_at',{ascending:false});
 
     if(availableOrders.length > lastAvailableCount && lastAvailableCount!== 0){
       triggerAlert(`🚨 New Order #${availableOrders[0].id} is Available!`);
@@ -103,10 +136,10 @@ async function fetchOrders(){
     document.getElementById('orderBadge').innerHTML = availableOrders.length > 0? `<span class="badge">${availableOrders.length}</span>` : '';
 
     const { data:myActive } = await supabaseClient.from('orders')
- .select('*')
- .eq('status','on the way')
- .eq('delivery_agent_email', curUser.email)
- .order('created_at',{ascending:false});
+.select('*')
+.eq('status','on the way')
+.eq('delivery_agent_email', curUser.email)
+.order('created_at',{ascending:false});
 
     const orderMap = new Map();
     [...(availableOrders||[]),...(myActive||[])].forEach(o => orderMap.set(o.id, o));
@@ -130,7 +163,7 @@ function renderOrders(){
           <p class="text-xs">📞 ${o.customer_phone}</p>
           <p class="text-xs">🏠 ${addr}</p>
         </div>
-        <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">🚚 Pick Up Order - Start 2HR Timer</button>
+        <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">🚚 Pick Up Order - Start 3HR Timer</button>
       </div>`;
     }
     else {
@@ -162,11 +195,11 @@ async function loadCompleted(){
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const { data:completed } = await supabaseClient.from('orders')
- .select('*')
- .eq('status','delivered')
- .eq('delivery_agent_email', curUser.email)
- .gte('delivered_at', sevenDaysAgo.toISOString())
- .order('delivered_at',{ascending:false});
+.select('*')
+.eq('status','delivered')
+.eq('delivery_agent_email', curUser.email)
+.gte('delivered_at', sevenDaysAgo.toISOString())
+.order('delivered_at',{ascending:false});
     if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }
     else {
       document.getElementById('completed').innerHTML = completed.map(o=>{
@@ -191,24 +224,28 @@ async function loadOrders(){
 }
 
 async function pickup(id){
+  const realName = agentProfile?.full_name || curUser.name || curUser.email.split('@')[0];
+  const realPhone = agentProfile?.phone || agentProfile?.whatsapp || curUser.phone || '';
+
   const { data, error } = await supabaseClient.from('orders').update({
     status:'on the way',
     delivery_started_at:new Date().toISOString(),
     picked_at:new Date().toISOString(),
     delivery_agent_email: curUser.email,
-    delivery_agent_name: curUser.name || curUser.email.split('@')[0]
+    delivery_agent_name: realName,
+    delivery_agent_phone: realPhone
   }).eq('id',id).eq('status','paid').is('delivery_agent_email', null).select();
 
   if(error ||!data || data.length === 0) alert('ERROR: This order was just picked by another agent');
   else {
-    alert('Order picked up! 2 Hour countdown started.');
+    alert('Order picked up! 3 Hour countdown started.');
     loadOrders();
   }
 }
 
 function logout(){ localStorage.removeItem('lgm_user'); location.href='index.html'; }
 
-loadOrders();
+loadAgentProfile().then(()=> loadOrders());
 
 setInterval(()=>{
   document.querySelectorAll('.countdown').forEach(el => {
