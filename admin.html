@@ -71,11 +71,12 @@ async function load(){
     const {data:u} = await supabaseClient.from('users').select('*');
     users = u||[];
 
-    // FIXED: SHOW ALL ACTIVE ORDERS, NOT ONLY PAID
+    // FIXED: ORDER BY ID DESC + LIMIT 100 SO #36 SHOWS AT TOP
     const {data:o} = await supabaseClient.from('orders')
      .select('*')
      .in('status',['paid','picked','delivered','failed'])
-     .order('created_at',{ascending:false});
+     .order('id',{ascending:false})
+     .limit(100);
     orders = o||[];
 
     // CHECK FOR NEW PAID ORDERS AND TRIGGER ALERT
