@@ -102,7 +102,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let users=[], orders=[], tab='pending', orderSubTab='all', lastSeenOrderCount=0;
 let returnsChart = null;
-const TWO_HOURS_MS = 3 * 60 * 60 * 1000;
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='/'; }
 
