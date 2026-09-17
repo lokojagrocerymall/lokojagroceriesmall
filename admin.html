@@ -11,7 +11,6 @@
   @keyframes timer-pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
 .alert-tab{animation:pulse-red 1s infinite;border:2px solid #ef4444!important;border-radius:8px;}
 .badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900;}
- /* FIX HIDDEN TAB - make scrollable and auto-scroll */
 .tabs-scroll::-webkit-scrollbar{display:none}
 .tabs-scroll{ -ms-overflow-style:none; scrollbar-width:none; scroll-behavior:smooth }
 </style>
@@ -23,7 +22,6 @@
 </header>
 
 <div class="p-3 max-w-5xl mx-auto">
-  <!-- TOP 3 BOXES -->
   <div class="grid grid-cols-3 gap-2 mb-3">
     <div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden">
       <div class="text-[10px] text-gray-400 leading-tight">Gross Sales</div>
@@ -39,7 +37,6 @@
     </div>
   </div>
 
-  <!-- DAILY / WEEKLY / MONTHLY ANALYTICS -->
   <div class="grid grid-cols-3 gap-2 mb-3">
     <div class="bg-white p-2 rounded-xl shadow min-w-0">
       <div class="text-[10px] font-bold text-gray-500 text-center mb-1">TODAY</div>
@@ -64,7 +61,6 @@
     </div>
   </div>
 
-  <!-- GRAPH - MON TO SAT RETURNS -->
   <div class="bg-white p-3 rounded-xl shadow mb-3">
     <div class="flex justify-between items-center mb-2">
       <b class="text-[12px]">📊 Platform Returns (Mon - Sat)</b>
@@ -82,7 +78,6 @@
       <button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Orders (<span id="cO">0</span>)</button>
     </div>
 
-    <!-- ORDER SUB-FILTERS -->
     <div id="orderFilters" class="hidden flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b">
       <button onclick="filterOrders('all')" id="fAll" class="px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap">All (<span id="fcAll">0</span>)</button>
       <button onclick="filterOrders('paid')" id="fPaid" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">🆕 New (<span id="fcPaid">0</span>)</button>
@@ -92,6 +87,17 @@
     </div>
 
     <div id="list" class="p-3 text-sm">Loading...</div>
+  </div>
+</div>
+
+<!-- FULL KYC MODAL - NEW -->
+<div id="detailModal" class="fixed inset-0 bg-black/70 z-[999] hidden flex items-center justify-center p-3">
+  <div class="bg-white rounded-2xl max-w-[480px] w-full max-h-[92vh] overflow-y-auto shadow-2xl">
+    <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center rounded-t-2xl">
+      <b class="text-green-700 text-sm">📋 Full Signup Details</b>
+      <button onclick="closeModal()" class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">✕ Close</button>
+    </div>
+    <div id="modalBody" class="p-4 text-[12px] leading-6"></div>
   </div>
 </div>
 
@@ -106,7 +112,6 @@ const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='/'; }
 
-// === BOLD TIMER FOR ADMIN - SAME AS CUSTOMER ===
 function formatAdminCountdown(startTime){
   if(!startTime) return `<div style="background:#fff7ed;border:2px dashed #f97316;padding:8px;border-radius:10px;margin-top:8px;text-align:center;font-weight:900;color:#c2410c;font-size:11px">⏰ Rider picked - timer starting...</div>`;
   const end = new Date(startTime).getTime() + TWO_HOURS_MS;
@@ -128,26 +133,12 @@ async function load(){
   try{
     const {data:u} = await supabaseClient.from('users').select('*');
     users = u||[];
-    const {data:o} = await supabaseClient.from('orders')
-   .select('*')
-   .in('status',['paid','picked','on the way','delivered','failed'])
-   .order('id',{ascending:false})
-   .limit(200);
+    const {data:o} = await supabaseClient.from('orders').select('*').in('status',['paid','picked','on the way','delivered','failed']).order('id',{ascending:false}).limit(200);
     orders = o||[];
-
-    // SORT: PAID (NEW) ALWAYS FIRST, THEN ONWAY, THEN REST
-    orders.sort((a,b)=>{
-      const priority = {paid:0, picked:1, 'on the way':1, delivered:2, failed:3};
-      const pa = priority[a.status]?? 4;
-      const pb = priority[b.status]?? 4;
-      if(pa!==pb) return pa - pb;
-      return b.id - a.id;
-    });
-
+    orders.sort((a,b)=>{ const priority = {paid:0, picked:1, 'on the way':1, delivered:2, failed:3}; const pa = priority[a.status]?? 4; const pb = priority[b.status]?? 4; if(pa!==pb) return pa - pb; return b.id - a.id; });
     const paidOrders = orders.filter(x=>x.status==='paid');
     if(paidOrders.length > lastSeenOrderCount && lastSeenOrderCount!== 0){ triggerNewOrderAlert(); }
     lastSeenOrderCount = paidOrders.length;
-
     let vendors = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor');
     let agents = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
     let pendingV = vendors.filter(x=>x.is_approved===false || x.is_approved===null);
@@ -155,35 +146,21 @@ async function load(){
     let suspendedV = vendors.filter(x=>x.is_approved===false);
     let suspendedA = agents.filter(x=>x.is_approved===false);
     let activeV = vendors.filter(x=>x.is_approved===true);
-
     document.getElementById('cP').innerText = pendingV.length + pendingA.length;
     document.getElementById('cV').innerText = activeV.length;
     document.getElementById('cS').innerText = suspendedV.length + suspendedA.length;
     document.getElementById('cA').innerText = agents.length;
     document.getElementById('cO').innerText = orders.length;
     document.getElementById('pendingCount').innerText = pendingV.length + pendingA.length;
-
-    calcSales();
-    drawReturnsChart();
-
+    calcSales(); drawReturnsChart();
     document.getElementById('fcAll').innerText = orders.length;
     document.getElementById('fcPaid').innerText = orders.filter(x=>x.status==='paid').length;
     document.getElementById('fcOnway').innerText = orders.filter(x=>x.status==='picked' || x.status==='on the way').length;
     document.getElementById('fcDel').innerText = orders.filter(x=>x.status==='delivered').length;
     document.getElementById('fcFail').innerText = orders.filter(x=>x.status==='failed').length;
-
-    updateOrdersTabAlert();
-    render();
-
-    // Auto-scroll tabs to show Orders tab (fix hidden issue in screenshot)
-    setTimeout(()=>{
-      const tabsEl = document.getElementById('mainTabs');
-      if(tabsEl) tabsEl.scrollLeft = tabsEl.scrollWidth;
-    }, 300);
-
-  }catch(e){
-    document.getElementById('list').innerHTML = `<div class="text-red-500">ERROR: ${e.message}</div>`;
-  }
+    updateOrdersTabAlert(); render();
+    setTimeout(()=>{ const tabsEl = document.getElementById('mainTabs'); if(tabsEl) tabsEl.scrollLeft = tabsEl.scrollWidth; }, 300);
+  }catch(e){ document.getElementById('list').innerHTML = `<div class="text-red-500">ERROR: ${e.message}</div>`; }
 }
 
 function calcSales(){
@@ -192,20 +169,9 @@ function calcSales(){
   document.getElementById('sales').title = '₦'+Math.round(gross).toLocaleString();
   document.getElementById('income').innerText = '₦'+Math.round(gross*0.15).toLocaleString();
   document.getElementById('income').title = '₦'+Math.round(gross*0.15).toLocaleString();
-
-  let now = new Date();
-  let todayStr = now.toDateString();
-  let weekAgo = new Date(); weekAgo.setDate(now.getDate()-7);
-  let monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  let d = orders.filter(o=> new Date(o.created_at).toDateString()===todayStr);
-  let w = orders.filter(o=> new Date(o.created_at) >= weekAgo);
-  let m = orders.filter(o=> new Date(o.created_at) >= monthStart);
-
-  let dGross = d.reduce((s,x)=>s+Number(x.total||0),0);
-  let wGross = w.reduce((s,x)=>s+Number(x.total||0),0);
-  let mGross = m.reduce((s,x)=>s+Number(x.total||0),0);
-
+  let now = new Date(); let todayStr = now.toDateString(); let weekAgo = new Date(); weekAgo.setDate(now.getDate()-7); let monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  let d = orders.filter(o=> new Date(o.created_at).toDateString()===todayStr); let w = orders.filter(o=> new Date(o.created_at) >= weekAgo); let m = orders.filter(o=> new Date(o.created_at) >= monthStart);
+  let dGross = d.reduce((s,x)=>s+Number(x.total||0),0); let wGross = w.reduce((s,x)=>s+Number(x.total||0),0); let mGross = m.reduce((s,x)=>s+Number(x.total||0),0);
   document.getElementById('dSales').innerText = '₦'+Math.round(dGross).toLocaleString();
   document.getElementById('dIncome').innerText = '₦'+Math.round(dGross*0.15).toLocaleString();
   document.getElementById('wSales').innerText = '₦'+Math.round(wGross).toLocaleString();
@@ -213,73 +179,19 @@ function calcSales(){
   document.getElementById('mSales').innerText = '₦'+Math.round(mGross).toLocaleString();
   document.getElementById('mIncome').innerText = '₦'+Math.round(mGross*0.15).toLocaleString();
 }
-
-// MONDAY TO SATURDAY GRAPH
 function drawReturnsChart(){
   const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat'];
-  // Get Monday of this week
-  const now = new Date();
-  const day = now.getDay(); // 0 Sun - 6 Sat
-  const diffToMonday = day===0? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diffToMonday);
-  monday.setHours(0,0,0,0);
-
-  let salesPerDay = [0,0,0,0,0,0];
-  let incomePerDay = [0,0,0,0,0,0];
-
-  for(let i=0;i<6;i++){
-    const dStart = new Date(monday);
-    dStart.setDate(monday.getDate()+i);
-    const dEnd = new Date(dStart);
-    dEnd.setDate(dStart.getDate()+1);
-    const dayOrders = orders.filter(o=>{
-      const cd = new Date(o.created_at);
-      return cd >= dStart && cd < dEnd;
-    });
-    const gross = dayOrders.reduce((s,x)=>s+Number(x.total||0),0);
-    salesPerDay[i]=Math.round(gross);
-    incomePerDay[i]=Math.round(gross*0.15);
-  }
-
-  const ctx = document.getElementById('returnsChart').getContext('2d');
-  if(returnsChart) returnsChart.destroy();
-  returnsChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: dayNames,
-      datasets: [
-        { label:'Sales', data:salesPerDay, backgroundColor:'#16a34a', borderRadius:6 },
-        { label:'Income (15%)', data:incomePerDay, backgroundColor:'#f59e0b', borderRadius:6 }
-      ]
-    },
-    options: {
-      responsive:true,
-      plugins:{ legend:{ display:true, position:'bottom', labels:{ font:{size:10}, boxWidth:12 } } },
-      scales:{ y:{ beginAtZero:true, ticks:{ font:{size:9}, callback:v=>'₦'+v } }, x:{ ticks:{ font:{size:10, weight:'bold'} } } }
-    }
-  });
+  const now = new Date(); const day = now.getDay(); const diffToMonday = day===0? -6 : 1 - day; const monday = new Date(now); monday.setDate(now.getDate() + diffToMonday); monday.setHours(0,0,0,0);
+  let salesPerDay = [0,0,0,0,0,0]; let incomePerDay = [0,0,0,0,0,0];
+  for(let i=0;i<6;i++){ const dStart = new Date(monday); dStart.setDate(monday.getDate()+i); const dEnd = new Date(dStart); dEnd.setDate(dStart.getDate()+1); const dayOrders = orders.filter(o=>{ const cd = new Date(o.created_at); return cd >= dStart && cd < dEnd; }); const gross = dayOrders.reduce((s,x)=>s+Number(x.total||0),0); salesPerDay[i]=Math.round(gross); incomePerDay[i]=Math.round(gross*0.15); }
+  const ctx = document.getElementById('returnsChart').getContext('2d'); if(returnsChart) returnsChart.destroy();
+  returnsChart = new Chart(ctx, { type: 'bar', data: { labels: dayNames, datasets: [ { label:'Sales', data:salesPerDay, backgroundColor:'#16a34a', borderRadius:6 }, { label:'Income (15%)', data:incomePerDay, backgroundColor:'#f59e0b', borderRadius:6 } ] }, options: { responsive:true, plugins:{ legend:{ display:true, position:'bottom', labels:{ font:{size:10}, boxWidth:12 } } }, scales:{ y:{ beginAtZero:true, ticks:{ font:{size:9}, callback:v=>'₦'+v } }, x:{ ticks:{ font:{size:10, weight:'bold'} } } } } });
 }
-
 function updateOrdersTabAlert(){
-  const ordersTab = document.getElementById('btnO');
-  const newPaidOrders = orders.filter(o => o.status === 'paid').length;
-  if(newPaidOrders > 0){
-    ordersTab.classList.add('alert-tab');
-    ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>) <span class="badge">${newPaidOrders}</span>`;
-  } else {
-    ordersTab.classList.remove('alert-tab');
-    ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>)`;
-  }
+  const ordersTab = document.getElementById('btnO'); const newPaidOrders = orders.filter(o => o.status === 'paid').length;
+  if(newPaidOrders > 0){ ordersTab.classList.add('alert-tab'); ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>) <span class="badge">${newPaidOrders}</span>`; } else { ordersTab.classList.remove('alert-tab'); ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>)`; }
 }
-function triggerNewOrderAlert(){
-  new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
-  if(navigator.vibrate) navigator.vibrate([200,100,200]);
-  if(Notification.permission === "granted"){
-    new Notification("🔔 New Order!", { body: `You have ${orders.filter(o=>o.status==='paid').length} pending order(s)` });
-  } else if(Notification.permission!== "denied"){ Notification.requestPermission(); }
-}
-
+function triggerNewOrderAlert(){ new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate([200,100,200]); if(Notification.permission === "granted"){ new Notification("🔔 New Order!", { body: `You have ${orders.filter(o=>o.status==='paid').length} pending order(s)` }); } else if(Notification.permission!== "denied"){ Notification.requestPermission(); } }
 function filterOrders(type){
   orderSubTab = type;
   document.querySelectorAll('#orderFilters button').forEach(b=> b.className = 'px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap');
@@ -287,6 +199,56 @@ function filterOrders(type){
   document.getElementById(activeMap[type]).className = 'px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap';
   render();
 }
+
+// === NEW: FULL KYC VIEWER ===
+function openAgentDetail(email){
+  const u = users.find(x=>x.email===email);
+  if(!u){ alert('User not found: '+email); return; }
+  const passport = u.passport_url || u.passport || u.photo_url || u.profile_image || u.image_url || '';
+  const ninImg = u.nin_image || u.nin_url || u.nin_photo || u.id_card_url || '';
+  const guarantorImg = u.guarantor_image || u.guarantor_nin_url || u.guarantor_id_url || u.guarantor_photo || '';
+  const html = `
+    <div class="space-y-3">
+      <div class="text-center">
+        ${passport? `<img src="${passport}" class="w-28 h-28 rounded-full mx-auto border-4 border-green-500 object-cover shadow">` : `<div class="w-28 h-28 rounded-full mx-auto bg-gray-200 flex items-center justify-center text-4xl">👤</div>`}
+        <h2 class="font-black text-[15px] mt-2">${u.full_name || 'No Name'}</h2>
+        <p class="text-[11px] text-gray-500">${u.email}</p>
+        <span class="inline-block mt-1 px-3 py-0.5 rounded-full text-[10px] font-bold ${String(u.role).includes('delivery')? 'bg-blue-500 text-white':'bg-green-500 text-white'}">${u.role}</span>
+      </div>
+      <hr>
+      <div class="bg-green-50 p-3 rounded-xl border border-green-100">
+        <b class="text-green-700">📱 Personal Info</b><br>
+        Phone: <b>${u.phone || u.whatsapp || 'N/A'}</b><br>
+        WhatsApp: ${u.whatsapp || u.phone || 'N/A'}<br>
+        Location: ${u.location || u.address || 'N/A'}<br>
+        Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended/Pending'}</b><br>
+        Joined: ${u.created_at? new Date(u.created_at).toLocaleString() : 'N/A'}
+      </div>
+      <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+        <b class="text-blue-700">🆔 NIN & Passport</b><br>
+        NIN No: <b>${u.nin || u.nin_number || u.nin_no || 'N/A'}</b><br>
+        <div class="flex gap-2 mt-2 flex-wrap">
+          ${passport? `<a href="${passport}" target="_blank" class="bg-green-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">🖼️ View Passport</a>` : '<span class="text-[11px] text-gray-400">No passport uploaded</span>'}
+          ${ninImg? `<a href="${ninImg}" target="_blank" class="bg-blue-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">📄 View NIN Card</a>` : '<span class="text-[11px] text-gray-400">No NIN image</span>'}
+        </div>
+      </div>
+      <div class="bg-yellow-50 p-3 rounded-xl border border-yellow-100">
+        <b class="text-yellow-700">👨‍👩‍👦 Guarantor Info</b><br>
+        Name: <b>${u.guarantor_name || u.guarantor_fullname || 'N/A'}</b><br>
+        Phone: <b>${u.guarantor_phone || u.guarantor_number || 'N/A'}</b><br>
+        Address: ${u.guarantor_address || 'N/A'}<br>
+        Relationship: ${u.guarantor_relationship || u.guarantor_relation || 'N/A'}<br>
+        <div class="mt-2">
+          ${guarantorImg? `<a href="${guarantorImg}" target="_blank" class="bg-yellow-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">📄 View Guarantor ID</a>` : '<span class="text-[11px] text-gray-400">No guarantor ID</span>'}
+        </div>
+      </div>
+      ${u.bank_name || u.account_number? `<div class="bg-purple-50 p-3 rounded-xl border border-purple-100"><b>🏦 Bank</b><br>Bank: ${u.bank_name||''}<br>Acct No: ${u.account_number||''}<br>Acct Name: ${u.account_name||''}</div>` : ''}
+    </div>
+  `;
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('detailModal').classList.remove('hidden');
+}
+function closeModal(){ document.getElementById('detailModal').classList.add('hidden'); }
 
 function render(){
   let data=[];
@@ -301,27 +263,27 @@ function render(){
     if(orderSubTab==='delivered') data = orders.filter(o=>o.status==='delivered');
     if(orderSubTab==='failed') data = orders.filter(o=>o.status==='failed');
   }
-
   document.getElementById('orderFilters').className = tab==='orders'? 'flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b' : 'hidden';
-
   if(data.length===0){ document.getElementById('list').innerHTML = `<div class="text-center text-gray-400 py-10">No ${orderSubTab==='all'?'':orderSubTab} ${tab} yet</div>`; return; }
-
   let html='';
   if(tab==='pending' || tab==='vendors' || tab==='suspended' || tab==='agents'){
     data.forEach(u=>{
       let roleBadge = String(u.role).toLowerCase().trim()==='delivery_agent'? `<span class="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px]">AGENT</span>` : `<span class="bg-green-500 text-white px-2 py-0.5 rounded text-[10px]">VENDOR</span>`;
       let actionBtn = (tab==='pending' || tab==='suspended')? `<button onclick="updateStatus('${u.email}', true)" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve / Reactivate</button>` : `<button onclick="updateStatus('${u.email}', false)" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>`;
-      html += `<div class="border rounded-lg p-3 mb-2"><div class="font-bold">${u.full_name} ${roleBadge}</div><div class="text-xs text-gray-500">${u.email} • ${u.phone||''} • ${u.location||''}</div><div class="text-xs mt-1">Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended'}</b></div>${actionBtn}</div>`;
+      let viewBtn = `<button onclick="openAgentDetail('${u.email}')" class="mt-2 ml-1 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">👁️ View Full Info</button>`;
+      html += `<div class="border rounded-lg p-3 mb-2"><div class="font-bold">${u.full_name || 'null'} ${roleBadge}</div><div class="text-xs text-gray-500">${u.email} • ${u.phone||u.whatsapp||''} • ${u.location||''}</div><div class="text-xs mt-1">Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended'}</b></div>${actionBtn} ${viewBtn}</div>`;
     });
   }
   if(tab==='orders'){
     data.forEach(o=>{
       let statusColor = o.status==='paid'? 'text-orange-600' : (o.status==='picked' || o.status==='on the way')? 'text-blue-600' : o.status==='delivered'? 'text-green-600' : 'text-red-600';
-      let agentInfo = o.delivery_agent_name? `<div class="text-xs text-blue-600 font-bold truncate">🚚 Agent: ${o.delivery_agent_name} (${o.delivery_agent_phone||''})</div>` : `<div class="text-xs text-orange-600 font-bold">⚠️ Waiting for Agent</div>`;
+      let agentUser = users.find(u=>u.email===o.delivery_agent_email);
+      let agentDisplayName = o.delivery_agent_name || agentUser?.full_name || o.delivery_agent_email || 'N/A';
+      let agentDisplayPhone = o.delivery_agent_phone || agentUser?.phone || agentUser?.whatsapp || '';
+      let agentInfo = o.delivery_agent_email? `<div class="text-xs text-blue-600 font-bold truncate">🚚 Agent: ${agentDisplayName} (${agentDisplayPhone}) <button onclick="openAgentDetail('${o.delivery_agent_email}')" class="ml-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[9px] font-bold">View KYC</button></div>` : `<div class="text-xs text-orange-600 font-bold">⚠️ Waiting for Agent</div>`;
       const startTime = o.picked_at || o.delivery_started_at;
       const isActive = (o.status==='picked' || o.status==='on the way');
       let timerHTML = isActive? `<div class="admin-timer" data-start="${startTime}">${formatAdminCountdown(startTime)}</div>` : '';
-      // Highlight NEW orders
       const newBorder = o.status==='paid'? 'border-2 border-green-500 bg-green-50' : 'border';
       html += `<div class="${newBorder} rounded-lg p-3 mb-2 min-w-0">
         <div class="flex justify-between gap-2"><div class="font-bold text-[12px] truncate">Order #${o.id} - <span class="${statusColor}">${o.status.toUpperCase()}</span> ${o.status==='paid'? '🆕 NEW FIRST':''}</div><div class="font-bold text-green-700 text-[12px] shrink-0">₦${Number(o.total||0).toLocaleString()}</div></div>
@@ -341,11 +303,7 @@ function showTab(t){
   ['P','V','S','A','O'].forEach(k=> document.getElementById('btn'+k).className = 'flex-1 p-3 font-bold text-gray-400 whitespace-nowrap');
   const map={pending:'btnP',vendors:'btnV',suspended:'btnS',agents:'btnA',orders:'btnO'};
   document.getElementById(map[t]).className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap';
-  if(t==='orders'){
-    document.getElementById('btnO').classList.remove('alert-tab');
-    // Scroll to end to ensure Orders tab is visible
-    setTimeout(()=>{ document.getElementById('mainTabs').scrollLeft = document.getElementById('mainTabs').scrollWidth; }, 100);
-  }
+  if(t==='orders'){ document.getElementById('btnO').classList.remove('alert-tab'); setTimeout(()=>{ document.getElementById('mainTabs').scrollLeft = document.getElementById('mainTabs').scrollWidth; },100); }
   render();
 }
 async function updateStatus(email, status){
@@ -354,17 +312,7 @@ async function updateStatus(email, status){
   alert(`Account ${status?'Approved':'Suspended'}!`);
   load();
 }
-
-// LIVE TIMER UPDATE EVERY SECOND
-setInterval(()=>{
-  document.querySelectorAll('.admin-timer').forEach(el=>{
-    const start = el.getAttribute('data-start');
-    if(start && start!=='null' && start!=='undefined'){
-      el.innerHTML = formatAdminCountdown(start);
-    }
-  });
-},1000);
-
+setInterval(()=>{ document.querySelectorAll('.admin-timer').forEach(el=>{ const start = el.getAttribute('data-start'); if(start && start!=='null' && start!=='undefined'){ el.innerHTML = formatAdminCountdown(start); } }); },1000);
 setInterval(load, 40000);
 load();
 </script>
