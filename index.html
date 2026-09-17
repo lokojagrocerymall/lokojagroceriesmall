@@ -23,7 +23,7 @@
   <div class="flex items-center gap-3">
     <div onclick="showCheckout()" class="relative cursor-pointer">
       <span style="font-size:26px">🛒</span>
-      <span id="cartCount" class="absolute -top-2 -right-2 bg-green-600 text-white text-[11px] font-black rounded-full w-5 h-5 flex items-center justify-center">0</span>
+      <span id="cartCount" class="absolute -top-2 -right-2 bg-green-600 text-white text-[11px] font-black rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
     </div>
     <button onclick="document.getElementById('menu').classList.toggle('hidden')" style="font-size:26px">☰</button>
   </div>
@@ -39,6 +39,7 @@
   <div class="bg-white rounded-2xl p-4 shadow-sm mb-3">
     <h2 class="font-black text-[16px] mb-3">📦 Checkout</h2>
     <div id="cartSummary"></div>
+    <button onclick="clearCartNow()" class="mt-3 text-xs text-red-500 font-bold underline">Clear Cart</button>
   </div>
   <div class="bg-white rounded-2xl p-4 shadow-sm">
     <h3 class="font-black text-[15px] mb-3">Delivery Details</h3>
@@ -90,6 +91,19 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let delivery = 5000; let total = 0;
 
+// === CRITICAL FIX: WIPE OLD LEGACY CART KEYS THAT CAUSE "2" BUG ===
+(function cleanLegacyCart(){
+  // Old system used 'cart' key, new uses 'lgm_cart'
+  if(localStorage.getItem('cart')){
+    console.log('Removing legacy cart with', JSON.parse(localStorage.getItem('cart')||'[]').length, 'items');
+    localStorage.removeItem('cart');
+  }
+  // Also clean old inconsistent keys
+  if(localStorage.getItem('lgm_cart') && localStorage.getItem('lgm_cart').includes('"quantity"')){
+    localStorage.removeItem('lgm_cart'); // old format
+  }
+})();
+
 supabaseClient.auth.getUser().then(async ({data: {user}}) => {
   if(user){
     const { data: userData } = await supabaseClient.from('users').select('role, is_approved').eq('id', user.id).maybeSingle();
@@ -104,11 +118,33 @@ supabaseClient.auth.getUser().then(async ({data: {user}}) => {
 
 function doSearch(){ const q=document.getElementById('searchInput').value.trim(); if(q) location.href='browse.html?q='+encodeURIComponent(q); }
 function goCat(c){ location.href='browse.html?cat='+encodeURIComponent(c); }
-function updateCart(){ let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]'); document.getElementById('cartCount').innerText=cart.reduce((s,i)=>s+i.qty,0); }
+
+function updateCart(){
+  let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
+  let count = cart.reduce((s,i)=>s+(Number(i.qty)||0),0);
+  let badge = document.getElementById('cartCount');
+  badge.innerText = count;
+  if(count>0){
+    badge.classList.remove('hidden');
+    badge.classList.add('flex');
+  } else {
+    badge.classList.add('hidden');
+    badge.classList.remove('flex');
+  }
+}
+
+function clearCartNow(){
+  if(!confirm('Clear cart?')) return;
+  localStorage.removeItem('lgm_cart');
+  localStorage.removeItem('cart'); // legacy
+  updateCart();
+  showCart();
+}
+
 function showCheckout(){ document.getElementById('homeSection').classList.add('hidden'); document.getElementById('checkoutSection').classList.remove('hidden'); showCart(); window.scrollTo(0,0); }
 function showCart(){
   let cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
-  if(cart.length === 0){ document.getElementById('cartSummary').innerHTML = "<p>Cart is empty</p>"; return; }
+  if(cart.length === 0){ document.getElementById('cartSummary').innerHTML = "<p class='text-center text-gray-400 py-4'>Cart is empty - add items</p>"; return; }
   let h = ''; total = 0;
   cart.forEach(item=>{ total += item.price * item.qty; h += `<div class="flex justify-between text-sm mb-1"><span>${item.name} x${item.qty}</span><span>₦${(item.price*item.qty).toLocaleString()}</span></div>`; });
   h += `<hr class="my-2"><div class="flex justify-between text-sm">Delivery: <span>₦${delivery.toLocaleString()}</span></div>`;
@@ -159,16 +195,11 @@ function payWithFlutterwave(){
   });
 }
 
-// === FIXED saveOrder - CLEARS BOTH CARTS + NEVER RETURNS TO CART ===
 async function saveOrder(tx_ref, name, phone, address, grandTotal){
   const curUser = JSON.parse(localStorage.getItem('lgm_user'));
   const cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
   let sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
-
-  console.log("Saving order for:", curUser.email, "items:", cart.length);
-
   try{
-    // 1. SAVE ORDER
     const { data: order, error } = await supabaseClient.from('orders').insert({
       tx_ref: tx_ref,
       customer_id: curUser.id,
@@ -180,57 +211,29 @@ async function saveOrder(tx_ref, name, phone, address, grandTotal){
       subtotal: sub,
       delivery_fee: delivery,
       total: grandTotal,
-      payment_status: 'paid',
+      payment_status: true,
       status: 'paid'
     }).select().single();
 
-    if(error){
-      console.error("ORDERS INSERT ERROR FULL:", error);
-      alert("❌ ORDER SAVE FAILED:\n" + error.message + "\n\nTake screenshot and send me!");
-      throw error;
-    }
+    if(error){ throw error; }
 
-    console.log("Order saved ID:", order.id);
-
-    // 2. CLEAR CARTS IMMEDIATELY - BEFORE vendor/delivery
+    // CLEAR CARTS IMMEDIATELY
     localStorage.removeItem('lgm_cart');
-    try{ await supabaseClient.from('carts').delete().eq('customer_id', curUser.id); }catch(e){ console.log("carts clear skip:", e.message); }
+    localStorage.removeItem('cart');
+    try{ await supabaseClient.from('carts').delete().eq('customer_id', curUser.id); }catch(e){}
     updateCart();
 
-    // 3. VENDOR ORDERS - fire and forget
-    try{
-      await supabaseClient.from('vendor_orders').insert({
-        order_id: order.id,
-        vendor_id: cart[0]?.vendor_id || null,
-        vendor_email: cart[0]?.vendor_email || null,
-        items: cart,
-        subtotal: sub,
-        status: 'new'
-      });
-    }catch(vErr){ console.log("vendor_orders skipped:", vErr.message); }
-
-    // 4. DELIVERY - fire and forget
-    try{
-      await supabaseClient.from('delivery_assignments').insert({
-        order_id: order.id,
-        status: 'pending_pickup',
-        customer_id: curUser.id,
-        customer_address: address,
-        customer_phone: phone,
-        items_summary: cart.map(i=>`${i.name}x${i.qty}`).join(', ')
-      });
-    }catch(dErr){ console.log("delivery skipped:", dErr.message); }
+    try{ await supabaseClient.from('vendor_orders').insert({ order_id: order.id, vendor_id: cart[0]?.vendor_id || null, vendor_email: cart[0]?.vendor_email || null, items: cart, subtotal: sub, status: 'new' }); }catch(vErr){}
+    try{ await supabaseClient.from('delivery_assignments').insert({ order_id: order.id, status: 'pending_pickup', customer_id: curUser.id, customer_address: address, customer_phone: phone, items_summary: cart.map(i=>`${i.name}x${i.qty}`).join(', ') }); }catch(dErr){}
 
     alert('✅ Payment Successful! Order #' + order.id + '\nGoing to My Orders');
     window.location.replace('customer.html');
-
   }catch(err){
     console.error("FINAL SAVE ERROR:", err);
-    // EVEN ON ERROR, CLEAR CART AND GO TO CUSTOMER PAGE - NEVER RETURN TO CART
     localStorage.removeItem('lgm_cart');
-    try{ await supabaseClient.from('carts').delete().eq('customer_id', curUser.id); }catch(e){}
+    localStorage.removeItem('cart');
     updateCart();
-    alert('⚠️ Payment was successful but order save had issue: ' + err.message + '\n\nYour payment is safe. Going to orders page - check if order appears. If not, send me screenshot of this error.');
+    alert('⚠️ Payment was successful but order save had issue: ' + err.message + '\nGoing to orders page');
     window.location.replace('customer.html');
   }
 }
