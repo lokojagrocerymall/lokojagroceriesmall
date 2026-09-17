@@ -121,7 +121,7 @@ if(!curUser || String(curUser.role).toLowerCase().trim()!== 'vendor'){
   alert('Access Denied. Please login as Vendor');
   location.href='/';
 }
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const TWO_HOURS_MS = 3 * 60 * 60 * 1000;
 
 function setTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
