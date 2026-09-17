@@ -41,7 +41,7 @@ if(!curUser ||!curUser.email || String(curUser.role).toLowerCase().trim()!=='del
 document.getElementById('name').innerText = curUser.name || curUser.email;
 document.getElementById('email').innerText = curUser.email;
 
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const TWO_HOURS_MS = 3 * 60 * 60 * 1000;
 let isCalling = false;
 let ordersCache = [];
 let lastAvailableCount = 0;
