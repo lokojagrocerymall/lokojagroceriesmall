@@ -453,7 +453,7 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
       subtotal: subtotal,
       delivery_fee: delivery,
       total: total,
-      payment_status: 'paid',
+      payment_status: true,
       status: 'paid'
     }).select().single();
 
