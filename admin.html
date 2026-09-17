@@ -71,10 +71,10 @@ async function load(){
     const {data:u} = await supabaseClient.from('users').select('*');
     users = u||[];
 
-    // FIXED: ORDER BY ID DESC + LIMIT 100 SO #36 SHOWS AT TOP
+    // FIXED: ADDED 'on the way' STATUS + ORDER BY ID
     const {data:o} = await supabaseClient.from('orders')
      .select('*')
-     .in('status',['paid','picked','delivered','failed'])
+     .in('status',['paid','picked','on the way','delivered','failed'])
      .order('id',{ascending:false})
      .limit(100);
     orders = o||[];
@@ -166,7 +166,7 @@ function render(){
   }
   if(tab==='orders'){
     data.forEach(o=>{
-      let statusColor = o.status==='paid' ? 'text-orange-600' : o.status==='picked' ? 'text-blue-600' : o.status==='delivered' ? 'text-green-600' : 'text-red-600';
+      let statusColor = o.status==='paid' ? 'text-orange-600' : (o.status==='picked' || o.status==='on the way') ? 'text-blue-600' : o.status==='delivered' ? 'text-green-600' : 'text-red-600';
       let agentInfo = o.delivery_agent_name? `<div class="text-xs text-blue-600 font-bold">🚚 Agent: ${o.delivery_agent_name} (${o.delivery_agent_phone||''}) - Picked at: ${o.picked_at? new Date(o.picked_at).toLocaleTimeString():''}</div>` : `<div class="text-xs text-orange-600 font-bold">⚠️ Waiting for Agent</div>`;
       html += `<div class="border rounded-lg p-3 mb-2">
         <div class="flex justify-between"><div class="font-bold">Order #${o.id} - <span class="${statusColor}">${o.status.toUpperCase()}</span></div><div class="font-bold text-green-700">₦${Number(o.total||0).toLocaleString()}</div></div>
