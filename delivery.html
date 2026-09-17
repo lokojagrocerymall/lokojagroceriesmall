@@ -4,8 +4,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @keyframes pulse-red {0%,100%{background:#fee2e2;border-color:#ef4444}50%{background:#fecaca;border-color:#dc2626}}
- .alert-card{animation:pulse-red 1s infinite;border:2px solid #ef4444!important}
- .badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900}
+  @keyframes timer-pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.alert-card{animation:pulse-red 1s infinite;border:2px solid #ef4444!important}
+.badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900}
 </style>
 </head>
 <body class="bg-gray-100">
@@ -45,15 +46,16 @@ let isCalling = false;
 let ordersCache = [];
 let lastAvailableCount = 0;
 
+// === BOLD VISIBLE TIMER FOR DELIVERY ===
 function formatCountdown(startTime){
-  if(!startTime) return '';
+  if(!startTime) return '<span style="font-size:22px;font-weight:900;color:#ea580c">⏰ Timer starting...</span>';
   const end = new Date(startTime).getTime() + TWO_HOURS_MS;
   const diff = end - new Date().getTime();
-  if(diff <= 0) return '<span class="text-red-600 font-bold">TIME UP! CALL ADMIN</span>';
+  if(diff <= 0) return '<span style="font-size:22px;font-weight:900;color:#dc2626;background:#fee2e2;padding:4px 10px;border-radius:8px">❌ TIME UP! CALL ADMIN</span>';
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
-  return `<span class="text-red-600 font-bold">${h}h ${m}m ${s}s</span>`;
+  return `<span style="font-size:32px;font-weight:900;color:#dc2626;letter-spacing:1px;animation:timer-pulse 1s infinite">${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s</span>`;
 }
 
 function formatPickedUpTime(startTime){
@@ -69,10 +71,10 @@ function triggerAlert(msg){
 async function loadRiderStats(){
   try{
     const {data} = await supabaseClient.from('orders')
-  .select('customer_rating')
-  .eq('delivery_agent_email', curUser.email)
-  .eq('status', 'delivered')
-  .not('customer_rating', 'is', null);
+ .select('customer_rating')
+ .eq('delivery_agent_email', curUser.email)
+ .eq('status', 'delivered')
+ .not('customer_rating', 'is', null);
     const ratings = data?.map(d=>d.customer_rating) || [];
     const avg = ratings.length > 0? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '0';
     document.getElementById('riderStats').innerHTML = `
@@ -87,27 +89,24 @@ async function loadRiderStats(){
 
 async function fetchOrders(){
   try{
-    // RULE 1: AVAILABLE ORDERS = MUST BE PAID AND payment_status=true AND no agent picked yet
     const { data:availableOrders } = await supabaseClient.from('orders')
-  .select('*')
-  .eq('status','paid')
-  .eq('payment_status', true) // CRITICAL FIX: ONLY PAID ORDERS
-  .is('delivery_agent_email', null)
-  .order('created_at',{ascending:false});
+ .select('*')
+ .eq('status','paid')
+ .eq('payment_status', true)
+ .is('delivery_agent_email', null)
+ .order('created_at',{ascending:false});
 
-    // TRIGGER ALERT FOR NEW AVAILABLE ORDERS
     if(availableOrders.length > lastAvailableCount && lastAvailableCount!== 0){
       triggerAlert(`🚨 New Order #${availableOrders[0].id} is Available!`);
     }
     lastAvailableCount = availableOrders.length;
     document.getElementById('orderBadge').innerHTML = availableOrders.length > 0? `<span class="badge">${availableOrders.length}</span>` : '';
 
-    // RULE 2: MY ACTIVE ORDERS = status=on the way AND assigned to ME
     const { data:myActive } = await supabaseClient.from('orders')
-  .select('*')
-  .eq('status','on the way')
-  .eq('delivery_agent_email', curUser.email)
-  .order('created_at',{ascending:false});
+ .select('*')
+ .eq('status','on the way')
+ .eq('delivery_agent_email', curUser.email)
+ .order('created_at',{ascending:false});
 
     const orderMap = new Map();
     [...(availableOrders||[]),...(myActive||[])].forEach(o => orderMap.set(o.id, o));
@@ -123,7 +122,6 @@ function renderOrders(){
 
   document.getElementById('orders').innerHTML = ordersCache.map(o=>{
     const addr = o.customer_address || o.address || 'N/A';
-    // CASE 1: AVAILABLE ORDER - ANY AGENT CAN PICK
     if(o.status === 'paid' &&!o.delivery_agent_email){
       return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-green-400 alert-card">
         <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
@@ -135,8 +133,6 @@ function renderOrders(){
         <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">🚚 Pick Up Order - Start 2HR Timer</button>
       </div>`;
     }
-
-    // CASE 2: MY ACTIVE ORDER - ONLY ME CAN SEE
     else {
       return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-orange-400" id="order-${o.id}">
         <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
@@ -146,12 +142,13 @@ function renderOrders(){
           <p class="text-xs">🏠 ${addr}</p>
         </div>
 
-        <div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
-          <p class="text-xs text-gray-600 font-bold">YOU ARE DELIVERING THIS</p>
-          <p class="text-xs text-gray-500">Picked up at: ${formatPickedUpTime(o.delivery_started_at)}</p>
-          <b>⏰ Time Left:</b> <span class="countdown" data-start="${o.delivery_started_at}">${formatCountdown(o.delivery_started_at)}</span>
+        <div style="background:linear-gradient(135deg,#ffffff,#fef3c7);border:3px solid #f59e0b;padding:16px;border-radius:16px;margin-top:12px;text-align:center;box-shadow:0 6px 20px rgba(245,158,11,0.35)">
+          <div style="font-size:11px;font-weight:900;letter-spacing:2px;color:#92400e;background:#fde68a;display:inline-block;padding:3px 12px;border-radius:20px">⏰ YOU ARE DELIVERING - TIME LEFT</div>
+          <div style="margin-top:8px"><span class="countdown" data-start="${o.delivery_started_at}">${formatCountdown(o.delivery_started_at)}</span></div>
+          <div style="font-size:12px;font-weight:800;color:#78350f;margin-top:6px">Picked at: ${formatPickedUpTime(o.delivery_started_at)} • Deliver before fail!</div>
         </div>
-        <a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-2 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
+
+        <a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-3 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
         <div class="mt-2 p-2 bg-blue-50 rounded-lg text-center border-blue-200">
           <p class="text-xs text-blue-700 font-bold">Waiting for Customer to Confirm Delivery</p>
         </div>
@@ -165,11 +162,11 @@ async function loadCompleted(){
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const { data:completed } = await supabaseClient.from('orders')
-  .select('*')
-  .eq('status','delivered')
-  .eq('delivery_agent_email', curUser.email)
-  .gte('delivered_at', sevenDaysAgo.toISOString())
-  .order('delivered_at',{ascending:false});
+ .select('*')
+ .eq('status','delivered')
+ .eq('delivery_agent_email', curUser.email)
+ .gte('delivered_at', sevenDaysAgo.toISOString())
+ .order('delivered_at',{ascending:false});
     if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }
     else {
       document.getElementById('completed').innerHTML = completed.map(o=>{
@@ -194,10 +191,10 @@ async function loadOrders(){
 }
 
 async function pickup(id){
-  // ATOMIC UPDATE: Only pick if it's still available
   const { data, error } = await supabaseClient.from('orders').update({
     status:'on the way',
     delivery_started_at:new Date().toISOString(),
+    picked_at:new Date().toISOString(),
     delivery_agent_email: curUser.email,
     delivery_agent_name: curUser.name || curUser.email.split('@')[0]
   }).eq('id',id).eq('status','paid').is('delivery_agent_email', null).select();
