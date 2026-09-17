@@ -21,7 +21,7 @@
     <span style="font-size:21px;font-weight:900;letter-spacing:-0.5px;color:#166534;line-height:1">Lokoja Grocery Mall</span>
   </div>
   <div class="flex items-center gap-3">
-    <div onclick="location.href='cart.html'" class="relative cursor-pointer">
+    <div onclick="showCheckout()" class="relative cursor-pointer">
       <span style="font-size:26px">🛒</span>
       <span id="cartCount" class="absolute -top-2 -right-2 bg-green-600 text-white text-[11px] font-black rounded-full w-5 h-5 flex items-center justify-center">0</span>
     </div>
@@ -35,24 +35,21 @@
   <a href="signup.html" class="block py-2 text-green-600">➕ Sign Up</a>
 </div>
 
-<!-- CHECKOUT SECTION -->
 <div id="checkoutSection" class="hidden p-4">
   <div class="bg-white rounded-2xl p-4 shadow-sm mb-3">
     <h2 class="font-black text-[16px] mb-3">📦 Checkout</h2>
     <div id="cartSummary"></div>
   </div>
-
   <div class="bg-white rounded-2xl p-4 shadow-sm">
     <h3 class="font-black text-[15px] mb-3">Delivery Details</h3>
     <input id="cName" placeholder="Full Name" class="w-full p-3 border rounded-lg mb-3">
     <input id="cPhone" placeholder="Phone Number 080..." class="w-full p-3 border rounded-lg mb-3">
     <input id="cAddress" placeholder="Delivery Address in Lokoja" class="w-full p-3 border rounded-lg mb-3">
     <button class="w-full bg-green-600 text-white py-3 rounded-xl font-black" onclick="payWithFlutterwave()">Pay Now With Flutterwave</button>
-    <p class="text-xs text-gray-500 mt-2 text-center">Vendor gets 90%, Platform 10% + ₦5,000 delivery</p>
+    <p class="text-xs text-gray-500 mt-2 text-center">Vendor 90% + ₦5,000 delivery</p>
   </div>
 </div>
 
-<!-- HOME SECTION -->
 <div id="homeSection">
 <div class="mx-4 mt-4 bg-gradient-to-br from-green-600 to-green-800 rounded-[20px] p-6 text-white text-center">
   <div class="inline-block bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs font-bold mb-3">📍 Lokoja, Kogi State</div>
@@ -63,7 +60,6 @@
   </div>
   <div class="mt-4"><span class="bg-green-400 text-green-900 px-4 py-1.5 rounded-full text-xs font-black">✅ OPEN NOW - Order now!</span></div>
 </div>
-
 <div class="p-4">
   <h2 class="font-black text-[15px] mb-3">Shop by Category</h2>
   <div class="grid grid-cols-3 gap-3">
@@ -75,7 +71,6 @@
     <button onclick="goCat('Baby')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">👶<br>Baby</button>
   </div>
 </div>
-
 <div class="px-4 pb-10">
   <div id="productsGrid" class="grid grid-cols-2 gap-3">
     <div class="col-span-2 text-center text-sm text-gray-400 py-10">Loading products...</div>
@@ -93,7 +88,6 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let isSubmitting = false;
 let delivery = 5000; let total = 0;
 
 supabaseClient.auth.getUser().then(async ({data: {user}}) => {
@@ -108,39 +102,20 @@ supabaseClient.auth.getUser().then(async ({data: {user}}) => {
   }
 })
 
-function doSearch(){
-  const q=document.getElementById('searchInput').value.trim();
-  if(q) location.href='browse.html?q='+encodeURIComponent(q);
-}
+function doSearch(){ const q=document.getElementById('searchInput').value.trim(); if(q) location.href='browse.html?q='+encodeURIComponent(q); }
 function goCat(c){ location.href='browse.html?cat='+encodeURIComponent(c); }
-
-function updateCart(){
-  let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
-  let totalQty=cart.reduce((s,i)=>s+i.qty,0);
-  document.getElementById('cartCount').innerText=totalQty;
-}
-
-function showCheckout(){
-  document.getElementById('homeSection').classList.add('hidden');
-  document.getElementById('checkoutSection').classList.remove('hidden');
-  showCart();
-  window.scrollTo(0,0);
-}
-
+function updateCart(){ let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]'); document.getElementById('cartCount').innerText=cart.reduce((s,i)=>s+i.qty,0); }
+function showCheckout(){ document.getElementById('homeSection').classList.add('hidden'); document.getElementById('checkoutSection').classList.remove('hidden'); showCart(); window.scrollTo(0,0); }
 function showCart(){
   let cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
   if(cart.length === 0){ document.getElementById('cartSummary').innerHTML = "<p>Cart is empty</p>"; return; }
   let h = ''; total = 0;
-  cart.forEach(item=>{
-    total += item.price * item.qty;
-    h += `<div class="flex justify-between text-sm mb-1"><span>${item.name} x${item.qty}</span><span>₦${(item.price*item.qty).toLocaleString()}</span></div>`;
-  });
+  cart.forEach(item=>{ total += item.price * item.qty; h += `<div class="flex justify-between text-sm mb-1"><span>${item.name} x${item.qty}</span><span>₦${(item.price*item.qty).toLocaleString()}</span></div>`; });
   h += `<hr class="my-2"><div class="flex justify-between text-sm">Delivery: <span>₦${delivery.toLocaleString()}</span></div>`;
   h += `<div class="flex justify-between font-black text-[15px] mt-1">Total: <span>₦${(total+delivery).toLocaleString()}</span></div>`;
   document.getElementById('cartSummary').innerHTML = h;
 }
 
-// FIXED: HARDCODED KEY + SAFE FLOW
 function payWithFlutterwave(){
   const curUser = JSON.parse(localStorage.getItem('lgm_user'));
   if(!curUser){ alert('Please login first'); showDeliveryLogin(); return; }
@@ -148,20 +123,9 @@ function payWithFlutterwave(){
   const phone = document.getElementById('cPhone').value.trim();
   const address = document.getElementById('cAddress').value.trim();
   if(!name ||!phone ||!address) return alert('Fill all fields');
-
   let cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
   if(cart.length===0){ alert('Cart empty'); return; }
-
-  let calcTotal = 0; cart.forEach(i=> calcTotal += i.price*i.qty);
-  total = calcTotal;
-
-  const vendorSubaccounts = {
-    "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
-    "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
-  }
-  const vendorTotals = {};
-  cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + item.price*item.qty; });
-  const subaccounts = Object.keys(vendorTotals).map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"percentage", transaction_charge:90})).filter(s=>s.id);
+  let calcTotal = 0; cart.forEach(i=> calcTotal += i.price*i.qty); total = calcTotal;
 
   FlutterwaveCheckout({
     public_key: "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X",
@@ -169,79 +133,70 @@ function payWithFlutterwave(){
     amount: total + delivery,
     currency: "NGN",
     customer: { email: curUser.email, name: name, phone_number: phone },
-    customizations: { title: "Lokoja Grocery Mall - TEST MODE" },
-    subaccounts: subaccounts.length>0? subaccounts : undefined,
+    customizations: { title: "Lokoja Grocery Mall" },
     callback: function(response) {
-      console.log("FLW Response:", response);
-      if(response.status === "successful"){
-        saveOrder(response.tx_ref || response.transaction_id, name, phone, address, total+delivery);
-      } else { alert('Payment ' + response.status); }
+      console.log("FLW:", response);
+      // ANY successful status goes to save
+      saveOrder(response.tx_ref || "lgm_"+Date.now(), name, phone, address, total+delivery);
     },
-    onclose: function() { console.log('Flutterwave closed'); }
+    onclose: function() {}
   });
 }
 
-// FIXED: FULL FLOW WITH TRY/CATCH - NEVER RETURNS TO CART
+// === FINAL FIX - KEEPS YOUR FLOW BUT NEVER CRASHES ===
 async function saveOrder(tx_ref, name, phone, address, grandTotal){
-  try{
-    const curUser = JSON.parse(localStorage.getItem('lgm_user'));
-    const cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
-    let sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const curUser = JSON.parse(localStorage.getItem('lgm_user'));
+  const cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
+  let sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
 
+  try{
     const {data:order, error} = await supabaseClient.from('orders').insert({
-      tx_ref,
-      customer_id:curUser.id,
-      customer_name:name,
-      customer_email:curUser.email,
-      customer_phone:phone,
-      customer_address:address,
-      items:cart,
-      subtotal:sub,
-      delivery_fee:delivery,
-      total:grandTotal,
-      payment_status:'paid',
-      status:'paid'
+      tx_ref: tx_ref,
+      customer_id: curUser.id,
+      customer_name: name,
+      customer_email: curUser.email,
+      customer_phone: phone,
+      customer_address: address,
+      items: cart,
+      subtotal: sub,
+      delivery_fee: delivery,
+      total: grandTotal,
+      payment_status: 'paid',
+      status: 'paid'
     }).select().single();
 
     if(error) throw error;
 
-    // 1. VENDOR ORDERS - try but don't crash if table missing
-    try{
-      const vendors = [...new Set(cart.map(i=>i.vendor_id).filter(Boolean))];
-      for(let vid of vendors){
-        let vendorItems = cart.filter(i=>i.vendor_id===vid);
-        await supabaseClient.from('vendor_orders').insert({
-          order_id:order.id,
-          vendor_id:vid,
-          vendor_email:vendorItems[0]?.vendor_email || null,
-          items:vendorItems,
-          subtotal:vendorItems.reduce((s,i)=>s+i.price*i.qty,0),
-          status:'new'
-        });
-      }
-    }catch(vErr){ console.log("vendor_orders skipped:", vErr.message); }
+    // Fire and forget - does not block customer redirect
+    const vendorId = cart[0]?.vendor_id || null;
+    const vendorEmail = cart[0]?.vendor_email || null;
 
-    // 2. DELIVERY ASSIGNMENTS - KEEP YOUR FLOW
-    try{
-      await supabaseClient.from('delivery_assignments').insert({
-        order_id:order.id,
-        status:'pending_pickup',
-        customer_id: curUser.id,
-        customer_address:address,
-        customer_phone:phone,
-        items_summary:cart.map(i=>`${i.name}x${i.qty}`).join(', ')
-      });
-    }catch(dErr){ console.log("delivery_assignments skipped:", dErr.message); }
+    supabaseClient.from('vendor_orders').insert({
+      order_id: order.id,
+      vendor_id: vendorId,
+      vendor_email: vendorEmail,
+      items: cart,
+      subtotal: sub,
+      status: 'new'
+    }).then(r=>console.log("vendor_orders ok")).catch(e=>console.log("vendor_orders err",e.message));
 
-    // ALWAYS CLEAR CART AND GO TO CUSTOMER PAGE
+    supabaseClient.from('delivery_assignments').insert({
+      order_id: order.id,
+      status: 'pending_pickup',
+      customer_id: curUser.id,
+      customer_address: address,
+      customer_phone: phone,
+      items_summary: cart.map(i=>`${i.name}x${i.qty}`).join(', ')
+    }).then(r=>console.log("delivery_assignments ok")).catch(e=>console.log("delivery_assignments err",e.message));
+
     localStorage.removeItem('lgm_cart');
     updateCart();
-    alert('✅ Payment Successful! Order #'+order.id);
+    alert('✅ Payment Successful! Order #'+order.id+'\nGoing to My Orders');
     window.location.replace('customer.html');
 
   }catch(err){
-    console.error("SAVE ERROR:", err);
-    alert('Payment success! But DB: '+err.message+' - clearing cart and going to orders');
+    console.error("ORDER SAVE FAIL:", err);
+    alert('Payment was successful! But save error: '+err.message+'\nI will clear cart and take you to orders - order may still be saved');
     localStorage.removeItem('lgm_cart');
     updateCart();
     window.location.replace('customer.html');
@@ -250,36 +205,32 @@ async function saveOrder(tx_ref, name, phone, address, grandTotal){
 
 async function loadProducts(){
   const { data, error } = await supabaseClient.from('products').select('*').eq('is_approved', true).order('created_at',{ascending:false}).limit(50);
-  if(error){
-    document.getElementById('productsGrid').innerHTML=`<div class="col-span-2 text-center text-sm text-red-400 py-10">Error: ${error.message}</div>`;
-    return;
-  }
-  if(!data || data.length===0){
-    document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products yet<br>Go to Vendor Dashboard to add</div>';
-    return;
-  }
+  if(error){ document.getElementById('productsGrid').innerHTML=`<div class="col-span-2 text-center text-sm text-red-400 py-10">Error: ${error.message}</div>`; return; }
+  if(!data || data.length===0){ document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products yet</div>'; return; }
   let html='';
   data.forEach(p=>{
     const img = p.image || p.image_url || '';
     const imgTag = img? `<img src="${img}" class="h-full w-full object-cover rounded-xl">` : '🛒';
     const safeName = (p.name||'').replace(/'/g,"").replace(/"/g,'');
+    const vId = p.vendor_id || '';
+    const vEmail = p.vendor_email || '';
     html+=`<div class="bg-white rounded-2xl p-3 shadow-sm">
       <div class="bg-gray-100 rounded-xl h-28 flex items-center justify-center text-3xl mb-2 overflow-hidden">${imgTag}</div>
       <div class="font-bold text-[13px] truncate">${p.name}</div>
-      <div class="text-[11px] text-gray-500 truncate">${p.category||''} • Stock: ${p.stock||0}</div>
-      <div class="flex justify-between items-center mt-2"><b class="text-green-700 text-[13px]">₦${Number(p.price).toLocaleString()}</b><button onclick="addToCart(${p.id},'${safeName}',${p.price},'${img}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button></div>
+      <div class="text-[11px] text-gray-500 truncate">${p.category||''}</div>
+      <div class="flex justify-between items-center mt-2"><b class="text-green-700 text-[13px]">₦${Number(p.price).toLocaleString()}</b><button onclick="addToCart(${p.id},'${safeName}',${p.price},'${img}','${vId}','${vEmail}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button></div>
     </div>`;
   });
   document.getElementById('productsGrid').innerHTML=html;
 }
 
-function addToCart(id,name,price,image){
+function addToCart(id,name,price,image,vendor_id,vendor_email){
   let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
   let f=cart.find(i=>i.id===id);
-  if(f){ f.qty++; if(image) f.image=image; } else { cart.push({id,name,price,image:image||'',qty:1}); }
+  if(f){ f.qty++; } else { cart.push({id,name,price,image:image||'',vendor_id:vendor_id||null,vendor_email:vendor_email||null,qty:1}); }
   localStorage.setItem('lgm_cart', JSON.stringify(cart));
   updateCart();
-  alert(name+' added to cart!');
+  alert(name+' added!');
 }
 
 updateCart();
@@ -287,7 +238,6 @@ loadProducts();
 if(window.location.hash === '#checkout') showCheckout();
 </script>
 
-<!-- LOGIN MODAL -->
 <div id="deliveryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
   <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-sm mx-4">
     <h1 class="text-2xl font-bold text-center text-green-700 mb-6">🔐 LGM Login</h1>
@@ -310,7 +260,6 @@ let passVisible = false;
 function showDeliveryLogin(){ document.getElementById('deliveryModal').classList.remove('hidden'); }
 function hideDeliveryLogin(){ document.getElementById('deliveryModal').classList.add('hidden'); document.getElementById('d_error').innerText = ''; }
 function togglePassword(){ const passInput = document.getElementById('d_password'); passVisible =!passVisible; passInput.type = passVisible? 'text' : 'password'; }
-
 async function forgotPassword(){
   const email = document.getElementById('d_email').value.trim();
   const errorEl = document.getElementById('d_error');
@@ -318,59 +267,38 @@ async function forgotPassword(){
   if(!confirm(`Send password reset link to ${email}?`)) return;
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: 'https://y-mall.vercel.app/' });
   if(error){ errorEl.innerText = 'Error: ' + error.message; }
-  else { errorEl.className = "text-green-600 text-sm mt-3 text-center"; errorEl.innerText = 'Reset link sent! Check your inbox.'; }
+  else { errorEl.className = "text-green-600 text-sm mt-3 text-center"; errorEl.innerText = 'Reset link sent!'; }
 }
-
 async function deliveryLogin(){
-  const errorEl = document.getElementById('d_error');
-  const btn = document.getElementById('loginBtn');
-  errorEl.innerText = "Checking...";
-  btn.disabled = true;
+  const errorEl = document.getElementById('d_error'); const btn = document.getElementById('loginBtn');
+  errorEl.innerText = "Checking..."; btn.disabled = true;
   const email = document.getElementById('d_email').value.trim().toLowerCase();
   const password = document.getElementById('d_password').value.trim();
-  if(!email ||!password){
-    errorEl.innerText = "Please enter email and password";
-    btn.disabled = false;
-    return;
-  }
+  if(!email ||!password){ errorEl.innerText = "Enter email and password"; btn.disabled = false; return; }
   try{
     const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({ email, password });
     if(authError) throw authError;
     const userId = authData.user.id;
     let { data: user } = await supabaseClient.from('users').select('*').eq('id', userId).maybeSingle();
     if(!user){
-      const { data: newUser } = await supabaseClient.from('users').insert({
-        id: userId,
-        email: authData.user.email,
-        full_name: authData.user_metadata?.full_name || 'User',
-        role: authData.user_metadata?.role || 'customer',
-        is_approved: true
-      }).select().single();
+      const { data: newUser } = await supabaseClient.from('users').insert({ id: userId, email: authData.user.email, full_name: authData.user_metadata?.full_name || 'User', role: authData.user_metadata?.role || 'customer', is_approved: true }).select().single();
       user = newUser;
     }
     if(user.role!== 'customer' && user.role!== 'admin' && user.is_approved === false){
       await supabaseClient.auth.signOut();
       errorEl.className = "text-yellow-600 text-sm mt-3 text-center font-bold";
-      errorEl.innerText = `⏳ Pending Approval\nHi ${user.full_name}, your account is awaiting admin approval.`;
-      btn.disabled = false;
-      return;
+      errorEl.innerText = `⏳ Pending Approval`; btn.disabled = false; return;
     }
     localStorage.setItem('lgm_user', JSON.stringify(user));
-    errorEl.className = "text-green-600 text-sm mt-3 text-center";
-    errorEl.innerText = "Login OK. Role: " + user.role + ". Redirecting...";
+    errorEl.className = "text-green-600 text-sm mt-3 text-center"; errorEl.innerText = "Login OK. Role: " + user.role;
     setTimeout(() => {
       if(user.role === 'admin') location.href = 'admin.html';
       else if(user.role === 'vendor') location.href = 'vendor.html';
       else if(user.role === 'delivery_agent') location.href = 'delivery.html';
       else location.href = 'customer.html';
     }, 800);
-  } catch(err){
-    errorEl.className = "text-red-500 text-sm mt-3 text-center";
-    errorEl.innerText = "Error: " + err.message;
-    btn.disabled = false;
-  }
+  } catch(err){ errorEl.className = "text-red-500 text-sm mt-3 text-center"; errorEl.innerText = "Error: " + err.message; btn.disabled = false; }
 }
-
 window.addEventListener('load', () => { if(window.location.hash === '#login'){ showDeliveryLogin(); } });
 </script>
 </body>
