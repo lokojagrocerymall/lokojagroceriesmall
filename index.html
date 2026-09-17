@@ -127,7 +127,6 @@ function payWithFlutterwave(){
   if(cart.length===0){ alert('Cart empty'); return; }
   let calcTotal = 0; cart.forEach(i=> calcTotal += i.price*i.qty); total = calcTotal;
 
-  // === 2 VENDORS SPLIT PAYMENT ===
   const vendorSubaccounts = {
     "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
     "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
@@ -143,7 +142,6 @@ function payWithFlutterwave(){
     transaction_charge_type: "flat_subaccount",
     transaction_charge: Math.round(vendorTotals[email] * 0.9)
   }));
-  console.log("Split accounts:", subaccounts);
 
   FlutterwaveCheckout({
     public_key: "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X",
@@ -161,12 +159,17 @@ function payWithFlutterwave(){
   });
 }
 
+// === FIXED saveOrder - CLEARS BOTH CARTS + NEVER RETURNS TO CART ===
 async function saveOrder(tx_ref, name, phone, address, grandTotal){
   const curUser = JSON.parse(localStorage.getItem('lgm_user'));
   const cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
   let sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
+
+  console.log("Saving order for:", curUser.email, "items:", cart.length);
+
   try{
-    const {data:order, error} = await supabaseClient.from('orders').insert({
+    // 1. SAVE ORDER
+    const { data: order, error } = await supabaseClient.from('orders').insert({
       tx_ref: tx_ref,
       customer_id: curUser.id,
       customer_name: name,
@@ -180,36 +183,54 @@ async function saveOrder(tx_ref, name, phone, address, grandTotal){
       payment_status: 'paid',
       status: 'paid'
     }).select().single();
-    if(error) throw error;
 
-    // Vendor and delivery - fire and forget, keep your flow
-    supabaseClient.from('vendor_orders').insert({
-      order_id: order.id,
-      vendor_id: cart[0]?.vendor_id || null,
-      vendor_email: cart[0]?.vendor_email || null,
-      items: cart,
-      subtotal: sub,
-      status: 'new'
-    }).then(()=>console.log("vendor ok")).catch(e=>console.log("vendor err",e.message));
+    if(error){
+      console.error("ORDERS INSERT ERROR FULL:", error);
+      alert("❌ ORDER SAVE FAILED:\n" + error.message + "\n\nTake screenshot and send me!");
+      throw error;
+    }
 
-    supabaseClient.from('delivery_assignments').insert({
-      order_id: order.id,
-      status: 'pending_pickup',
-      customer_id: curUser.id,
-      customer_address: address,
-      customer_phone: phone,
-      items_summary: cart.map(i=>`${i.name}x${i.qty}`).join(', ')
-    }).then(()=>console.log("delivery ok")).catch(e=>console.log("delivery err",e.message));
+    console.log("Order saved ID:", order.id);
 
+    // 2. CLEAR CARTS IMMEDIATELY - BEFORE vendor/delivery
     localStorage.removeItem('lgm_cart');
+    try{ await supabaseClient.from('carts').delete().eq('customer_id', curUser.id); }catch(e){ console.log("carts clear skip:", e.message); }
     updateCart();
-    alert('✅ Payment Successful! Order #'+order.id);
+
+    // 3. VENDOR ORDERS - fire and forget
+    try{
+      await supabaseClient.from('vendor_orders').insert({
+        order_id: order.id,
+        vendor_id: cart[0]?.vendor_id || null,
+        vendor_email: cart[0]?.vendor_email || null,
+        items: cart,
+        subtotal: sub,
+        status: 'new'
+      });
+    }catch(vErr){ console.log("vendor_orders skipped:", vErr.message); }
+
+    // 4. DELIVERY - fire and forget
+    try{
+      await supabaseClient.from('delivery_assignments').insert({
+        order_id: order.id,
+        status: 'pending_pickup',
+        customer_id: curUser.id,
+        customer_address: address,
+        customer_phone: phone,
+        items_summary: cart.map(i=>`${i.name}x${i.qty}`).join(', ')
+      });
+    }catch(dErr){ console.log("delivery skipped:", dErr.message); }
+
+    alert('✅ Payment Successful! Order #' + order.id + '\nGoing to My Orders');
     window.location.replace('customer.html');
+
   }catch(err){
-    console.error("ORDER SAVE FAIL:", err);
-    alert('Payment success but DB: '+err.message);
+    console.error("FINAL SAVE ERROR:", err);
+    // EVEN ON ERROR, CLEAR CART AND GO TO CUSTOMER PAGE - NEVER RETURN TO CART
     localStorage.removeItem('lgm_cart');
+    try{ await supabaseClient.from('carts').delete().eq('customer_id', curUser.id); }catch(e){}
     updateCart();
+    alert('⚠️ Payment was successful but order save had issue: ' + err.message + '\n\nYour payment is safe. Going to orders page - check if order appears. If not, send me screenshot of this error.');
     window.location.replace('customer.html');
   }
 }
