@@ -5,6 +5,7 @@
 <script src="https://checkout.flutterwave.com/v3.js"></script>
 <style>
   @keyframes pulse-red {0%,100%{background:#fee2e2;border-color:#ef4444}50%{background:#fecaca;border-color:#dc2626}}
+  @keyframes timer-pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
 .alert-tab{animation:pulse-red 1s infinite;border:2px solid #ef4444!important;border-radius:8px}
 .badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900}
 </style>
@@ -105,7 +106,7 @@ let isSubmitting = false;
 let lastOrderStatus = {};
 let customerOrdersCache = [];
 
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // FIXED: Changed from 3hrs to 2hrs to match vendor
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const LOKOJA_AREAS = [
   "200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs",
   "Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC",
@@ -186,23 +187,24 @@ function showTab(t){
   if(t==='cart') { syncCartFromSupabase().then(()=>renderCart()); }
 }
 
-// === FIXED TIMER - NOW USES picked_at OR delivery_started_at ===
+// === BOLD VISIBLE TIMER FOR CUSTOMER ONLY ===
 function formatCustomerCountdown(orderId, startTime){
-  if(!startTime) return `<div class="bg-orange-50 p-2 rounded-lg mt-2 text-center"><b class="text-orange-600 text-xs">⏰ Rider picked - timer starting...</b></div>`;
+  if(!startTime) return `<div style="background:#fff7ed;border:2px dashed #f97316;padding:12px;border-radius:14px;margin-top:12px;text-align:center;font-weight:900;color:#c2410c">⏰ Rider on the way - Timer starting...</div>`;
   const end = new Date(startTime).getTime() + TWO_HOURS_MS;
   const diff = end - new Date().getTime();
   if(diff <= 0) {
     autoMarkFailed(orderId);
-    return `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b class="text-red-600 text-xs">⏰ Delivery Time Expired - Failed</b></div>`;
+    return `<div style="background:#fee2e2;border:3px solid #dc2626;color:#dc2626;padding:16px;border-radius:14px;margin-top:12px;text-align:center;font-weight:900;font-size:15px">❌ DELIVERY TIME EXPIRED - FAILED</div>`;
   }
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
   const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
-  return `<div class="bg-orange-50 p-2 rounded-lg mt-2 text-center border border-orange-200">
-            <p class="text-xs text-gray-600 font-bold">⏰ Auto-Fail in: ${h}h ${m}m ${s}s</p>
-            <p class="text-[11px] text-gray-500">Picked at: ${pickedUpTime}</p>
-          </div>`;
+  return `<div style="background:linear-gradient(135deg,#ffffff,#fef3c7);border:3px solid #f59e0b;padding:16px;border-radius:16px;margin-top:12px;text-align:center;box-shadow:0 6px 20px rgba(245,158,11,0.35)">
+    <div style="font-size:11px;font-weight:900;letter-spacing:2px;color:#92400e;background:#fde68a;display:inline-block;padding:3px 12px;border-radius:20px">⏰ DELIVERY COUNTDOWN</div>
+    <div style="font-size:34px;font-weight:900;color:#dc2626;margin:8px 0;letter-spacing:1px;line-height:1;animation:timer-pulse 1s infinite">${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s</div>
+    <div style="font-size:12px;font-weight:800;color:#78350f">Picked at: ${pickedUpTime} • Auto-fail in 2hrs</div>
+  </div>`;
 }
 
 function triggerAlert(msg){
@@ -507,7 +509,6 @@ function renderOrdersList(){
     }
 
     const isOnTheWay = o.status === 'picked' || o.status === 'on the way';
-    // FIXED: Use picked_at OR delivery_started_at
     const startTime = o.picked_at || o.delivery_started_at || o.updated_at;
 
     html += `<div class="bg-white p-3 rounded-2xl shadow">
@@ -569,10 +570,8 @@ async function submitRating(id){
   }
 }
 
-// === FIXED: LIVE COUNTING EVERY SECOND ===
 setInterval(()=>{
   if(document.getElementById('view-orders') &&!document.getElementById('view-orders').classList.contains('hidden')){
-    // Update timers without re-fetching
     if(!isUserInteracting){
       document.querySelectorAll('.customer-timer').forEach(el=>{
         const orderId = el.getAttribute('data-order');
