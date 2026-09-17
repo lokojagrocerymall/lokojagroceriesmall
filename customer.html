@@ -388,13 +388,17 @@ async function payWithFlutterwave(e){
   const vendorSubaccounts = {
     "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
     "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
-  }
+  };
   const vendorTotals = {};
   cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + item.price*item.qty; });
 
-  const subaccounts = Object.keys(vendorTotals)
-.map(email=>({id:vendorSubaccounts[email], transaction_charge_type:"flat_subaccount", transaction_charge: Math.round(vendorTotals[email]*0.9)}))
-.filter(s=>s.id);
+  const subaccounts = Object.keys(vendorTotals).map(email=>{
+    const id = vendorSubaccounts[email];
+    if(!id) return null;
+    return { id: id, transaction_charge_type: "flat_subaccount", transaction_charge: Math.round(vendorTotals[email]*0.9) };
+  }).filter(s=>s && s.id);
+
+  console.log("Subaccounts for split:", subaccounts);
 
   FlutterwaveCheckout({
     public_key: "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X",
@@ -402,28 +406,34 @@ async function payWithFlutterwave(e){
     amount: total,
     currency: "NGN",
     payment_options: "card",
-    redirect_url: window.location.href,
     customer: { email: user.email, phone_number: checkoutPhone, name: displayName },
     subaccounts: subaccounts.length>0? subaccounts : undefined,
     customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery" },
     callback: async function(data){
-      if(data.status === "successful" && data.transaction_id){
-        document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order...</span>';
-        await saveOrderAfterPayment(data.tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total);
+      console.log("FLW callback:", data);
+      if(data.status === "successful"){
+        document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Tx:'+data.tx_ref+' Saving order...</span>';
+        await saveOrderAfterPayment(data.tx_ref || tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total);
       } else {
-        alert('Payment not completed');
-        document.getElementById('orderMsg').innerHTML='<span style="color:red">❌ Payment cancelled</span>';
+        alert('Payment not completed: ' + data.status);
+        document.getElementById('orderMsg').innerHTML='<span style="color:red">❌ Payment '+data.status+'</span>';
         isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
       }
     },
     onclose: function(){
-      document.getElementById('orderMsg').innerText='Payment closed';
-      isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
+      console.log("FLW closed, isSubmitting:", isSubmitting);
+      setTimeout(()=>{
+        if(isSubmitting){
+          document.getElementById('orderMsg').innerText='Payment window closed - if you paid, check My Orders in 5s';
+          isSubmitting=false;
+          btn.disabled=false;
+          btn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
+        }
+      }, 3000);
     }
   });
 }
 
-// === FIXED SAVE - USES ONLY EXISTING COLUMNS ===
 async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total){
   const itemsWithVendor = cart.map(i => ({
     id: i.id, name: i.name, price: i.price, qty: i.qty, vendor_email: i.vendor_email, vendor_id: i.vendor_id
@@ -451,7 +461,6 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
 
     console.log("Order saved ID:", order.id);
 
-    // CLEAR BOTH CARTS
     localStorage.removeItem('lgm_cart');
     cart = [];
     try{ await supabaseClient.from('carts').delete().eq('customer_id', user.id); }catch(e){ console.log("clear cart err", e.message); }
@@ -463,22 +472,16 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
   }catch(err){
     console.error("ORDER SAVE FAIL:", err);
     alert("❌ ORDER SAVE FAILED:\n" + err.message + "\n\nScreenshot this!");
-    // Still clear cart so it doesn't stay 21 forever
-    localStorage.removeItem('lgm_cart');
-    cart = [];
-    try{ await supabaseClient.from('carts').delete().eq('customer_id', user.id); }catch(e){}
-    saveCart();
     document.getElementById('orderMsg').innerHTML = `<span style="color:red">Payment ok but DB: ${err.message}</span>`;
     isSubmitting=false;
+    const btn = document.getElementById('placeOrderBtn');
+    btn.disabled=false;
+    btn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
   }
 }
 
 async function loadOrders(){
-  const {data} = await supabaseClient.from('orders')
-.select('*')
-.eq('customer_email', user.email)
-.in('status',['paid','picked','delivered','failed'])
-.order('created_at',{ascending:false});
+  const {data} = await supabaseClient.from('orders').select('*').eq('customer_email', user.email).in('status',['paid','picked','delivered','failed']).order('created_at',{ascending:false});
 
   data?.forEach(o=>{
     if(lastOrderStatus[o.id] && lastOrderStatus[o.id]!== o.status){
