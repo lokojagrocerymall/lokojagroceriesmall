@@ -481,17 +481,18 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
 }
 
 async function loadOrders(){
-  const {data} = await supabaseClient.from('orders').select('*').eq('customer_email', user.email).in('status',['paid','picked','delivered','failed']).order('created_at',{ascending:false});
+  // FIXED: ADDED 'on the way' + ORDER BY ID DESC
+  const {data} = await supabaseClient.from('orders').select('*').eq('customer_email', user.email).in('status',['paid','picked','on the way','delivered','failed']).order('id',{ascending:false}).limit(100);
 
   data?.forEach(o=>{
     if(lastOrderStatus[o.id] && lastOrderStatus[o.id]!== o.status){
-      if(o.status === 'picked') triggerAlert(`🚚 Order #${o.id} is On The Way!`);
+      if(o.status === 'picked' || o.status === 'on the way') triggerAlert(`🚚 Order #${o.id} is On The Way!`);
       if(o.status === 'delivered') triggerAlert(`✅ Order #${o.id} Delivered!`);
     }
     lastOrderStatus[o.id] = o.status;
   });
 
-  let hasActive = data?.some(o=> o.status==='picked' || o.status==='paid');
+  let hasActive = data?.some(o=> o.status==='picked' || o.status==='on the way' || o.status==='paid');
   const ordersTab = document.getElementById('tabOrders');
   if(hasActive){ ordersTab.classList.add('alert-tab'); }
   else { ordersTab.classList.remove('alert-tab'); }
@@ -501,18 +502,20 @@ async function loadOrders(){
     let statusText = '';
     let statusColor = 'text-blue-600';
     if(o.status === 'paid'){ statusText = 'Watch out, an agent will attend to you in the next 5 minutes'; statusColor = 'text-blue-600'; }
-    if(o.status === 'picked'){ statusText = 'Order On The Way, Please Be Available'; statusColor = 'text-orange-500'; }
+    if(o.status === 'picked' || o.status === 'on the way'){ statusText = 'Order On The Way, Please Be Available'; statusColor = 'text-orange-500'; }
     if(o.status === 'delivered'){ statusText = 'Delivered'; statusColor = 'text-green-600'; }
     if(o.status === 'failed'){ statusText = 'Delivery Failed. Admin will contact you'; statusColor = 'text-red-600'; }
 
     let agentInfo = '';
-    if(o.status === 'picked' && o.delivery_agent_name){
+    if((o.status === 'picked' || o.status === 'on the way') && o.delivery_agent_name){
       agentInfo = `<div class="bg-blue-50 p-2 rounded-lg mt-2">
         <b class="text-blue-700">On The Way for Delivery</b>
         <div class="text-xs">🚚 Rider: ${o.delivery_agent_name}</div>
         <div class="text-xs">📞 ${o.delivery_agent_phone}</div>
       </div>`;
     }
+
+    const isOnTheWay = o.status === 'picked' || o.status === 'on the way';
 
     html += `<div class="bg-white p-3 rounded-2xl shadow">
       <div class="flex justify-between"><b>Order #${o.id}</b><span class="${statusColor} font-bold capitalize">${o.status}</span></div>
@@ -521,8 +524,8 @@ async function loadOrders(){
       <div class="text-xs text-gray-500">📱 ${o.customer_phone}</div>
       ${agentInfo}
       <div class="bg-gray-50 p-2 rounded-lg mt-2 text-center font-bold text-sm">${statusText}</div>
-      ${o.status==='picked'? formatCustomerCountdown(o.id, o.picked_at) : ''}
-      ${o.status==='picked'? `<button onclick="markDelivered(${o.id})" class="w-full mt-2 bg-green-600 text-white py-2 rounded-full font-bold">✓ Mark Delivered</button>` : ''}
+      ${isOnTheWay? formatCustomerCountdown(o.id, o.picked_at) : ''}
+      ${isOnTheWay? `<button onclick="markDelivered(${o.id})" class="w-full mt-2 bg-green-600 text-white py-2 rounded-full font-bold">✓ Mark Delivered</button>` : ''}
       ${buildRatingUI(o)}
       <div class="text-xs text-gray-400 mt-2">${new Date(o.created_at).toLocaleString()}</div>
     </div>`;
