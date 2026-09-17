@@ -5,10 +5,15 @@
 <title>Admin - Lokoja Grocery Mall</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   @keyframes pulse-red {0%,100%{background-color:#fee2e2;border-color:#ef4444;}50%{background-color:#fecaca;border-color:#dc2626;}}
- .alert-tab{animation:pulse-red 1s infinite;border:2px solid #ef4444!important;border-radius:8px;}
- .badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900;}
+  @keyframes timer-pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.alert-tab{animation:pulse-red 1s infinite;border:2px solid #ef4444!important;border-radius:8px;}
+.badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900;}
+ /* FIX HIDDEN TAB - make scrollable and auto-scroll */
+.tabs-scroll::-webkit-scrollbar{display:none}
+.tabs-scroll{ -ms-overflow-style:none; scrollbar-width:none; scroll-behavior:smooth }
 </style>
 </head>
 <body class="bg-gray-100">
@@ -18,7 +23,7 @@
 </header>
 
 <div class="p-3 max-w-5xl mx-auto">
-  <!-- TOP 3 BOXES - FIXED OVERFLOW -->
+  <!-- TOP 3 BOXES -->
   <div class="grid grid-cols-3 gap-2 mb-3">
     <div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden">
       <div class="text-[10px] text-gray-400 leading-tight">Gross Sales</div>
@@ -59,8 +64,17 @@
     </div>
   </div>
 
+  <!-- GRAPH - MON TO SAT RETURNS -->
+  <div class="bg-white p-3 rounded-xl shadow mb-3">
+    <div class="flex justify-between items-center mb-2">
+      <b class="text-[12px]">📊 Platform Returns (Mon - Sat)</b>
+      <span class="text-[10px] text-gray-400">Daily Sales vs Income (15%)</span>
+    </div>
+    <canvas id="returnsChart" height="180"></canvas>
+  </div>
+
   <div class="bg-white rounded-xl shadow">
-    <div class="flex border-b overflow-x-auto text-[11px] sticky top-[56px] bg-white z-10">
+    <div id="mainTabs" class="tabs-scroll flex border-b overflow-x-auto text-[11px] sticky top-[56px] bg-white z-10">
       <button onclick="showTab('pending')" id="btnP" class="flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap">Pending (<span id="cP">0</span>)</button>
       <button onclick="showTab('vendors')" id="btnV" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Active V (<span id="cV">0</span>)</button>
       <button onclick="showTab('suspended')" id="btnS" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Suspended (<span id="cS">0</span>)</button>
@@ -68,7 +82,7 @@
       <button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Orders (<span id="cO">0</span>)</button>
     </div>
 
-    <!-- ORDER SUB-FILTERS - ONLY SHOW WHEN ORDERS TAB ACTIVE -->
+    <!-- ORDER SUB-FILTERS -->
     <div id="orderFilters" class="hidden flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b">
       <button onclick="filterOrders('all')" id="fAll" class="px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap">All (<span id="fcAll">0</span>)</button>
       <button onclick="filterOrders('paid')" id="fPaid" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">🆕 New (<span id="fcPaid">0</span>)</button>
@@ -87,8 +101,27 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let users=[], orders=[], tab='pending', orderSubTab='all', lastSeenOrderCount=0;
+let returnsChart = null;
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='/'; }
+
+// === BOLD TIMER FOR ADMIN - SAME AS CUSTOMER ===
+function formatAdminCountdown(startTime){
+  if(!startTime) return `<div style="background:#fff7ed;border:2px dashed #f97316;padding:8px;border-radius:10px;margin-top:8px;text-align:center;font-weight:900;color:#c2410c;font-size:11px">⏰ Rider picked - timer starting...</div>`;
+  const end = new Date(startTime).getTime() + TWO_HOURS_MS;
+  const diff = end - new Date().getTime();
+  if(diff <= 0) return `<div style="background:#fee2e2;border:3px solid #dc2626;color:#dc2626;padding:10px;border-radius:12px;margin-top:8px;text-align:center;font-weight:900;font-size:12px">❌ TIME UP - FAILED</div>`;
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+  return `<div style="background:linear-gradient(135deg,#ffffff,#fef3c7);border:3px solid #f59e0b;padding:12px;border-radius:14px;margin-top:8px;text-align:center;box-shadow:0 4px 12px rgba(245,158,11,0.25)">
+    <div style="font-size:9px;font-weight:900;letter-spacing:1.5px;color:#92400e;background:#fde68a;display:inline-block;padding:2px 8px;border-radius:12px">⏰ DELIVERY COUNTDOWN</div>
+    <div style="font-size:26px;font-weight:900;color:#dc2626;margin:4px 0;letter-spacing:1px;line-height:1;animation:timer-pulse 1s infinite">${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s</div>
+    <div style="font-size:10px;font-weight:800;color:#78350f">Picked at: ${pickedUpTime} • Auto-fail 2hrs</div>
+  </div>`;
+}
 
 async function load(){
   document.getElementById('list').innerHTML = 'Loading...';
@@ -96,11 +129,20 @@ async function load(){
     const {data:u} = await supabaseClient.from('users').select('*');
     users = u||[];
     const {data:o} = await supabaseClient.from('orders')
-    .select('*')
-    .in('status',['paid','picked','on the way','delivered','failed'])
-    .order('id',{ascending:false})
-    .limit(200);
+   .select('*')
+   .in('status',['paid','picked','on the way','delivered','failed'])
+   .order('id',{ascending:false})
+   .limit(200);
     orders = o||[];
+
+    // SORT: PAID (NEW) ALWAYS FIRST, THEN ONWAY, THEN REST
+    orders.sort((a,b)=>{
+      const priority = {paid:0, picked:1, 'on the way':1, delivered:2, failed:3};
+      const pa = priority[a.status]?? 4;
+      const pb = priority[b.status]?? 4;
+      if(pa!==pb) return pa - pb;
+      return b.id - a.id;
+    });
 
     const paidOrders = orders.filter(x=>x.status==='paid');
     if(paidOrders.length > lastSeenOrderCount && lastSeenOrderCount!== 0){ triggerNewOrderAlert(); }
@@ -121,10 +163,9 @@ async function load(){
     document.getElementById('cO').innerText = orders.length;
     document.getElementById('pendingCount').innerText = pendingV.length + pendingA.length;
 
-    // GROSS + INCOME + DAILY/WEEKLY/MONTHLY
     calcSales();
+    drawReturnsChart();
 
-    // ORDER SUB COUNTS
     document.getElementById('fcAll').innerText = orders.length;
     document.getElementById('fcPaid').innerText = orders.filter(x=>x.status==='paid').length;
     document.getElementById('fcOnway').innerText = orders.filter(x=>x.status==='picked' || x.status==='on the way').length;
@@ -133,6 +174,13 @@ async function load(){
 
     updateOrdersTabAlert();
     render();
+
+    // Auto-scroll tabs to show Orders tab (fix hidden issue in screenshot)
+    setTimeout(()=>{
+      const tabsEl = document.getElementById('mainTabs');
+      if(tabsEl) tabsEl.scrollLeft = tabsEl.scrollWidth;
+    }, 300);
+
   }catch(e){
     document.getElementById('list').innerHTML = `<div class="text-red-500">ERROR: ${e.message}</div>`;
   }
@@ -164,6 +212,53 @@ function calcSales(){
   document.getElementById('wIncome').innerText = '₦'+Math.round(wGross*0.15).toLocaleString();
   document.getElementById('mSales').innerText = '₦'+Math.round(mGross).toLocaleString();
   document.getElementById('mIncome').innerText = '₦'+Math.round(mGross*0.15).toLocaleString();
+}
+
+// MONDAY TO SATURDAY GRAPH
+function drawReturnsChart(){
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat'];
+  // Get Monday of this week
+  const now = new Date();
+  const day = now.getDay(); // 0 Sun - 6 Sat
+  const diffToMonday = day===0? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday);
+  monday.setHours(0,0,0,0);
+
+  let salesPerDay = [0,0,0,0,0,0];
+  let incomePerDay = [0,0,0,0,0,0];
+
+  for(let i=0;i<6;i++){
+    const dStart = new Date(monday);
+    dStart.setDate(monday.getDate()+i);
+    const dEnd = new Date(dStart);
+    dEnd.setDate(dStart.getDate()+1);
+    const dayOrders = orders.filter(o=>{
+      const cd = new Date(o.created_at);
+      return cd >= dStart && cd < dEnd;
+    });
+    const gross = dayOrders.reduce((s,x)=>s+Number(x.total||0),0);
+    salesPerDay[i]=Math.round(gross);
+    incomePerDay[i]=Math.round(gross*0.15);
+  }
+
+  const ctx = document.getElementById('returnsChart').getContext('2d');
+  if(returnsChart) returnsChart.destroy();
+  returnsChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dayNames,
+      datasets: [
+        { label:'Sales', data:salesPerDay, backgroundColor:'#16a34a', borderRadius:6 },
+        { label:'Income (15%)', data:incomePerDay, backgroundColor:'#f59e0b', borderRadius:6 }
+      ]
+    },
+    options: {
+      responsive:true,
+      plugins:{ legend:{ display:true, position:'bottom', labels:{ font:{size:10}, boxWidth:12 } } },
+      scales:{ y:{ beginAtZero:true, ticks:{ font:{size:9}, callback:v=>'₦'+v } }, x:{ ticks:{ font:{size:10, weight:'bold'} } } }
+    }
+  });
 }
 
 function updateOrdersTabAlert(){
@@ -223,11 +318,17 @@ function render(){
     data.forEach(o=>{
       let statusColor = o.status==='paid'? 'text-orange-600' : (o.status==='picked' || o.status==='on the way')? 'text-blue-600' : o.status==='delivered'? 'text-green-600' : 'text-red-600';
       let agentInfo = o.delivery_agent_name? `<div class="text-xs text-blue-600 font-bold truncate">🚚 Agent: ${o.delivery_agent_name} (${o.delivery_agent_phone||''})</div>` : `<div class="text-xs text-orange-600 font-bold">⚠️ Waiting for Agent</div>`;
-      html += `<div class="border rounded-lg p-3 mb-2 min-w-0">
-        <div class="flex justify-between gap-2"><div class="font-bold text-[12px] truncate">Order #${o.id} - <span class="${statusColor}">${o.status.toUpperCase()}</span></div><div class="font-bold text-green-700 text-[12px] shrink-0">₦${Number(o.total||0).toLocaleString()}</div></div>
+      const startTime = o.picked_at || o.delivery_started_at;
+      const isActive = (o.status==='picked' || o.status==='on the way');
+      let timerHTML = isActive? `<div class="admin-timer" data-start="${startTime}">${formatAdminCountdown(startTime)}</div>` : '';
+      // Highlight NEW orders
+      const newBorder = o.status==='paid'? 'border-2 border-green-500 bg-green-50' : 'border';
+      html += `<div class="${newBorder} rounded-lg p-3 mb-2 min-w-0">
+        <div class="flex justify-between gap-2"><div class="font-bold text-[12px] truncate">Order #${o.id} - <span class="${statusColor}">${o.status.toUpperCase()}</span> ${o.status==='paid'? '🆕 NEW FIRST':''}</div><div class="font-bold text-green-700 text-[12px] shrink-0">₦${Number(o.total||0).toLocaleString()}</div></div>
         <div class="text-xs truncate">Customer: ${o.customer_name || o.customer_email} - ${o.customer_phone||''}</div>
         <div class="text-xs text-gray-500 truncate">${o.customer_address||''}</div>
         ${agentInfo}
+        ${timerHTML}
         <div class="text-[10px] text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</div>
       </div>`;
     });
@@ -240,7 +341,11 @@ function showTab(t){
   ['P','V','S','A','O'].forEach(k=> document.getElementById('btn'+k).className = 'flex-1 p-3 font-bold text-gray-400 whitespace-nowrap');
   const map={pending:'btnP',vendors:'btnV',suspended:'btnS',agents:'btnA',orders:'btnO'};
   document.getElementById(map[t]).className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap';
-  if(t==='orders'){ document.getElementById('btnO').classList.remove('alert-tab'); }
+  if(t==='orders'){
+    document.getElementById('btnO').classList.remove('alert-tab');
+    // Scroll to end to ensure Orders tab is visible
+    setTimeout(()=>{ document.getElementById('mainTabs').scrollLeft = document.getElementById('mainTabs').scrollWidth; }, 100);
+  }
   render();
 }
 async function updateStatus(email, status){
@@ -249,6 +354,17 @@ async function updateStatus(email, status){
   alert(`Account ${status?'Approved':'Suspended'}!`);
   load();
 }
+
+// LIVE TIMER UPDATE EVERY SECOND
+setInterval(()=>{
+  document.querySelectorAll('.admin-timer').forEach(el=>{
+    const start = el.getAttribute('data-start');
+    if(start && start!=='null' && start!=='undefined'){
+      el.innerHTML = formatAdminCountdown(start);
+    }
+  });
+},1000);
+
 setInterval(load, 10000);
 load();
 </script>
