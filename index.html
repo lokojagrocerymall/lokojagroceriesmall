@@ -46,7 +46,7 @@
     <input id="cPhone" placeholder="Phone Number 080..." class="w-full p-3 border rounded-lg mb-3">
     <input id="cAddress" placeholder="Delivery Address in Lokoja" class="w-full p-3 border rounded-lg mb-3">
     <button class="w-full bg-green-600 text-white py-3 rounded-xl font-black" onclick="payWithFlutterwave()">Pay Now With Flutterwave</button>
-    <p class="text-xs text-gray-500 mt-2 text-center">Vendor 90% + ₦5,000 delivery</p>
+    <p class="text-xs text-gray-500 mt-2 text-center">Vendor 90% split + ₦5,000 delivery</p>
   </div>
 </div>
 
@@ -127,28 +127,44 @@ function payWithFlutterwave(){
   if(cart.length===0){ alert('Cart empty'); return; }
   let calcTotal = 0; cart.forEach(i=> calcTotal += i.price*i.qty); total = calcTotal;
 
+  // === 2 VENDORS SPLIT PAYMENT ===
+  const vendorSubaccounts = {
+    "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
+    "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
+  };
+  const vendorTotals = {};
+  cart.forEach(item=>{
+    if(item.vendor_email && vendorSubaccounts[item.vendor_email]){
+      vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + item.price*item.qty;
+    }
+  });
+  const subaccounts = Object.keys(vendorTotals).map(email=>({
+    id: vendorSubaccounts[email],
+    transaction_charge_type: "flat_subaccount",
+    transaction_charge: Math.round(vendorTotals[email] * 0.9)
+  }));
+  console.log("Split accounts:", subaccounts);
+
   FlutterwaveCheckout({
     public_key: "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X",
     tx_ref: "lgm_" + Date.now(),
     amount: total + delivery,
     currency: "NGN",
     customer: { email: curUser.email, name: name, phone_number: phone },
-    customizations: { title: "Lokoja Grocery Mall" },
+    customizations: { title: "Lokoja Grocery Mall - Split" },
+    subaccounts: subaccounts.length>0? subaccounts : undefined,
     callback: function(response) {
       console.log("FLW:", response);
-      // ANY successful status goes to save
       saveOrder(response.tx_ref || "lgm_"+Date.now(), name, phone, address, total+delivery);
     },
     onclose: function() {}
   });
 }
 
-// === FINAL FIX - KEEPS YOUR FLOW BUT NEVER CRASHES ===
 async function saveOrder(tx_ref, name, phone, address, grandTotal){
   const curUser = JSON.parse(localStorage.getItem('lgm_user'));
   const cart = JSON.parse(localStorage.getItem('lgm_cart')) || [];
   let sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
-
   try{
     const {data:order, error} = await supabaseClient.from('orders').insert({
       tx_ref: tx_ref,
@@ -164,21 +180,17 @@ async function saveOrder(tx_ref, name, phone, address, grandTotal){
       payment_status: 'paid',
       status: 'paid'
     }).select().single();
-
     if(error) throw error;
 
-    // Fire and forget - does not block customer redirect
-    const vendorId = cart[0]?.vendor_id || null;
-    const vendorEmail = cart[0]?.vendor_email || null;
-
+    // Vendor and delivery - fire and forget, keep your flow
     supabaseClient.from('vendor_orders').insert({
       order_id: order.id,
-      vendor_id: vendorId,
-      vendor_email: vendorEmail,
+      vendor_id: cart[0]?.vendor_id || null,
+      vendor_email: cart[0]?.vendor_email || null,
       items: cart,
       subtotal: sub,
       status: 'new'
-    }).then(r=>console.log("vendor_orders ok")).catch(e=>console.log("vendor_orders err",e.message));
+    }).then(()=>console.log("vendor ok")).catch(e=>console.log("vendor err",e.message));
 
     supabaseClient.from('delivery_assignments').insert({
       order_id: order.id,
@@ -187,16 +199,15 @@ async function saveOrder(tx_ref, name, phone, address, grandTotal){
       customer_address: address,
       customer_phone: phone,
       items_summary: cart.map(i=>`${i.name}x${i.qty}`).join(', ')
-    }).then(r=>console.log("delivery_assignments ok")).catch(e=>console.log("delivery_assignments err",e.message));
+    }).then(()=>console.log("delivery ok")).catch(e=>console.log("delivery err",e.message));
 
     localStorage.removeItem('lgm_cart');
     updateCart();
-    alert('✅ Payment Successful! Order #'+order.id+'\nGoing to My Orders');
+    alert('✅ Payment Successful! Order #'+order.id);
     window.location.replace('customer.html');
-
   }catch(err){
     console.error("ORDER SAVE FAIL:", err);
-    alert('Payment was successful! But save error: '+err.message+'\nI will clear cart and take you to orders - order may still be saved');
+    alert('Payment success but DB: '+err.message);
     localStorage.removeItem('lgm_cart');
     updateCart();
     window.location.replace('customer.html');
