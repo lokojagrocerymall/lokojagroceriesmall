@@ -124,28 +124,24 @@ window.onload = async () => {
   showTab('shop');
 }
 
-// === NEW: SYNC CART FROM SUPABASE - THIS FIXES CART (0) BUG ===
 async function syncCartFromSupabase(){
   try{
     const userData = JSON.parse(localStorage.getItem('lgm_user')||'{}');
     if(!userData.id) return;
-
     const { data: dbCart } = await supabaseClient.from('carts').select('*').eq('customer_id', userData.id);
-
     if(dbCart && dbCart.length > 0){
-      // Use Supabase cart as source of truth
       cart = dbCart.map(c => ({
         id: c.product_id,
         name: c.product_name,
         price: Number(c.product_price),
         image_url: c.product_image,
+        image: c.product_image,
         vendor_email: c.vendor_email,
         vendor_id: c.vendor_id,
         qty: c.qty
       }));
       localStorage.setItem('lgm_cart', JSON.stringify(cart));
     } else if(cart.length > 0){
-      // Local cart exists but no DB cart - push local to DB
       for(let item of cart){
         await supabaseClient.from('carts').upsert({
           customer_id: userData.id,
@@ -262,7 +258,6 @@ async function loadProducts(){
   document.getElementById('productGrid').innerHTML = html || 'No products yet';
 }
 
-// === FIXED addToCart - NOW SAVES TO SUPABASE ===
 async function addToCart(id){
   const product = allProducts.find(p=>p.id===id);
   if(!product) return;
@@ -270,8 +265,6 @@ async function addToCart(id){
   if(existing) existing.qty++;
   else cart.push({...product, qty:1});
   saveCart(true);
-
-  // Save to Supabase
   try{
     const u = JSON.parse(localStorage.getItem('lgm_user')||'{}');
     if(u.id){
@@ -287,8 +280,7 @@ async function addToCart(id){
       }, {onConflict: 'customer_id,product_id'});
     }
   }catch(e){ console.log("cart db save error", e.message); }
-
-  alert(product.name + ' added to cart - will show on all your devices!');
+  alert(product.name + ' added!');
 }
 
 function saveCart(syncCount = true){
@@ -303,7 +295,6 @@ async function updateQty(id, change){
   if(item.qty <= 0) cart = cart.filter(i=>i.id!==id);
   saveCart();
   renderCart();
-
   try{
     const u = JSON.parse(localStorage.getItem('lgm_user')||'{}');
     if(u.id){
@@ -392,7 +383,6 @@ async function payWithFlutterwave(e){
   const btn = document.getElementById('placeOrderBtn');
   btn.disabled = true;
   btn.innerText = 'Processing Payment...';
-
   document.getElementById('orderMsg').innerHTML='<span style="color:blue">🔄 Opening Flutterwave...</span>';
 
   const vendorSubaccounts = {
@@ -433,38 +423,53 @@ async function payWithFlutterwave(e){
   });
 }
 
+// === FIXED SAVE - USES ONLY EXISTING COLUMNS ===
 async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total){
   const itemsWithVendor = cart.map(i => ({
-    id: i.id, name: i.name, price: i.price, qty: i.qty, vendor_email: i.vendor_email
+    id: i.id, name: i.name, price: i.price, qty: i.qty, vendor_email: i.vendor_email, vendor_id: i.vendor_id
   }));
 
-  const { error } = await supabaseClient.from('orders').insert({
-    customer_id: user.id,
-    customer_name: displayName,
-    customer_email: user.email,
-    customer_phone: checkoutPhone,
-    customer_whatsapp: checkoutWhatsApp,
-    customer_address: `${finalLocation} | ${checkoutAddress} | Landmark: ${checkoutLandmark}`,
-    vendor_email: itemsWithVendor[0]?.vendor_email || 'test@vendor.com',
-    items: itemsWithVendor,
-    subtotal: subtotal,
-    delivery_fee: delivery,
-    total: total,
-    tx_ref: tx_ref,
-    status: 'paid',
-    payment_status: 'paid'
-  });
+  console.log("Saving order:", tx_ref);
 
-  if(error) {
-    alert('DB Error: '+error.message);
-    isSubmitting=false;
-  } else {
+  try{
+    const { data: order, error } = await supabaseClient.from('orders').insert({
+      tx_ref: tx_ref,
+      customer_id: user.id,
+      customer_name: displayName,
+      customer_email: user.email,
+      customer_phone: checkoutPhone,
+      customer_address: `${finalLocation} | ${checkoutAddress} | Landmark: ${checkoutLandmark} | WA:${checkoutWhatsApp}`,
+      items: itemsWithVendor,
+      subtotal: subtotal,
+      delivery_fee: delivery,
+      total: total,
+      payment_status: 'paid',
+      status: 'paid'
+    }).select().single();
+
+    if(error) throw error;
+
+    console.log("Order saved ID:", order.id);
+
     // CLEAR BOTH CARTS
     localStorage.removeItem('lgm_cart');
     cart = [];
-    try{ await supabaseClient.from('carts').delete().eq('customer_id', user.id); }catch(e){}
-    document.getElementById('orderMsg').innerHTML = '<span style="color:green;font-weight:bold">✅ Paid! Order '+tx_ref+' saved.</span>';
+    try{ await supabaseClient.from('carts').delete().eq('customer_id', user.id); }catch(e){ console.log("clear cart err", e.message); }
+    saveCart();
+
+    document.getElementById('orderMsg').innerHTML = `<span style="color:green;font-weight:bold">✅ Paid! Order #${order.id} saved.</span>`;
     setTimeout(()=>{ showTab('orders'); isSubmitting=false; },1500);
+
+  }catch(err){
+    console.error("ORDER SAVE FAIL:", err);
+    alert("❌ ORDER SAVE FAILED:\n" + err.message + "\n\nScreenshot this!");
+    // Still clear cart so it doesn't stay 21 forever
+    localStorage.removeItem('lgm_cart');
+    cart = [];
+    try{ await supabaseClient.from('carts').delete().eq('customer_id', user.id); }catch(e){}
+    saveCart();
+    document.getElementById('orderMsg').innerHTML = `<span style="color:red">Payment ok but DB: ${err.message}</span>`;
+    isSubmitting=false;
   }
 }
 
@@ -510,8 +515,7 @@ async function loadOrders(){
       <div class="flex justify-between"><b>Order #${o.id}</b><span class="${statusColor} font-bold capitalize">${o.status}</span></div>
       <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
       <div class="text-xs text-gray-500 mt-1">📍 ${o.customer_address}</div>
-      <div class="text-xs text-gray-500">📱 WhatsApp: ${o.customer_whatsapp || o.customer_phone}</div>
-      <div class="text-xs text-gray-500">📞 Phone: ${o.customer_phone}</div>
+      <div class="text-xs text-gray-500">📱 ${o.customer_phone}</div>
       ${agentInfo}
       <div class="bg-gray-50 p-2 rounded-lg mt-2 text-center font-bold text-sm">${statusText}</div>
       ${o.status==='picked'? formatCustomerCountdown(o.id, o.picked_at) : ''}
