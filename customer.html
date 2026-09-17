@@ -103,8 +103,9 @@ let tempRating = {};
 let isUserInteracting = false;
 let isSubmitting = false;
 let lastOrderStatus = {};
+let customerOrdersCache = [];
 
-const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // FIXED: Changed from 3hrs to 2hrs to match vendor
 const LOKOJA_AREAS = [
   "200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs",
   "Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC",
@@ -185,22 +186,22 @@ function showTab(t){
   if(t==='cart') { syncCartFromSupabase().then(()=>renderCart()); }
 }
 
+// === FIXED TIMER - NOW USES picked_at OR delivery_started_at ===
 function formatCustomerCountdown(orderId, startTime){
-  if(!startTime) return '';
-  const end = new Date(startTime).getTime() + THREE_HOURS_MS;
+  if(!startTime) return `<div class="bg-orange-50 p-2 rounded-lg mt-2 text-center"><b class="text-orange-600 text-xs">⏰ Rider picked - timer starting...</b></div>`;
+  const end = new Date(startTime).getTime() + TWO_HOURS_MS;
   const diff = end - new Date().getTime();
   if(diff <= 0) {
     autoMarkFailed(orderId);
-    return `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b class="text-red-600">⏰ Delivery Failed. Admin will contact you</b></div>`;
+    return `<div class="bg-red-50 p-2 rounded-lg mt-2 text-center"><b class="text-red-600 text-xs">⏰ Delivery Time Expired - Failed</b></div>`;
   }
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
   const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
-  return `<div class="bg-orange-50 p-2 rounded-lg mt-2 text-center">
-            <p class="text-xs text-gray-600 font-bold">3 HOUR DELIVERY WINDOW</p>
-            <p class="text-xs text-gray-500">Picked up at: ${pickedUpTime}</p>
-            <b class="text-red-600">⏰ Arriving in: ${h}h ${m}m ${s}s</b>
+  return `<div class="bg-orange-50 p-2 rounded-lg mt-2 text-center border border-orange-200">
+            <p class="text-xs text-gray-600 font-bold">⏰ Auto-Fail in: ${h}h ${m}m ${s}s</p>
+            <p class="text-[11px] text-gray-500">Picked at: ${pickedUpTime}</p>
           </div>`;
 }
 
@@ -398,8 +399,6 @@ async function payWithFlutterwave(e){
     return { id: id, transaction_charge_type: "flat_subaccount", transaction_charge: Math.round(vendorTotals[email]*0.9) };
   }).filter(s=>s && s.id);
 
-  console.log("Subaccounts for split:", subaccounts);
-
   FlutterwaveCheckout({
     public_key: "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X",
     tx_ref: tx_ref,
@@ -410,9 +409,8 @@ async function payWithFlutterwave(e){
     subaccounts: subaccounts.length>0? subaccounts : undefined,
     customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery" },
     callback: async function(data){
-      console.log("FLW callback:", data);
       if(data.status === "successful"){
-        document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Tx:'+data.tx_ref+' Saving order...</span>';
+        document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order...</span>';
         await saveOrderAfterPayment(data.tx_ref || tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total);
       } else {
         alert('Payment not completed: ' + data.status);
@@ -421,7 +419,6 @@ async function payWithFlutterwave(e){
       }
     },
     onclose: function(){
-      console.log("FLW closed, isSubmitting:", isSubmitting);
       setTimeout(()=>{
         if(isSubmitting){
           document.getElementById('orderMsg').innerText='Payment window closed - if you paid, check My Orders in 5s';
@@ -438,9 +435,6 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
   const itemsWithVendor = cart.map(i => ({
     id: i.id, name: i.name, price: i.price, qty: i.qty, vendor_email: i.vendor_email, vendor_id: i.vendor_id
   }));
-
-  console.log("Saving order:", tx_ref);
-
   try{
     const { data: order, error } = await supabaseClient.from('orders').insert({
       tx_ref: tx_ref,
@@ -456,22 +450,15 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
       payment_status: true,
       status: 'paid'
     }).select().single();
-
     if(error) throw error;
-
-    console.log("Order saved ID:", order.id);
-
     localStorage.removeItem('lgm_cart');
     cart = [];
-    try{ await supabaseClient.from('carts').delete().eq('customer_id', user.id); }catch(e){ console.log("clear cart err", e.message); }
+    try{ await supabaseClient.from('carts').delete().eq('customer_id', user.id); }catch(e){}
     saveCart();
-
     document.getElementById('orderMsg').innerHTML = `<span style="color:green;font-weight:bold">✅ Paid! Order #${order.id} saved.</span>`;
     setTimeout(()=>{ showTab('orders'); isSubmitting=false; },1500);
-
   }catch(err){
-    console.error("ORDER SAVE FAIL:", err);
-    alert("❌ ORDER SAVE FAILED:\n" + err.message + "\n\nScreenshot this!");
+    alert("❌ ORDER SAVE FAILED:\n" + err.message);
     document.getElementById('orderMsg').innerHTML = `<span style="color:red">Payment ok but DB: ${err.message}</span>`;
     isSubmitting=false;
     const btn = document.getElementById('placeOrderBtn');
@@ -481,10 +468,10 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
 }
 
 async function loadOrders(){
-  // FIXED: ADDED 'on the way' + ORDER BY ID DESC
   const {data} = await supabaseClient.from('orders').select('*').eq('customer_email', user.email).in('status',['paid','picked','on the way','delivered','failed']).order('id',{ascending:false}).limit(100);
+  customerOrdersCache = data || [];
 
-  data?.forEach(o=>{
+  customerOrdersCache.forEach(o=>{
     if(lastOrderStatus[o.id] && lastOrderStatus[o.id]!== o.status){
       if(o.status === 'picked' || o.status === 'on the way') triggerAlert(`🚚 Order #${o.id} is On The Way!`);
       if(o.status === 'delivered') triggerAlert(`✅ Order #${o.id} Delivered!`);
@@ -492,13 +479,17 @@ async function loadOrders(){
     lastOrderStatus[o.id] = o.status;
   });
 
-  let hasActive = data?.some(o=> o.status==='picked' || o.status==='on the way' || o.status==='paid');
+  let hasActive = customerOrdersCache.some(o=> o.status==='picked' || o.status==='on the way' || o.status==='paid');
   const ordersTab = document.getElementById('tabOrders');
   if(hasActive){ ordersTab.classList.add('alert-tab'); }
   else { ordersTab.classList.remove('alert-tab'); }
 
+  renderOrdersList();
+}
+
+function renderOrdersList(){
   let html='';
-  data?.forEach(o=>{
+  customerOrdersCache.forEach(o=>{
     let statusText = '';
     let statusColor = 'text-blue-600';
     if(o.status === 'paid'){ statusText = 'Watch out, an agent will attend to you in the next 5 minutes'; statusColor = 'text-blue-600'; }
@@ -509,13 +500,15 @@ async function loadOrders(){
     let agentInfo = '';
     if((o.status === 'picked' || o.status === 'on the way') && o.delivery_agent_name){
       agentInfo = `<div class="bg-blue-50 p-2 rounded-lg mt-2">
-        <b class="text-blue-700">On The Way for Delivery</b>
+        <b class="text-blue-700 text-sm">On The Way for Delivery</b>
         <div class="text-xs">🚚 Rider: ${o.delivery_agent_name}</div>
-        <div class="text-xs">📞 ${o.delivery_agent_phone}</div>
+        <div class="text-xs">📞 ${o.delivery_agent_phone || ''}</div>
       </div>`;
     }
 
     const isOnTheWay = o.status === 'picked' || o.status === 'on the way';
+    // FIXED: Use picked_at OR delivery_started_at
+    const startTime = o.picked_at || o.delivery_started_at || o.updated_at;
 
     html += `<div class="bg-white p-3 rounded-2xl shadow">
       <div class="flex justify-between"><b>Order #${o.id}</b><span class="${statusColor} font-bold capitalize">${o.status}</span></div>
@@ -524,7 +517,7 @@ async function loadOrders(){
       <div class="text-xs text-gray-500">📱 ${o.customer_phone}</div>
       ${agentInfo}
       <div class="bg-gray-50 p-2 rounded-lg mt-2 text-center font-bold text-sm">${statusText}</div>
-      ${isOnTheWay? formatCustomerCountdown(o.id, o.picked_at) : ''}
+      ${isOnTheWay? `<div class="customer-timer" data-order="${o.id}" data-start="${startTime}">${formatCustomerCountdown(o.id, startTime)}</div>` : ''}
       ${isOnTheWay? `<button onclick="markDelivered(${o.id})" class="w-full mt-2 bg-green-600 text-white py-2 rounded-full font-bold">✓ Mark Delivered</button>` : ''}
       ${buildRatingUI(o)}
       <div class="text-xs text-gray-400 mt-2">${new Date(o.created_at).toLocaleString()}</div>
@@ -576,7 +569,25 @@ async function submitRating(id){
   }
 }
 
-function logout(){ localStorage.removeItem('lgm_user'); localStorage.removeItem('lgm_cart'); location.href='login.html'; }
+// === FIXED: LIVE COUNTING EVERY SECOND ===
+setInterval(()=>{
+  if(document.getElementById('view-orders') &&!document.getElementById('view-orders').classList.contains('hidden')){
+    // Update timers without re-fetching
+    if(!isUserInteracting){
+      document.querySelectorAll('.customer-timer').forEach(el=>{
+        const orderId = el.getAttribute('data-order');
+        const start = el.getAttribute('data-start');
+        if(start && start!== 'null' && start!== 'undefined'){
+          el.innerHTML = formatCustomerCountdown(orderId, start);
+        }
+      });
+    }
+  }
+},1000);
 
-setInterval(()=>{ if(document.getElementById('view-orders') &&!document.getElementById('view-orders').classList.contains('hidden')) loadOrders(); }, 10000);
+setInterval(()=>{
+  if(document.getElementById('view-orders') &&!document.getElementById('view-orders').classList.contains('hidden') &&!isUserInteracting){
+    loadOrders();
+  }
+}, 10000);
 </script></body></html>
