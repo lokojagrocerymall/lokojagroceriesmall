@@ -71,18 +71,19 @@ async function load(){
     const {data:u} = await supabaseClient.from('users').select('*');
     users = u||[];
 
+    // FIXED: SHOW ALL ACTIVE ORDERS, NOT ONLY PAID
     const {data:o} = await supabaseClient.from('orders')
      .select('*')
-     .eq('status','paid')
-     .eq('payment_status', true)
+     .in('status',['paid','picked','delivered','failed'])
      .order('created_at',{ascending:false});
     orders = o||[];
 
-    // CHECK FOR NEW ORDERS AND TRIGGER ALERT
-    if(orders.length > lastSeenOrderCount && lastSeenOrderCount !== 0){
+    // CHECK FOR NEW PAID ORDERS AND TRIGGER ALERT
+    const paidOrders = orders.filter(x=>x.status==='paid');
+    if(paidOrders.length > lastSeenOrderCount && lastSeenOrderCount !== 0){
       triggerNewOrderAlert();
     }
-    lastSeenOrderCount = orders.length;
+    lastSeenOrderCount = paidOrders.length;
 
     let vendors = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor');
     let agents = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
@@ -115,22 +116,19 @@ function updateOrdersTabAlert(){
   const newPaidOrders = orders.filter(o => o.status === 'paid').length;
   
   if(newPaidOrders > 0){
-    ordersTab.classList.add('alert-tab', 'text-red-600');
+    ordersTab.classList.add('alert-tab');
     ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>) <span class="badge">${newPaidOrders}</span>`;
   } else {
-    ordersTab.classList.remove('alert-tab', 'text-red-600');
+    ordersTab.classList.remove('alert-tab');
     ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>)`;
   }
 }
 
 function triggerNewOrderAlert(){
-  // Sound
   new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
-  // Vibrate
   if(navigator.vibrate) navigator.vibrate([200,100,200]);
-  // Browser notification
   if(Notification.permission === "granted"){
-    new Notification("🔔 New Order!", { body: `You have ${orders.length} pending order(s)` });
+    new Notification("🔔 New Order!", { body: `You have ${orders.filter(o=>o.status==='paid').length} pending order(s)` });
   } else if(Notification.permission !== "denied"){
     Notification.requestPermission();
   }
@@ -167,12 +165,14 @@ function render(){
   }
   if(tab==='orders'){
     data.forEach(o=>{
-      let agentInfo = o.delivery_agent_name? `<div class="text-xs text-blue-600 font-bold">Agent: ${o.delivery_agent_name}</div>` : `<div class="text-xs text-orange-600 font-bold">⚠️ Waiting for Agent</div>`;
+      let statusColor = o.status==='paid' ? 'text-orange-600' : o.status==='picked' ? 'text-blue-600' : o.status==='delivered' ? 'text-green-600' : 'text-red-600';
+      let agentInfo = o.delivery_agent_name? `<div class="text-xs text-blue-600 font-bold">🚚 Agent: ${o.delivery_agent_name} (${o.delivery_agent_phone||''}) - Picked at: ${o.picked_at? new Date(o.picked_at).toLocaleTimeString():''}</div>` : `<div class="text-xs text-orange-600 font-bold">⚠️ Waiting for Agent</div>`;
       html += `<div class="border rounded-lg p-3 mb-2">
-        <div class="flex justify-between"><div class="font-bold">Order #${o.id}</div><div class="font-bold text-green-700">₦${Number(o.total||0).toLocaleString()}</div></div>
-        <div class="text-xs">Customer: ${o.customer_name || o.customer_email}</div>
-        <div class="text-xs">Status: <b class="text-orange-600">${o.status}</b></div>
+        <div class="flex justify-between"><div class="font-bold">Order #${o.id} - <span class="${statusColor}">${o.status.toUpperCase()}</span></div><div class="font-bold text-green-700">₦${Number(o.total||0).toLocaleString()}</div></div>
+        <div class="text-xs">Customer: ${o.customer_name || o.customer_email} - ${o.customer_phone||''}</div>
+        <div class="text-xs text-gray-500 truncate">${o.customer_address||''}</div>
         ${agentInfo}
+        <div class="text-[10px] text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</div>
       </div>`;
     });
   }
@@ -181,22 +181,19 @@ function render(){
 
 function showTab(t){
   tab=t;
-  // Reset all tabs to gray
   document.getElementById('btnP').className = 'flex-1 p-3 font-bold text-gray-400';
   document.getElementById('btnV').className = 'flex-1 p-3 font-bold text-gray-400';
   document.getElementById('btnS').className = 'flex-1 p-3 font-bold text-gray-400';
   document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-gray-400';
   document.getElementById('btnO').className = 'flex-1 p-3 font-bold text-gray-400';
   
-  // Activate clicked tab
   if(t==='pending') document.getElementById('btnP').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
   if(t==='vendors') document.getElementById('btnV').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
   if(t==='suspended') document.getElementById('btnS').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
   if(t==='agents') document.getElementById('btnA').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
   if(t==='orders'){ 
     document.getElementById('btnO').className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600';
-    // RESET ALERT WHEN ADMIN CLICKS ORDERS
-    document.getElementById('btnO').classList.remove('alert-tab', 'text-red-600');
+    document.getElementById('btnO').classList.remove('alert-tab');
   }
   
   render();
@@ -210,7 +207,6 @@ async function updateStatus(email, status){
   load();
 }
 
-// AUTO REFRESH EVERY 10 SECONDS
 setInterval(load, 10000);
 load();
 </script>
