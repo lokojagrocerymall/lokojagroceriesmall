@@ -155,33 +155,32 @@ function setupBankVerification(){
   });
 }
 
+// --- FIXED: NOW WORKS WITH NEW PAYSTACK VERIFY-BANK FUNCTION ---
 async function verifyAccountManual(){
   const accInput = document.getElementById('accountNumber');
   const nameInput = document.getElementById('accountName');
   const statusEl = document.getElementById('verifyStatus');
   const btn = document.getElementById('verifyBtn');
   const accountNumber = accInput.value.trim();
-  const bankCode = document.getElementById('bankCode').value;
+  const bankCode = document.getElementById('bankCode').value || document.getElementById('bankName').value;
   if(!bankCode){ alert("Please select bank first"); return; }
   if(accountNumber.length!== 10){ alert("Enter 10-digit account number"); return; }
   btn.innerText = "⏳..."; btn.disabled = true;
   statusEl.classList.remove('hidden');
-  statusEl.textContent = "⏳ Verifying with Flutterwave...";
+  statusEl.textContent = "⏳ Verifying with Paystack...";
   statusEl.className = "text-xs p-2 rounded bg-orange-100 text-orange-600";
   nameInput.value = "";
   try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-bank`, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
-      body: JSON.stringify({ account_number: accountNumber, bank_code: bankCode })
+    const { data, error } = await supabaseClient.functions.invoke('verify-bank', {
+      body: { account_number: accountNumber, bank_code: bankCode }
     });
-    const data = await res.json();
-    if(data && data.success && data.account_name){
+    console.log('Verify response:', data);
+    if(data && (data.verified || data.account_name) && data.account_name){
       nameInput.value = data.account_name;
       statusEl.textContent = "✅ Verified: " + data.account_name;
       statusEl.className = "text-xs p-2 rounded bg-green-100 text-green-700 font-bold";
     } else {
-      statusEl.textContent = "❌ " + (data.message || "Could not verify. Check number & bank.");
+      statusEl.textContent = "❌ Could not verify. Check number & bank.";
       statusEl.className = "text-xs p-2 rounded bg-red-100 text-red-600";
     }
   } catch(e){
@@ -267,6 +266,9 @@ async function signup(e){
       if(!document.getElementById('ninCard').files[0]) throw new Error("Please upload NIN Slip");
       if(!document.getElementById('guarantorPassport').files[0]) throw new Error("Please upload Guarantor Passport");
       if(!document.getElementById('guarantorNIN').files[0]) throw new Error("Please upload Guarantor NIN");
+    }
+    if((currentRole === 'vendor' || currentRole === 'delivery_agent') &&!document.getElementById('accountName').value){
+      throw new Error("Please verify your bank account first - click Verify button");
     }
     let { data, error: authError } = await supabaseClient.auth.signUp({
       email, password,
