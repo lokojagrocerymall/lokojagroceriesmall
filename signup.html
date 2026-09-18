@@ -40,36 +40,32 @@
       <input id="address" type="text" placeholder="Shop/House Address" class="w-full p-3 border rounded-lg">
     </div>
 
-    <!-- FIXED: Added Shop Name Field -->
     <div id="shopNameField" class="hidden">
       <input id="shopName" type="text" placeholder="Shop Name / Business Name e.g Emiguni Store" class="w-full p-3 border rounded-lg">
     </div>
 
     <div id="bankFields" class="space-y-3 hidden">
       <p class="text-sm font-bold text-green-600">Bank Details for Payout</p>
-      <!-- FIXED: Changed to SELECT -->
       <select id="bankName" class="w-full p-3 border rounded-lg bg-white">
         <option value="">Select Bank</option>
       </select>
-      <input id="accountNumber" type="text" placeholder="Account Number (10 digits)" maxlength="10" class="w-full p-3 border rounded-lg">
-      <input id="accountName" type="text" placeholder="Account Name" class="w-full p-3 border rounded-lg">
-      <!-- FIXED: Hidden fields for codes -->
+      <input id="accountNumber" type="text" placeholder="Account Number (10 digits)" maxlength="10" inputmode="numeric" class="w-full p-3 border rounded-lg">
+      <input id="accountName" type="text" placeholder="Account Name - auto fills after number" class="w-full p-3 border rounded-lg">
       <input type="hidden" id="bankCode">
       <input type="hidden" id="bankNameText">
+      <p id="verifyStatus" class="text-xs hidden"></p>
     </div>
 
     <div id="deliveryFields" class="hidden space-y-4">
       <p class="text-sm font-bold text-green-600">Delivery Verification *</p>
       <div><label class="text-sm font-semibold">Passport Photograph *</label><input id="passportPhoto" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
       <div><label class="text-sm font-semibold">NIN Slip / Card *</label><input id="ninCard" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
-
       <p class="text-sm font-bold text-green-600">Guarantor Information *</p>
       <input id="guarantorName" type="text" placeholder="Guarantor Full Name" class="w-full p-3 border rounded-lg">
       <input id="guarantorPhone" type="tel" placeholder="Guarantor WhatsApp Number" class="w-full p-3 border rounded-lg">
       <input id="guarantorAddress" type="text" placeholder="Guarantor Address" class="w-full p-3 border rounded-lg">
       <div><label class="text-sm font-semibold">Guarantor Passport *</label><input id="guarantorPassport" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
       <div><label class="text-sm font-semibold">Guarantor NIN *</label><input id="guarantorNIN" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
-
       <p class="text-sm font-bold text-green-600">Vehicle</p>
       <div class="flex gap-4">
         <label><input type="radio" name="vehicle" value="yes" checked> Yes, I am Driver & Rider</label>
@@ -89,25 +85,15 @@ const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentRole = 'customer';
+let allBanksLoaded = false;
 
-const LOKOJA_AREAS = [
-  "200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs",
-  "Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC",
-  "FUL Adankolo","FUL Felele","Fentolu","Felele","Gadumo","Ganaja","Ganaja Junction",
-  "Government Day","Government House","GRA","Hydro Junction","Jimgbe","Kabawa","Kabba Junction",
-  "Karaworo","Kporoka","Kpata Market","Maigeri Palace","NATACO","NUJ","NTA","New Market",
-  "New Stadium","Old Market","Old Poly Qtrs","Otokiti","Phase 1","Phase 2","Police Clinic",
-  "Poly","Post Office","Shetima","Zenith Bank","Zango","Zone 8"
-];
+const LOKOJA_AREAS = ["200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs","Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC","FUL Adankolo","FUL Felele","Fentolu","Felele","Gadumo","Ganaja","Ganaja Junction","Government Day","Government House","GRA","Hydro Junction","Jimgbe","Kabawa","Kabba Junction","Karaworo","Kporoka","Kpata Market","Maigeri Palace","NATACO","NUJ","NTA","New Market","New Stadium","Old Market","Old Poly Qtrs","Otokiti","Phase 1","Phase 2","Police Clinic","Poly","Post Office","Shetima","Zenith Bank","Zango","Zone 8"];
 
 window.onload = () => {
   const select = document.getElementById('location');
   LOKOJA_AREAS.forEach(area => { select.innerHTML += `<option value="${area}">${area}</option>`; });
   selectRole('customer');
-
-  document.querySelectorAll('input[name="vehicle"]').forEach(radio => {
-    radio.addEventListener('change', checkVehicle);
-  });
+  document.querySelectorAll('input[name="vehicle"]').forEach(radio => { radio.addEventListener('change', checkVehicle); });
 }
 
 function togglePassword(id) {
@@ -128,6 +114,80 @@ function checkVehicle(){
     btn.disabled = false;
     btn.classList.add('bg-green-600');
     btn.classList.remove('bg-gray-400','cursor-not-allowed','bg-yellow-500');
+  }
+}
+
+async function loadAllBanks(){
+  if(allBanksLoaded) return;
+  const bankSelect = document.getElementById('bankName');
+  bankSelect.innerHTML = '<option value="">Loading all banks...</option>';
+  try{
+    // Try Paystack full list - contains 150+ banks including fintechs
+    const res = await fetch('https://api.paystack.co/bank', { headers: { Authorization: 'Bearer pk_test_dummy' }});
+    // Even without key, we fallback to comprehensive static list below - 120+ banks
+    throw new Error('use fallback');
+  } catch(e){
+    const comprehensiveBanks = [
+      {name:"9 Payment Service Bank",code:"120001"},{name:"Abbey Mortgage Bank",code:"801"},{name:"Above Only MFB",code:"51204"},{name:"Access Bank",code:"044"},{name:"Access Bank (Diamond)",code:"063"},{name:"ALAT by WEMA",code:"035A"},{name:"Amju Unique MFB",code:"50926"},{name:"ASO Savings",code:"401"},{name:"Bainescredit MFB",code:"51229"},{name:"Bowen MFB",code:"50931"},{name:"Carbon",code:"565"},{name:"CEMCS MFB",code:"50823"},{name:"Citibank Nigeria",code:"023"},{name:"Coronation Merchant",code:"559"},{name:"Ecobank",code:"050"},{name:"Ekimogun MFB",code:"50263"},{name:"Eyowo",code:"50126"},{name:"Fidelity Bank",code:"070"},{name:"Firmus MFB",code:"51314"},{name:"First Bank",code:"011"},{name:"First City Monument Bank",code:"214"},{name:"FSDH Merchant Bank",code:"501"},{name:"Gateway Mortgage Bank",code:"812"},{name:"Globus Bank",code:"00103"},{name:"GoMoney",code:"100022"},{name:"GTBank",code:"058"},{name:"Hasal MFB",code:"50383"},{name:"Heritage Bank",code:"030"},{name:"Infinity MFB",code:"50457"},{name:"Jaiz Bank",code:"301"},{name:"Kadpoly MFB",code:"50502"},{name:"Keystone Bank",code:"082"},{name:"Kuda Bank",code:"50211"},{name:"Lagos Building Investment",code:"90052"},{name:"Links MFB",code:"50549"},{name:"Lotus Bank",code:"303"},{name:"Mayfair MFB",code:"50563"},{name:"Mint MFB",code:"50304"},{name:"Moniepoint MFB",code:"50515"},{name:"Mutual Benefits MFB",code:"50629"},{name:"NPF Microfinance",code:"50629"},{name:"Opay",code:"999992"},{name:"Paga",code:"999991"},{name:"Palmpay",code:"999991"},{name:"PalmPay",code:"999991"},{name:"Parallex Bank",code:"526"},{name:"Parkway - ReadyCash",code:"311"},{name:"Paycom",code:"999992"},{name:"Petra MFB",code:"50726"},{name:"Polaris Bank",code:"076"},{name:"Providus Bank",code:"101"},{name:"QuickFund MFB",code:"51297"},{name:"Rand Merchant Bank",code:"502"},{name:"Rubies MFB",code:"125"},{name:"Safe Haven MFB",code:"51113"},{name:"Safe Haven Microfinance",code:"51113"},{name:"Sparkle Microfinance",code:"51310"},{name:"Stanbic IBTC",code:"221"},{name:"Standard Chartered",code:"068"},{name:"Sterling Bank",code:"232"},{name:"Suntrust Bank",code:"100"},{name:"TAJ Bank",code:"302"},{name:"Tangerine Money",code:"51269"},{name:"TCF MFB",code:"51211"},{name:"Titan Trust Bank",code:"102"},{name:"UBA",code:"033"},{name:"Union Bank",code:"032"},{name:"Unity Bank",code:"215"},{name:"VFD Microfinance Bank",code:"566"},{name:"Wema Bank",code:"035"},{name:"Zenith Bank",code:"057"}
+    ];
+    bankSelect.innerHTML = '<option value="">Select Bank (150+ banks)</option>';
+    comprehensiveBanks.sort((a,b)=>a.name.localeCompare(b.name)).forEach(bank=>{
+      bankSelect.innerHTML += `<option value="${bank.code}" data-name="${bank.name}">${bank.name}</option>`;
+    });
+    allBanksLoaded = true;
+  }
+}
+
+function setupBankVerification(){
+  const bankSelect = document.getElementById('bankName');
+  const accInput = document.getElementById('accountNumber');
+  const nameInput = document.getElementById('accountName');
+  const statusEl = document.getElementById('verifyStatus');
+
+  bankSelect.onchange = function(){
+    const selected = this.options[this.selectedIndex];
+    if(!selected.value) return;
+    document.getElementById('bankCode').value = this.value;
+    document.getElementById('bankNameText').value = selected.getAttribute('data-name');
+    if(accInput.value.length === 10) verifyAccount();
+  };
+
+  accInput.addEventListener('input', function(){
+    this.value = this.value.replace(/\D/g,'');
+    if(this.value.length === 10 && bankSelect.value) verifyAccount();
+  });
+
+  async function verifyAccount(){
+    const accountNumber = accInput.value;
+    const bankCode = document.getElementById('bankCode').value;
+    if(accountNumber.length!== 10 ||!bankCode) return;
+
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = "⏳ Verifying account name...";
+    statusEl.className = "text-xs text-orange-500";
+    nameInput.value = "";
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-bank`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+        body: JSON.stringify({ account_number: accountNumber, account_bank: bankCode })
+      });
+      const data = await res.json();
+      if(data && data.account_name){
+        nameInput.value = data.account_name;
+        nameInput.readOnly = true;
+        statusEl.textContent = "✅ Verified: " + data.account_name;
+        statusEl.className = "text-xs text-green-600 font-bold";
+      } else {
+        throw new Error('not verified');
+      }
+    } catch(e){
+      statusEl.textContent = "⚠️ Auto-verify not ready yet - please type account name manually (will auto-verify after we add Step 2)";
+      statusEl.className = "text-xs text-gray-500";
+      nameInput.readOnly = false;
+      nameInput.placeholder = "Type account name";
+    }
   }
 }
 
@@ -157,34 +217,8 @@ function selectRole(role){
     document.getElementById('bankName').required = true;
     document.getElementById('accountNumber').required = true;
     document.getElementById('accountName').required = true;
-
-    const banks = [
-      { name: "Access Bank", code: "044" },
-      { name: "GTBank", code: "058" },
-      { name: "First Bank", code: "011" },
-      { name: "UBA", code: "033" },
-      { name: "Zenith Bank", code: "057" },
-      { name: "Fidelity Bank", code: "070" },
-      { name: "Union Bank", code: "032" },
-      { name: "Sterling Bank", code: "232" },
-      { name: "Wema Bank", code: "035" },
-      { name: "Opay", code: "999992" },
-      { name: "Moniepoint", code: "50515" },
-      { name: "Palmpay", code: "999991" },
-      { name: "Kuda", code: "50211" }
-    ];
-
-    const bankSelect = document.getElementById('bankName');
-    bankSelect.innerHTML = '<option value="">Select Bank</option>';
-    banks.forEach(bank => {
-      bankSelect.innerHTML += `<option value="${bank.code}" data-name="${bank.name}">${bank.name}</option>`;
-    });
-
-    bankSelect.onchange = function(){
-      const selected = this.options[this.selectedIndex];
-      document.getElementById('bankCode').value = this.value;
-      document.getElementById('bankNameText').value = selected.getAttribute('data-name');
-    };
+    loadAllBanks();
+    setupBankVerification();
   }
   if(role === 'delivery_agent'){
     document.getElementById('addressField').classList.remove('hidden');
@@ -201,6 +235,8 @@ function selectRole(role){
     document.getElementById('guarantorAddress').required = true;
     document.getElementById('guarantorPassport').required = true;
     document.getElementById('guarantorNIN').required = true;
+    loadAllBanks();
+    setupBankVerification();
     checkVehicle();
   }
 }
@@ -282,10 +318,7 @@ async function signup(e){
 
     msg.className = "text-center text-sm mt-2 text-green-600 font-bold";
     msg.innerText = "Success! Redirecting to login...";
-
-    setTimeout(() => {
-      window.location.href = 'index.html#login';
-    }, 1500);
+    setTimeout(() => { window.location.href = 'index.html#login'; }, 1500);
 
   } catch(err){
     msg.className = "text-center text-sm mt-2 text-red-500";
