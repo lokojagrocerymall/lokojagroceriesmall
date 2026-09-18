@@ -155,7 +155,7 @@ function setupBankVerification(){
   });
 }
 
-// --- FIXED: NOW WORKS WITH NEW PAYSTACK VERIFY-BANK FUNCTION ---
+// --- UPDATED: Now shows real Paystack error + verification optional ---
 async function verifyAccountManual(){
   const accInput = document.getElementById('accountNumber');
   const nameInput = document.getElementById('accountName');
@@ -167,25 +167,27 @@ async function verifyAccountManual(){
   if(accountNumber.length!== 10){ alert("Enter 10-digit account number"); return; }
   btn.innerText = "⏳..."; btn.disabled = true;
   statusEl.classList.remove('hidden');
-  statusEl.textContent = "⏳ Verifying with Paystack...";
+  statusEl.textContent = "⏳ Verifying...";
   statusEl.className = "text-xs p-2 rounded bg-orange-100 text-orange-600";
   nameInput.value = "";
   try {
     const { data, error } = await supabaseClient.functions.invoke('verify-bank', {
       body: { account_number: accountNumber, bank_code: bankCode }
     });
-    console.log('Verify response:', data);
-    if(data && (data.verified || data.account_name) && data.account_name){
+    if(error) throw error;
+    if(data && data.verified && data.account_name){
       nameInput.value = data.account_name;
       statusEl.textContent = "✅ Verified: " + data.account_name;
       statusEl.className = "text-xs p-2 rounded bg-green-100 text-green-700 font-bold";
     } else {
-      statusEl.textContent = "❌ Could not verify. Check number & bank.";
-      statusEl.className = "text-xs p-2 rounded bg-red-100 text-red-600";
+      statusEl.textContent = "⚠️ " + (data?.message || "Could not verify - you can still signup, we will verify manually");
+      statusEl.className = "text-xs p-2 rounded bg-yellow-100 text-yellow-700";
+      // OPTIONAL: Auto-fill with placeholder so signup can continue
+      // nameInput.value = "To be verified manually";
     }
   } catch(e){
-    statusEl.textContent = "❌ Network error - try again: " + e.message;
-    statusEl.className = "text-xs p-2 rounded bg-red-100 text-red-600";
+    statusEl.textContent = "⚠️ Network issue - you can still signup: " + e.message;
+    statusEl.className = "text-xs p-2 rounded bg-yellow-100 text-yellow-700";
   }
   btn.innerText = "Verify"; btn.disabled = false;
 }
@@ -215,7 +217,8 @@ function selectRole(role){
     document.getElementById('bankFields').classList.remove('hidden');
     document.getElementById('bankName').required = true;
     document.getElementById('accountNumber').required = true;
-    document.getElementById('accountName').required = true;
+    // UPDATED: accountName NOT required anymore
+    document.getElementById('accountName').required = false;
     loadAllBanks();
     setupBankVerification();
   }
@@ -225,7 +228,8 @@ function selectRole(role){
     document.getElementById('bankFields').classList.remove('hidden');
     document.getElementById('bankName').required = true;
     document.getElementById('accountNumber').required = true;
-    document.getElementById('accountName').required = true;
+    // UPDATED: accountName NOT required anymore
+    document.getElementById('accountName').required = false;
     document.getElementById('deliveryFields').classList.remove('hidden');
     document.getElementById('passportPhoto').required = true;
     document.getElementById('ninCard').required = true;
@@ -267,9 +271,7 @@ async function signup(e){
       if(!document.getElementById('guarantorPassport').files[0]) throw new Error("Please upload Guarantor Passport");
       if(!document.getElementById('guarantorNIN').files[0]) throw new Error("Please upload Guarantor NIN");
     }
-    if((currentRole === 'vendor' || currentRole === 'delivery_agent') &&!document.getElementById('accountName').value){
-      throw new Error("Please verify your bank account first - click Verify button");
-    }
+    // UPDATED: Verification optional - removed blocking check
     let { data, error: authError } = await supabaseClient.auth.signUp({
       email, password,
       options: { data: { full_name: fullName, role: currentRole }}
