@@ -142,10 +142,43 @@ function selectRole(role){
   if(role === 'vendor'){
     document.getElementById('addressField').classList.remove('hidden');
     document.getElementById('address').required = true;
+    document.getElementById('shopNameField').classList.remove('hidden');
+    document.getElementById('shopName').required = true;
     document.getElementById('bankFields').classList.remove('hidden');
     document.getElementById('bankName').required = true;
     document.getElementById('accountNumber').required = true;
     document.getElementById('accountName').required = true;
+    
+    // Auto-populate Nigerian banks with codes
+    const banks = [
+      { name: "Access Bank", code: "044" },
+      { name: "GTBank", code: "058" },
+      { name: "First Bank", code: "011" },
+      { name: "UBA", code: "033" },
+      { name: "Zenith Bank", code: "057" },
+      { name: "Fidelity Bank", code: "070" },
+      { name: "Union Bank", code: "032" },
+      { name: "Sterling Bank", code: "232" },
+      { name: "Wema Bank", code: "035" },
+      { name: "Opay", code: "999992" },
+      { name: "Moniepoint", code: "50515" },
+      { name: "Palmpay", code: "999991" },
+      { name: "Kuda", code: "50211" },
+      { name: "UBA", code: "033" }
+    ];
+    
+    const bankSelect = document.getElementById('bankName');
+    bankSelect.innerHTML = '<option value="">Select Bank</option>';
+    banks.forEach(bank => {
+      bankSelect.innerHTML += `<option value="${bank.code}" data-name="${bank.name}">${bank.name}</option>`;
+    });
+    
+    // When bank is selected, auto-save code + name
+    bankSelect.addEventListener('change', function(){
+      const selected = this.options[this.selectedIndex];
+      document.getElementById('bankCode').value = this.value; // hidden field for code
+      document.getElementById('bankNameText').value = selected.getAttribute('data-name'); // hidden field for name
+    });
   }
   if(role === 'delivery_agent'){
     document.getElementById('addressField').classList.remove('hidden');
