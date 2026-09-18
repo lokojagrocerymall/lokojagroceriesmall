@@ -119,6 +119,8 @@ const LOKOJA_AREAS = [
   "Poly","Post Office","Shetima","Zenith Bank","Zango","Zone 8","Other"
 ];
 
+function cleanPrice(p){ return Number(String(p).replace(/[^0-9]/g,'')) || 0; }
+
 window.onload = async () => {
   const select = document.getElementById('checkoutLocation');
   LOKOJA_AREAS.forEach(area => {
@@ -151,7 +153,7 @@ async function syncCartFromSupabase(){
           customer_id: userData.id,
           product_id: item.id,
           product_name: item.name,
-          product_price: item.price,
+          product_price: cleanPrice(item.price),
           product_image: item.image_url || item.image || '',
           vendor_id: item.vendor_id || null,
           vendor_email: item.vendor_email || null,
@@ -189,7 +191,6 @@ function showTab(t){
   if(t==='cart') { syncCartFromSupabase().then(()=>renderCart()); }
 }
 
-// === BOLD VISIBLE TIMER FOR CUSTOMER ONLY ===
 function formatCustomerCountdown(orderId, startTime){
   if(!startTime) return `<div style="background:#fff7ed;border:2px dashed #f97316;padding:12px;border-radius:14px;margin-top:12px;text-align:center;font-weight:900;color:#c2410c">⏰ Rider on the way - Timer starting...</div>`;
   const end = new Date(startTime).getTime() + TWO_HOURS_MS;
@@ -277,7 +278,7 @@ async function addToCart(id){
         customer_id: u.id,
         product_id: product.id,
         product_name: product.name,
-        product_price: product.price,
+        product_price: cleanPrice(product.price),
         product_image: product.image_url || product.image || '',
         vendor_id: product.vendor_id || null,
         vendor_email: product.vendor_email || null,
@@ -290,13 +291,13 @@ async function addToCart(id){
 
 function saveCart(syncCount = true){
   localStorage.setItem('lgm_cart', JSON.stringify(cart));
-  document.getElementById('cartCount').innerText = cart.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('cartCount').innerText = cart.reduce((s,i)=>s+(Number(i.qty)||0),0);
 }
 
 async function updateQty(id, change){
   const item = cart.find(i=>i.id===id);
   if(!item) return;
-  item.qty += change;
+  item.qty = (Number(item.qty)||1) + change;
   if(item.qty <= 0) cart = cart.filter(i=>i.id!==id);
   saveCart();
   renderCart();
@@ -331,7 +332,7 @@ function renderCart(){
     document.getElementById('subTotal').innerText='₦0';
     document.getElementById('deliveryFee').innerText='₦0';
     document.getElementById('cartTotal').innerText='₦0';
-    document.getElementById('payAmount').innerText='₦0';
+    const pa = document.getElementById('payAmount'); if(pa) pa.innerText='₦0';
     document.getElementById('deliveryForm').classList.add('hidden');
     document.getElementById('placeOrderBtn').classList.add('hidden');
     if(alertBox) alertBox.classList.add('hidden');
@@ -339,7 +340,7 @@ function renderCart(){
   }
   let html=''; let subtotal=0;
   cart.forEach(i=>{
-    const unit = Number(String(i.price).replace(/[^0-9]/g,'')) || 0;
+    const unit = cleanPrice(i.price);
     const qty = Number(i.qty) || 1;
     subtotal += unit * qty;
     html += `<div class="flex items-center justify-between py-3 border-b">
@@ -364,7 +365,8 @@ function renderCart(){
   document.getElementById('subTotal').innerText='₦'+subtotal.toLocaleString();
   document.getElementById('deliveryFee').innerText='₦'+delivery.toLocaleString();
   document.getElementById('cartTotal').innerText='₦'+total.toLocaleString();
-  document.getElementById('payAmount').innerText='₦'+total.toLocaleString();
+  const payAmountEl = document.getElementById('payAmount');
+  if(payAmountEl) payAmountEl.innerText='₦'+total.toLocaleString();
   document.getElementById('deliveryForm').classList.remove('hidden');
   document.getElementById('placeOrderBtn').classList.remove('hidden');
 
@@ -392,15 +394,14 @@ function renderCart(){
       payBtn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
     }
   }
-    }
+}
 
 async function payWithFlutterwave(e){
   e.preventDefault();
   if(isSubmitting) return;
   if(cart.length===0) return alert('Cart is empty');
 
-  // --- MIN ORDER CHECK ONLY UPDATE ---
-  const subtotalCheck = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const subtotalCheck = cart.reduce((s,i)=> s + cleanPrice(i.price)*(Number(i.qty)||1),0);
   if(subtotalCheck < MIN_ORDER){
     const need = MIN_ORDER - subtotalCheck;
     alert(`❌ LGM Minimum Order is ₦${MIN_ORDER.toLocaleString()}\nYour cart: ₦${subtotalCheck.toLocaleString()}\nAdd ₦${need.toLocaleString()} more to checkout`);
@@ -418,7 +419,7 @@ async function payWithFlutterwave(e){
 
   if(!finalLocation ||!checkoutAddress ||!checkoutLandmark ||!checkoutWhatsApp ||!checkoutPhone) return alert('Fill all delivery details');
 
-  const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const subtotal = cart.reduce((s,i)=> s + cleanPrice(i.price)*(Number(i.qty)||1),0);
   const delivery = Math.round(subtotal * 0.05);
   const total = subtotal + delivery;
   const tx_ref = "LGM-" + Date.now();
@@ -434,7 +435,7 @@ async function payWithFlutterwave(e){
     "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
   };
   const vendorTotals = {};
-  cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + item.price*item.qty; });
+  cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + cleanPrice(item.price)*(Number(item.qty)||1); });
 
   const subaccounts = Object.keys(vendorTotals).map(email=>{
     const id = vendorSubaccounts[email];
@@ -475,14 +476,13 @@ async function payWithFlutterwave(e){
 }
 
 async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total){
-  // --- MIN ORDER CHECK ONLY UPDATE ---
   if(subtotal < MIN_ORDER){
     alert(`❌ Blocked - Cart less than ₦${MIN_ORDER.toLocaleString()}`);
     isSubmitting = false;
     return;
   }
   const itemsWithVendor = cart.map(i => ({
-    id: i.id, name: i.name, price: i.price, qty: i.qty, vendor_email: i.vendor_email, vendor_id: i.vendor_id
+    id: i.id, name: i.name, price: cleanPrice(i.price), qty: Number(i.qty)||1, vendor_email: i.vendor_email, vendor_id: i.vendor_id
   }));
   try{
     const { data: order, error } = await supabaseClient.from('orders').insert({
