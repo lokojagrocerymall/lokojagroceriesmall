@@ -40,11 +40,22 @@
       <input id="address" type="text" placeholder="Shop/House Address" class="w-full p-3 border rounded-lg">
     </div>
 
+    <!-- FIXED: Added Shop Name Field -->
+    <div id="shopNameField" class="hidden">
+      <input id="shopName" type="text" placeholder="Shop Name / Business Name e.g Emiguni Store" class="w-full p-3 border rounded-lg">
+    </div>
+
     <div id="bankFields" class="space-y-3 hidden">
       <p class="text-sm font-bold text-green-600">Bank Details for Payout</p>
-      <input id="bankName" type="text" placeholder="Bank Name" class="w-full p-3 border rounded-lg">
-      <input id="accountNumber" type="text" placeholder="Account Number" class="w-full p-3 border rounded-lg">
+      <!-- FIXED: Changed to SELECT -->
+      <select id="bankName" class="w-full p-3 border rounded-lg bg-white">
+        <option value="">Select Bank</option>
+      </select>
+      <input id="accountNumber" type="text" placeholder="Account Number (10 digits)" maxlength="10" class="w-full p-3 border rounded-lg">
       <input id="accountName" type="text" placeholder="Account Name" class="w-full p-3 border rounded-lg">
+      <!-- FIXED: Hidden fields for codes -->
+      <input type="hidden" id="bankCode">
+      <input type="hidden" id="bankNameText">
     </div>
 
     <div id="deliveryFields" class="hidden space-y-4">
@@ -109,7 +120,6 @@ function togglePassword(id) {
 function checkVehicle(){
   const btn = document.getElementById('submitBtn');
   const vehicle = document.querySelector('input[name="vehicle"]:checked')?.value;
-
   if(currentRole === 'delivery_agent' && vehicle === 'no'){
     btn.disabled = true;
     btn.classList.remove('bg-green-600','bg-yellow-500');
@@ -123,7 +133,6 @@ function checkVehicle(){
 
 function selectRole(role){
   currentRole = role;
-
   ['btnCustomer','btnVendor','btnDeliveryAgent'].forEach(id=>{
     document.getElementById(id).classList.remove('border-green-600','bg-green-50');
     document.getElementById(id).classList.add('border-gray-200');
@@ -132,8 +141,8 @@ function selectRole(role){
   if(role === 'vendor') document.getElementById('btnVendor').classList.add('border-green-600','bg-green-50');
   if(role === 'delivery_agent') document.getElementById('btnDeliveryAgent').classList.add('border-green-600','bg-green-50');
 
-  ['customerAddressField','addressField','bankFields','deliveryFields'].forEach(id=>document.getElementById(id).classList.add('hidden'));
-  ['customerAddress','address','bankName','accountNumber','accountName','guarantorName','guarantorPhone','guarantorAddress','passportPhoto','ninCard','guarantorPassport','guarantorNIN'].forEach(id=>document.getElementById(id).required = false);
+  ['customerAddressField','addressField','shopNameField','bankFields','deliveryFields'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  ['customerAddress','address','shopName','bankName','accountNumber','accountName','guarantorName','guarantorPhone','guarantorAddress','passportPhoto','ninCard','guarantorPassport','guarantorNIN'].forEach(id=>document.getElementById(id).required = false);
 
   if(role === 'customer'){
     document.getElementById('customerAddressField').classList.remove('hidden');
@@ -148,8 +157,7 @@ function selectRole(role){
     document.getElementById('bankName').required = true;
     document.getElementById('accountNumber').required = true;
     document.getElementById('accountName').required = true;
-    
-    // Auto-populate Nigerian banks with codes
+
     const banks = [
       { name: "Access Bank", code: "044" },
       { name: "GTBank", code: "058" },
@@ -163,22 +171,20 @@ function selectRole(role){
       { name: "Opay", code: "999992" },
       { name: "Moniepoint", code: "50515" },
       { name: "Palmpay", code: "999991" },
-      { name: "Kuda", code: "50211" },
-      { name: "UBA", code: "033" }
+      { name: "Kuda", code: "50211" }
     ];
-    
+
     const bankSelect = document.getElementById('bankName');
     bankSelect.innerHTML = '<option value="">Select Bank</option>';
     banks.forEach(bank => {
       bankSelect.innerHTML += `<option value="${bank.code}" data-name="${bank.name}">${bank.name}</option>`;
     });
-    
-    // When bank is selected, auto-save code + name
-    bankSelect.addEventListener('change', function(){
+
+    bankSelect.onchange = function(){
       const selected = this.options[this.selectedIndex];
-      document.getElementById('bankCode').value = this.value; // hidden field for code
-      document.getElementById('bankNameText').value = selected.getAttribute('data-name'); // hidden field for name
-    });
+      document.getElementById('bankCode').value = this.value;
+      document.getElementById('bankNameText').value = selected.getAttribute('data-name');
+    };
   }
   if(role === 'delivery_agent'){
     document.getElementById('addressField').classList.remove('hidden');
@@ -201,7 +207,7 @@ function selectRole(role){
 
 async function uploadFile(file, path){
   if(!file) return '';
-  const { data, error } = await supabaseClient.storage.from('delivery_docs').upload(path, file, {upsert: true}); // upsert files too
+  const { data, error } = await supabaseClient.storage.from('delivery_docs').upload(path, file, {upsert: true});
   if(error) throw error;
   const { data: urlData } = supabaseClient.storage.from('delivery_docs').getPublicUrl(path);
   return urlData.publicUrl;
@@ -228,13 +234,11 @@ async function signup(e){
       if(!document.getElementById('guarantorNIN').files[0]) throw new Error("Please upload Guarantor NIN");
     }
 
-    // 1. Try to signup
     let { data, error: authError } = await supabaseClient.auth.signUp({
       email, password,
       options: { data: { full_name: fullName, role: currentRole }}
     });
-    
-    // 2. If email already exists, login instead
+
     if(authError && authError.message.includes("already registered")){
       msg.innerText = "Email exists. Logging you in...";
       const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({email, password});
@@ -253,14 +257,18 @@ async function signup(e){
       g_nin = await uploadFile(document.getElementById('guarantorNIN').files[0], `delivery/${uid}/g_nin.jpg`);
     }
 
-    // 3. UPSERT profile - this fixes the duplicate key error
+    const bankCodeVal = document.getElementById('bankCode').value || document.getElementById('bankName').value || null;
+    const bankNameVal = document.getElementById('bankNameText').value || null;
+
     const { error } = await supabaseClient.from('users').upsert({
       id: data.user.id,
       email, full_name: fullName,
       location: document.getElementById('location').value, address: finalAddress,
       landmark: document.getElementById('landmark').value, phone: document.getElementById('phone').value,
       role: currentRole,
-      bank_name: document.getElementById('bankName').value || null,
+      business_name: document.getElementById('shopName')?.value || null,
+      bank_name: bankNameVal,
+      bank_code: bankCodeVal,
       account_number: document.getElementById('accountNumber').value || null,
       account_name: document.getElementById('accountName').value || null,
       guarantor_name: document.getElementById('guarantorName').value || null,
@@ -269,7 +277,7 @@ async function signup(e){
       has_vehicle: document.querySelector('input[name="vehicle"]:checked')?.value || 'no',
       passport_url, nin_url, guarantor_passport_url: g_passport, guarantor_nin_url: g_nin,
       is_approved: currentRole === 'customer'? true : false
-    }, { onConflict: 'id' }); // important for upsert
+    }, { onConflict: 'id' });
     if(error) throw error;
 
     msg.className = "text-center text-sm mt-2 text-green-600 font-bold";
