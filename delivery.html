@@ -46,17 +46,25 @@ let ordersCache = [];
 let lastAvailableCount = 0;
 let agentProfile = null;
 
-// === FIX: FETCH FULL NAME + WHATSAPP FROM USERS TABLE ===
+// === FIX: SEPARATE FULL NAME AS FILLED IN SIGNUP ===
+function formatSeparatedName(raw){
+  if(!raw) return '';
+  let s = String(raw).trim().replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2');
+  s = s.split(/\s+/).filter(Boolean).map(w=> w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  return s;
+}
+
 async function loadAgentProfile(){
   try{
     const {data} = await supabaseClient.from('users')
-     .select('full_name, phone, whatsapp, email')
-     .eq('email', curUser.email)
-     .single();
+    .select('*')
+    .eq('email', curUser.email)
+    .single();
 
     if(data){
       agentProfile = data;
-      const fullName = data.full_name || curUser.name || curUser.email.split('@')[0];
+      let rawName = data.full_name || [data.first_name, data.middle_name, data.last_name].filter(Boolean).join(' ') || curUser.name || curUser.email.split('@')[0];
+      const fullName = formatSeparatedName(rawName);
       const waNumber = data.phone || data.whatsapp || curUser.phone || 'No number';
 
       document.getElementById('name').innerText = fullName;
@@ -68,13 +76,13 @@ async function loadAgentProfile(){
       curUser.phone = waNumber;
       localStorage.setItem('lgm_user', JSON.stringify(curUser));
     } else {
-      document.getElementById('name').innerText = curUser.name || curUser.email;
+      document.getElementById('name').innerText = formatSeparatedName(curUser.name || curUser.email);
       document.getElementById('phone').innerText = curUser.phone || 'No number';
       document.getElementById('email').innerText = curUser.email;
     }
   }catch(e){
     console.log(e);
-    document.getElementById('name').innerText = curUser.name || curUser.email;
+    document.getElementById('name').innerText = formatSeparatedName(curUser.name || curUser.email);
     document.getElementById('email').innerText = curUser.email;
   }
 }
@@ -224,7 +232,8 @@ async function loadOrders(){
 }
 
 async function pickup(id){
-  const realName = agentProfile?.full_name || curUser.name || curUser.email.split('@')[0];
+  let rawName = agentProfile?.full_name || [agentProfile?.first_name, agentProfile?.middle_name, agentProfile?.last_name].filter(Boolean).join(' ') || curUser.name || curUser.email.split('@')[0];
+  const realName = formatSeparatedName(rawName);
   const realPhone = agentProfile?.phone || agentProfile?.whatsapp || curUser.phone || '';
 
   const { data, error } = await supabaseClient.from('orders').update({
