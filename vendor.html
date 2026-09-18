@@ -289,7 +289,7 @@ function renderVendorOrders(){
       <div class="small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Address: ${o.customer_address}</div>
       ${agentInfo}
       <div style="margin-top:8px;font-size:12px"><b>Your Items:</b> ${o.items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
-      <div style="margin-top:4px"><b>Your Cut 90%:</b> <span style="color:#16a34a;font-weight:700">₦${myCut.toLocaleString()}</span> / Total: ₦${Number(o.total).toLocaleString()}</div>
+      <div style="margin-top:4px"><b>Your Items Total:</b> ₦${myTotal.toLocaleString()} | <b>Your Cut 90%:</b> <span style="color:#16a34a;font-weight:700">₦${myCut.toLocaleString()}</span></div>
       ${countdown}
     </div>`;
   });
