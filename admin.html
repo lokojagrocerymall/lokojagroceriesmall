@@ -255,6 +255,13 @@ function openAgentDetail(email){
 }
 function closeModal(){ document.getElementById('detailModal').classList.add('hidden'); }
 
+function toggleAdminDetails(id){
+  const el = document.getElementById('admin-details-'+id);
+  const btn = document.getElementById('admin-btn-'+id);
+  el.classList.toggle('hidden');
+  if(btn) btn.innerText = el.classList.contains('hidden')? '▼ Show Items & Vendors' : '▲ Hide Details';
+}
+
 function render(){
   if(tab==='finance'){
     let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
@@ -368,10 +375,17 @@ function render(){
         <div class="flex justify-between gap-2"><div class="font-bold text-[12px] truncate">Order #${o.id} - <span class="${statusColor}">${o.status.toUpperCase()}</span> ${o.status==='paid'? '🆕 NEW FIRST':''}</div><div class="font-bold text-green-700 text-[12px] shrink-0">₦${Number(o.total||0).toLocaleString()}</div></div>
         <div class="text-xs truncate">Customer: ${o.customer_name || o.customer_email} - ${o.customer_phone||''}</div>
         <div class="text-xs text-gray-500 truncate">${o.customer_address||''}</div>
-        ${agentInfo}
-        ${itemsBreakdown}
-        ${timerHTML}
-        <div class="text-[10px] text-gray-400 mt-1 flex justify-between"><span>${new Date(o.created_at).toLocaleString()}</span><span>Tx: ${o.tx_ref||'N/A'}</span></div>
+
+        <button onclick="toggleAdminDetails(${o.id})" id="admin-btn-${o.id}" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-[11px] font-black py-2 rounded-lg">
+          ▼ Show Items & Vendors
+        </button>
+
+        <div id="admin-details-${o.id}" class="hidden">
+          ${agentInfo}
+          ${itemsBreakdown}
+          ${timerHTML}
+          <div class="text-[10px] text-gray-400 mt-1 flex justify-between"><span>${new Date(o.created_at).toLocaleString()}</span><span>Tx: ${o.tx_ref||'N/A'}</span></div>
+        </div>
       </div>`;
     });
   }
