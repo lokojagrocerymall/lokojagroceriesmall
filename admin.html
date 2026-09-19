@@ -90,7 +90,6 @@
   </div>
 </div>
 
-<!-- FULL KYC MODAL - NEW -->
 <div id="detailModal" class="fixed inset-0 bg-black/70 z-[999] hidden flex items-center justify-center p-3">
   <div class="bg-white rounded-2xl max-w-[480px] w-full max-h-[92vh] overflow-y-auto shadow-2xl">
     <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center rounded-t-2xl">
@@ -200,7 +199,6 @@ function filterOrders(type){
   render();
 }
 
-// === NEW: FULL KYC VIEWER ===
 function openAgentDetail(email){
   const u = users.find(x=>x.email===email);
   if(!u){ alert('User not found: '+email); return; }
@@ -242,7 +240,7 @@ function openAgentDetail(email){
           ${guarantorImg? `<a href="${guarantorImg}" target="_blank" class="bg-yellow-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">📄 View Guarantor ID</a>` : '<span class="text-[11px] text-gray-400">No guarantor ID</span>'}
         </div>
       </div>
-      ${u.bank_name || u.account_number? `<div class="bg-purple-50 p-3 rounded-xl border border-purple-100"><b>🏦 Bank</b><br>Bank: ${u.bank_name||''}<br>Acct No: ${u.account_number||''}<br>Acct Name: ${u.account_name||''}</div>` : ''}
+      ${u.bank_name || u.account_number? `<div class="bg-purple-50 p-3 rounded-xl border border-purple-100"><b>🏦 Bank</b><br>Bank: ${u.bank_name||''}<br>Acct No: ${u.account_number||''}<br>Acct Name: ${u.account_name||''}<br>${u.paystack_subaccount_code? `Sub: <b>${u.paystack_subaccount_code}</b>`:''}</div>` : ''}
     </div>
   `;
   document.getElementById('modalBody').innerHTML = html;
@@ -269,9 +267,10 @@ function render(){
   if(tab==='pending' || tab==='vendors' || tab==='suspended' || tab==='agents'){
     data.forEach(u=>{
       let roleBadge = String(u.role).toLowerCase().trim()==='delivery_agent'? `<span class="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px]">AGENT</span>` : `<span class="bg-green-500 text-white px-2 py-0.5 rounded text-[10px]">VENDOR</span>`;
-      let actionBtn = (tab==='pending' || tab==='suspended')? `<button onclick="updateStatus('${u.email}', true)" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve / Reactivate</button>` : `<button onclick="updateStatus('${u.email}', false)" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>`;
+      let actionBtn = (tab==='pending' || tab==='suspended')? `<button id="btn-${u.email}" onclick="updateStatus('${u.email}', true)" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve / Reactivate</button>` : `<button onclick="updateStatus('${u.email}', false)" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>`;
       let viewBtn = `<button onclick="openAgentDetail('${u.email}')" class="mt-2 ml-1 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">👁️ View Full Info</button>`;
-      html += `<div class="border rounded-lg p-3 mb-2"><div class="font-bold">${u.full_name || 'null'} ${roleBadge}</div><div class="text-xs text-gray-500">${u.email} • ${u.phone||u.whatsapp||''} • ${u.location||''}</div><div class="text-xs mt-1">Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended'}</b></div>${actionBtn} ${viewBtn}</div>`;
+      let subInfo = u.paystack_subaccount_code? `<div class="text-[10px] text-green-600 font-bold mt-1">✅ ${u.paystack_subaccount_code}</div>` : '';
+      html += `<div class="border rounded-lg p-3 mb-2"><div class="font-bold">${u.full_name || 'null'} ${roleBadge}</div><div class="text-xs text-gray-500">${u.email} • ${u.phone||u.whatsapp||''} • ${u.location||''}</div><div class="text-xs mt-1">Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended'}</b> ${u.account_number? `• Acct: ${u.account_number} (${u.bank_name||'Opay'})`:''}</div>${subInfo}${actionBtn} ${viewBtn}</div>`;
     });
   }
   if(tab==='orders'){
@@ -306,12 +305,98 @@ function showTab(t){
   if(t==='orders'){ document.getElementById('btnO').classList.remove('alert-tab'); setTimeout(()=>{ document.getElementById('mainTabs').scrollLeft = document.getElementById('mainTabs').scrollWidth; },100); }
   render();
 }
+
+// ===== FIXED UPDATE STATUS - AUTO PAYSTACK SUBACCOUNT =====
+function getBankCode(bankName){
+  if(!bankName) return "999992";
+  const n = bankName.toLowerCase();
+  if(n.includes("opay")) return "999992";
+  if(n.includes("palm")) return "999991";
+  if(n.includes("kuda")) return "090267";
+  if(n.includes("monie")) return "50515";
+  if(n.includes("gtb") || n.includes("gtbank") || n.includes("guaranty")) return "058";
+  if(n.includes("access")) return "044";
+  if(n.includes("uba")) return "033";
+  if(n.includes("first")) return "011";
+  if(n.includes("zenith")) return "057";
+  if(n.includes("wema")) return "035";
+  if(n.includes("fcmb")) return "214";
+  if(n.includes("fidelity")) return "070";
+  if(n.includes("union")) return "032";
+  if(n.includes("stanbic")) return "221";
+  return "999992";
+}
+
 async function updateStatus(email, status){
-  if(!confirm(`${status?'Approve':'Suspend'} this account?`)) return;
-  await supabaseClient.from('users').update({is_approved: status}).eq('email',email);
-  alert(`Account ${status?'Approved':'Suspended'}!`);
+  const u = users.find(x=>x.email===email);
+  if(!u){ alert('User not found: '+email); return; }
+  const isVendor = String(u.role).toLowerCase().trim() === 'vendor';
+
+  if(!confirm(`${status?'Approve':'Suspend'} ${u.full_name || email}?${isVendor && status? '\n\nThis will auto-create Paystack subaccount for: ' + (u.account_number||'NO ACCOUNT') + ' ('+(u.bank_name||'Opay')+')' : ''}`)) return;
+
+  // VENDOR APPROVAL = CREATE PAYSTACK SUBACCOUNT
+  if(isVendor && status){
+    if(!u.account_number){
+      if(!confirm('❌ No account_number found for this vendor!\n\nVendor email: '+u.email+'\n\nDo you still want to APPROVE without Paystack? (vendor will NOT get auto-split)')) return;
+      await supabaseClient.from('users').update({is_approved: true}).eq('email',email);
+      alert('Approved without Paystack subaccount');
+      load(); return;
+    }
+
+    const btn = document.getElementById(`btn-${email}`);
+    if(btn){ btn.innerText = '⏳ Creating...'; btn.disabled = true; }
+
+    try{
+      document.getElementById('list').innerHTML = `<div class="text-center py-12"><div class="text-green-600 font-black">⏳ Creating Paystack subaccount...</div><div class="text-xs mt-2">${u.full_name} - ${u.account_number} - ${u.bank_name||'Opay'}</div></div>`;
+
+      const bankCode = u.bank_code || getBankCode(u.bank_name);
+
+      const { data, error } = await supabaseClient.functions.invoke('create-vendor-subaccount', {
+        body: {
+          account_number: String(u.account_number).trim(),
+          bank_code: String(bankCode).trim(),
+          vendor_name: u.full_name || u.business_name || 'Vendor',
+          vendor_email: u.email,
+          vendor_phone: u.phone || u.whatsapp || '08000000000'
+        }
+      });
+
+      if(error) throw new Error(error.message || JSON.stringify(error));
+      if(!data?.data?.subaccount_code) throw new Error('No subaccount_code returned: ' + JSON.stringify(data));
+
+      const subCode = data.data.subaccount_code;
+
+      // Save to DB
+      const { error: updErr } = await supabaseClient.from('users').update({
+        is_approved: true,
+        paystack_subaccount_code: subCode,
+        paystack_bank: data.data.settlement_bank || u.bank_name || 'OPay',
+        account_name_resolved: data.data.account_name || '',
+        bank_code: bankCode
+      }).eq('email', email);
+
+      if(updErr){
+        // Fallback if columns missing (you already ran SQL, but safe)
+        await supabaseClient.from('users').update({is_approved: true}).eq('email', email);
+        alert(`✅ Approved! Subaccount: ${subCode}\n\nNote: Could not save subaccount code to DB (${updErr.message}). You already ran SQL, so check column exists.\nName: ${data.data.account_name}\nYou keep 10%`);
+      } else {
+        alert(`✅ VENDOR APPROVED & LINKED!\n\nName: ${data.data.account_name}\nBank: ${data.data.settlement_bank}\nSubaccount: ${subCode}\n\nSplit: You 10% / Vendor 90% auto!`);
+      }
+
+    }catch(err){
+      console.error(err);
+      alert('❌ Paystack Failed: ' + err.message + '\n\nCheck: 1) Vendor Opay number correct? 2) Edge Function deployed? 3) Paystack secret key set?\n\nYou can retry Approve.');
+      load();
+      return;
+    }
+  } else {
+    // Agent approval or suspending
+    await supabaseClient.from('users').update({is_approved: status}).eq('email',email);
+    alert(`Account ${status?'Approved':'Suspended'}!`);
+  }
   load();
 }
+
 setInterval(()=>{ document.querySelectorAll('.admin-timer').forEach(el=>{ const start = el.getAttribute('data-start'); if(start && start!=='null' && start!=='undefined'){ el.innerHTML = formatAdminCountdown(start); } }); },1000);
 setInterval(load, 40000);
 load();
