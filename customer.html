@@ -193,19 +193,20 @@ function showTab(t){
 }
 
 function formatCustomerCountdown(orderId, startTime){
-  if(!startTime) return `<div style="background:#fff7ed;border:2px dashed #f97316;padding:12px;border-radius:14px;margin-top:12px;text-align:center;font-weight:900;color:#c2410c">⏰ Rider on the way - Timer starting...</div>`;
+  if(!startTime) return `<div class="customer-timer" data-order="${orderId}" data-start="${startTime}" style="background:#fff7ed;border:2px dashed #f97316;padding:12px;border-radius:14px;margin-top:12px;text-align:center;font-weight:900;color:#c2410c">⏰ Rider on the way - Timer starting...</div>`;
   const end = new Date(startTime).getTime() + TWO_HOURS_MS;
   const diff = end - new Date().getTime();
   if(diff <= 0) {
     autoMarkFailed(orderId);
-    return `<div style="background:#fee2e2;border:3px solid #dc2626;color:#dc2626;padding:16px;border-radius:14px;margin-top:12px;text-align:center;font-weight:900;font-size:15px">❌ DELIVERY TIME EXPIRED - FAILED</div>`;
+    return `<div class="customer-timer" data-order="${orderId}" data-start="${startTime}" style="background:#fee2e2;border:3px solid #dc2626;color:#dc2626;padding:16px;border-radius:14px;margin-top:12px;text-align:center;font-weight:900;font-size:15px">❌ DELIVERY TIME EXPIRED - FAILED</div>`;
   }
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
   const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
-  return `<div style="background:linear-gradient(135deg,#ffffff,#fef3c7);border:3px solid #f59e0b;padding:16px;border-radius:16px;margin-top:12px;text-align:center;box-shadow:0 6px 20px rgba(245,158,11,0.35)">
+  return `<div class="customer-timer" data-order="${orderId}" data-start="${startTime}" style="background:linear-gradient(135deg,#ffffff,#fef3c7);border:3px solid #f59e0b;padding:16px;border-radius:16px;margin-top:12px;text-align:center;box-shadow:0 6px 20px rgba(245,158,11,0.35)">
     <div style="font-size:11px;font-weight:900;letter-spacing:2px;color:#92400e;background:#fde68a;display:inline-block;padding:3px 12px;border-radius:20px">⏰ DELIVERY COUNTDOWN</div>
-    <div style="font-size:34px;font-weight:900;color:#dc2626;margin:8px 0;letter-spacing:1px;line-height:1">${h}h ${String(m).padStart(2,'0')}m</div>
+    <div class="countdown-time" style="font-size:34px;font-weight:900;color:#dc2626;margin:8px 0;letter-spacing:1px;line-height:1">${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s</div>
     <div style="font-size:12px;font-weight:800;color:#78350f">Picked at: ${pickedUpTime} • Auto-fail in 2hrs</div>
   </div>`;
 }
@@ -625,10 +626,31 @@ async function submitRating(id){
   if(error) alert(error.message);
   else { delete tempRating[id]; alert('Thank you for your feedback! 🙏'); loadOrders(); }
 }
-// FIXED: Removed 1-second per-second interval. Now only 60 seconds slow refresh and preserves open folds
+// LIVE per-second: updates ONLY the numbers, not whole page - fold stays open
+setInterval(()=>{
+  document.querySelectorAll('.customer-timer').forEach(el=>{
+    const orderId = el.getAttribute('data-order');
+    const start = el.getAttribute('data-start');
+    if(!start || start==='null' || start==='undefined' || start==='') return;
+    const end = new Date(start).getTime() + TWO_HOURS_MS;
+    const diff = end - new Date().getTime();
+    const timeEl = el.querySelector('.countdown-time');
+    if(!timeEl) return;
+    if(diff <= 0){
+      timeEl.innerText = "EXPIRED";
+      autoMarkFailed(orderId);
+      return;
+    }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    timeEl.innerText = `${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+  });
+},1000);
+// Slow status refresh every 30s - preserves open details
 setInterval(()=>{
   if(document.getElementById('view-orders') &&!document.getElementById('view-orders').classList.contains('hidden') &&!isUserInteracting){
     loadOrders();
   }
-}, 60000);
+}, 30000);
 </script></body></html>
