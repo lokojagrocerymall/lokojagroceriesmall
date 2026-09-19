@@ -487,7 +487,7 @@ async function updateStatus(email, status){
 }
 
 setInterval(()=>{ document.querySelectorAll('.admin-timer').forEach(el=>{ const start = el.getAttribute('data-start'); if(start && start!=='null' && start!=='undefined'){ el.innerHTML = formatAdminCountdown(start); } }); },1000);
-setInterval(load, 40000);
+setInterval(load, 80000);
 load();
 </script>
 </body>
