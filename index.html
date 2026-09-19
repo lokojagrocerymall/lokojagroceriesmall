@@ -1,143 +1,189 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://checkout.flutterwave.com/v3.js"></script><style>body{font-family:system-ui;background:#f8fafc}</style></head><body>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lokoja Grocery Mall</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://checkout.flutterwave.com/v3.js"></script>
+<style>body{font-family:system-ui;background:#f8fafc}</style>
+</head>
+<body>
 <div style="background:#facc15;text-align:center;padding:7px;font-size:12px;font-weight:900">⏰ OPEN: Mon-Sat 8AM-6PM • Sunday CLOSED</div>
-<header class="bg-white shadow-sm sticky top-0 z-50 px-4 py-3 flex justify-between items-center"><div class="flex items-center gap-3" onclick="location.href='index.html'" style="cursor:pointer"><img src="logo.png" style="width:48px;height:48px;border-radius:10px"><span style="font-size:21px;font-weight:900;color:#166534">Lokoja Grocery Mall</span></div><div class="flex items-center gap-3"><div onclick="showCheckout()" class="relative cursor-pointer"><span style="font-size:26px">🛒</span><span id="cartCount" class="absolute -top-2 -right-2 bg-green-600 text-white text-[11px] font-black rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></div><button onclick="document.getElementById('menu').classList.toggle('hidden')" style="font-size:26px">☰</button></div></header>
-<div id="menu" class="hidden bg-white border-b p-4 space-y-2 text-sm font-bold"><a href="browse.html" class="block py-2">🛍️ Browse</a><a href="#" onclick="showDeliveryLogin()" class="block py-2">🔐 Login</a><a href="signup.html" class="block py-2 text-green-600">➕ Sign Up</a></div>
-<div id="checkoutSection" class="hidden p-4"><div class="bg-white rounded-2xl p-4 shadow-sm mb-3"><h2 class="font-black mb-3">📦 Checkout</h2><div id="cartSummary"></div><button onclick="clearCartNow()" class="mt-3 text-xs text-red-500 font-bold underline">Clear Cart</button></div><div class="bg-white rounded-2xl p-4 shadow-sm"><h3 class="font-black mb-3">Delivery Details</h3><input id="cName" placeholder="Full Name" class="w-full p-3 border rounded-lg mb-3"><input id="cPhone" placeholder="Phone 080..." class="w-full p-3 border rounded-lg mb-3"><input id="cAddress" placeholder="Address in Lokoja" class="w-full p-3 border rounded-lg mb-3"><div id="minOrderAlert" class="hidden mb-3 p-3 rounded-xl text-[13px] font-black text-center"></div><button id="payBtn" class="w-full bg-green-600 text-white py-3 rounded-xl font-black" onclick="payWithFlutterwave()">Pay Now With Flutterwave</button><p class="text-xs text-gray-500 mt-2 text-center">Min order ₦20,000 • Vendor 90% + ₦5k delivery</p></div></div>
-<div id="homeSection"><div class="mx-4 mt-4 bg-gradient-to-br from-green-600 to-green-800 rounded-[20px] p-6 text-white text-center"><div class="inline-block bg-white/20 px-3 py-1 rounded-full text-xs font-bold mb-3">📍 Lokoja</div><h1 class="text-[26px] font-black mb-4">Fresh groceries from local<br>vendors</h1><div class="flex gap-2 max-w-md mx-auto"><input id="searchInput" placeholder="Search rice, yam..." class="flex-1 p-3.5 rounded-xl text-black text-sm outline-none" onkeyup="if(event.key==='Enter') doSearch()"><button onclick="doSearch()" class="bg-white text-green-700 px-5 rounded-xl font-black text-sm">Search</button></div></div><div class="p-4"><h2 class="font-black mb-3">Shop by Category</h2><div class="grid grid-cols-3 gap-3"><button onclick="goCat('Fruits')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🥬<br>Fruits</button><button onclick="goCat('Meat & Fish')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🐟<br>Meat & Fish</button><button onclick="goCat('Foodstuff')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🌾<br>Foodstuff</button><button onclick="goCat('Drinks')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🥤<br>Drinks</button><button onclick="goCat('Household')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🏠<br>Household</button><button onclick="goCat('Baby')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">👶<br>Baby</button></div></div><div class="px-4 pb-10"><div id="productsGrid" class="grid grid-cols-2 gap-3"><div class="col-span-2 text-center text-sm text-gray-400 py-10">Loading...</div></div></div></div>
-<footer class="bg-white border-t p-6 text-center"><b>Lokoja Grocery Mall</b><br><span class="text-xs text-gray-500">Mon-Sat 8AM-6PM • Sunday CLOSED</span></footer>
+
+<header class="bg-white shadow-sm sticky top-0 z-50 px-4 py-3 flex justify-between items-center">
+<div class="flex items-center gap-3" onclick="location.href='index.html'" style="cursor:pointer">
+<img src="logo.png" style="width:48px;height:48px;border-radius:10px">
+<span style="font-size:21px;font-weight:900;color:#166534">Lokoja Grocery Mall</span>
+</div>
+<div class="flex items-center gap-3">
+<div onclick="showCheckout()" class="relative cursor-pointer"><span style="font-size:26px">🛒</span><span id="cartCount" class="absolute -top-2 -right-2 bg-green-600 text-white text-[11px] font-black rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></div>
+<button onclick="document.getElementById('menu').classList.toggle('hidden')" style="font-size:26px">☰</button>
+</div>
+</header>
+
+<div id="menu" class="hidden bg-white border-b p-4 space-y-2 text-sm font-bold">
+<a href="browse.html" class="block py-2">🛍️ Browse</a>
+<a href="#" onclick="showDeliveryLogin()" class="block py-2">🔐 Login</a>
+<a href="signup.html" class="block py-2 text-green-600">➕ Sign Up</a>
+</div>
+
+<div id="checkoutSection" class="hidden p-4">
+<div class="bg-white rounded-2xl p-4 shadow-sm mb-3">
+<h2 class="font-black mb-3">📦 Checkout</h2><div id="cartSummary"></div>
+<button onclick="clearCartNow()" class="mt-3 text-xs text-red-500 font-bold underline">Clear Cart</button>
+</div>
+<div class="bg-white rounded-2xl p-4 shadow-sm">
+<h3 class="font-black mb-3">Delivery Details</h3>
+<input id="cName" placeholder="Full Name" class="w-full p-3 border rounded-lg mb-3">
+<input id="cPhone" placeholder="Phone 080..." class="w-full p-3 border rounded-lg mb-3">
+<input id="cAddress" placeholder="Address in Lokoja" class="w-full p-3 border rounded-lg mb-3">
+<div id="minOrderAlert" class="hidden mb-3 p-3 rounded-xl text-[13px] font-black text-center"></div>
+<button id="payBtn" class="w-full bg-green-600 text-white py-3 rounded-xl font-black" onclick="payWithFlutterwave()">Pay Now With Flutterwave</button>
+<p class="text-xs text-gray-500 mt-2 text-center">Min order ₦20,000 • Vendor 90% + ₦5k delivery</p>
+</div>
+</div>
+
+<div id="homeSection">
+<div class="mx-4 mt-4 bg-gradient-to-br from-green-600 to-green-800 rounded-[20px] p-6 text-white text-center">
+<div class="inline-block bg-white/20 px-3 py-1 rounded-full text-xs font-bold mb-3">📍 Lokoja</div>
+<h1 class="text-[26px] font-black mb-4">Fresh groceries from local<br>vendors</h1>
+<div class="flex gap-2 max-w-md mx-auto">
+<input id="searchInput" placeholder="Search rice, yam..." class="flex-1 p-3.5 rounded-xl text-black text-sm outline-none" onkeyup="if(event.key==='Enter') doSearch()">
+<button onclick="doSearch()" class="bg-white text-green-700 px-5 rounded-xl font-black text-sm">Search</button>
+</div>
+</div>
+<div class="p-4">
+<h2 class="font-black mb-3">Shop by Category</h2>
+<div class="grid grid-cols-3 gap-3">
+<button onclick="goCat('Fruits')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🥬<br>Fruits</button>
+<button onclick="goCat('Meat & Fish')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🐟<br>Meat & Fish</button>
+<button onclick="goCat('Foodstuff')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🌾<br>Foodstuff</button>
+<button onclick="goCat('Drinks')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🥤<br>Drinks</button>
+<button onclick="goCat('Household')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🏠<br>Household</button>
+<button onclick="goCat('Baby')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">👶<br>Baby</button>
+</div>
+</div>
+<div class="px-4 pb-10"><div id="productsGrid" class="grid grid-cols-2 gap-3"><div class="col-span-2 text-center text-sm text-gray-400 py-10">Loading...</div></div></div>
+</div>
+
+<footer class="bg-[#0f172a] text-slate-400 mt-10">
+  <div class="max-w-6xl mx-auto px-6 py-10">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+        <img src="logo.png" alt="LGM" class="w-10 h-10 object-contain">
+      </div>
+      <h2 class="text-white font-bold text-[20px]">Lokoja Grocery Mall</h2>
+    </div>
+    <p class="text-[15px] leading-6 max-w-xl mb-8">Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State. Fresh produce, meat, foodstuff and more — delivered to your door.</p>
+    <div class="grid grid-cols-2 gap-8">
+      <div>
+        <h3 class="text-white font-bold mb-3">Shop</h3>
+        <ul class="space-y-2 text-[15px]">
+          <li><a href="browse.html" class="hover:text-white">All Products</a></li>
+          <li><a href="browse.html" class="hover:text-white">Vendors</a></li>
+          <li><a href="browse.html?cat=Fruits" class="hover:text-white">Fruits & Vegetables</a></li>
+          <li><a href="browse.html?cat=Meat & Fish" class="hover:text-white">Meat & Fish</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-white font-bold mb-3">Account</h3>
+        <ul class="space-y-2 text-[15px]">
+          <li><a href="customer.html" class="hover:text-white">My Orders</a></li>
+          <li><a href="#" onclick="showCheckout();return false;" class="hover:text-white">Cart</a></li>
+          <li><a href="signup.html" class="hover:text-white">Become a Vendor</a></li>
+          <li><a href="#" onclick="showDeliveryLogin();return false;" class="hover:text-white">Sign In</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-8">
+      <h3 class="text-white font-bold mb-3">Contact</h3>
+      <div class="space-y-2 text-[15px]">
+        <div>Lokoja, Kogi State</div>
+        <div><a href="tel:08052941223" class="hover:text-white">08052941223</a></div>
+        <div>lokojagrocerymall@gmail.com</div>
+      </div>
+    </div>
+    <div class="border-t border-slate-800 mt-10 pt-6 text-center text-[13px] text-slate-500">© 2026 Lokoja Grocery Mall. All rights reserved.</div>
+  </div>
+</footer>
+
 <script>
-const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
+const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let delivery=5000;let total=0;const MIN_ORDER=20000;
 (function(){if(localStorage.getItem('cart'))localStorage.removeItem('cart');if(localStorage.getItem('lgm_cart')&&localStorage.getItem('lgm_cart').includes('"quantity"'))localStorage.removeItem('lgm_cart');})();
 supabaseClient.auth.getUser().then(async({data:{user}})=>{if(user){const{data:userData}=await supabaseClient.from('users').select('role,is_approved').eq('id',user.id).maybeSingle();if(userData&&userData.role!=='customer'&&userData.role!=='admin'&&userData.is_approved===false){await supabaseClient.auth.signOut();localStorage.removeItem('lgm_user');alert("Pending Approval");location.href='index.html#login';}}});
-function doSearch(){const q=document.getElementById('searchInput').value.trim();if(q)location.href='browse.html?q='+encodeURIComponent(q);}function goCat(c){location.href='browse.html?cat='+encodeURIComponent(c);}
+function doSearch(){const q=document.getElementById('searchInput').value.trim();if(q)location.href='browse.html?q='+encodeURIComponent(q);}
+function goCat(c){location.href='browse.html?cat='+encodeURIComponent(c);}
 function updateCart(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let count=cart.reduce((s,i)=>s+(Number(i.qty)||0),0);let badge=document.getElementById('cartCount');badge.innerText=count;if(count>0){badge.classList.remove('hidden');badge.classList.add('flex');}else{badge.classList.add('hidden');badge.classList.remove('flex');}}
 function clearCartNow(){if(!confirm('Clear cart?'))return;localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');updateCart();showCart();}
 function showCheckout(){document.getElementById('homeSection').classList.add('hidden');document.getElementById('checkoutSection').classList.remove('hidden');showCart();window.scrollTo(0,0);}
 function showCart(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let alertBox=document.getElementById('minOrderAlert');let payBtn=document.getElementById('payBtn');if(cart.length===0){document.getElementById('cartSummary').innerHTML="<p class='text-center text-gray-400 py-4'>Cart empty</p>";if(alertBox)alertBox.classList.add('hidden');if(payBtn){payBtn.disabled=true;payBtn.style.opacity='0.5';}return;}let h='';total=0;cart.forEach(item=>{total+=item.price*item.qty;h+=`<div class="flex justify-between text-sm mb-1"><span>${item.name} x${item.qty}</span><span>₦${(item.price*item.qty).toLocaleString()}</span></div>`;});h+=`<hr class="my-2"><div class="flex justify-between text-sm">Delivery: <span>₦${delivery.toLocaleString()}</span></div><div class="flex justify-between font-black mt-1">Total: <span>₦${(total+delivery).toLocaleString()}</span></div><div class="text-[11px] text-gray-500 mt-1">Items: ₦${total.toLocaleString()} ${total<MIN_ORDER?'(Min ₦20k)':'✓'}</div>`;document.getElementById('cartSummary').innerHTML=h;if(total<MIN_ORDER){let need=MIN_ORDER-total;if(alertBox){alertBox.classList.remove('hidden');alertBox.className="mb-3 p-3 rounded-xl text-[13px] font-black text-center bg-red-100 text-red-700 border border-red-200";alertBox.innerHTML=`❌ Min ₦20k - Add ₦${need.toLocaleString()} more`;}if(payBtn){payBtn.disabled=true;payBtn.style.opacity='0.5';payBtn.innerText=`Add ₦${need.toLocaleString()} More`;}}else{if(alertBox){alertBox.classList.remove('hidden');alertBox.className="mb-3 p-3 rounded-xl text-[13px] font-black text-center bg-green-100 text-green-700 border border-green-200";alertBox.innerHTML=`✅ Eligible!`;}if(payBtn){payBtn.disabled=false;payBtn.style.opacity='1';payBtn.innerText=`Pay Now With Flutterwave`;}}}
 function payWithFlutterwave(){const curUser=JSON.parse(localStorage.getItem('lgm_user'));if(!curUser){alert('Login first');showDeliveryLogin();return;}const name=document.getElementById('cName').value.trim();const phone=document.getElementById('cPhone').value.trim();const address=document.getElementById('cAddress').value.trim();if(!name||!phone||!address)return alert('Fill all fields');let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');if(cart.length===0){alert('Cart empty');return;}let calcTotal=0;cart.forEach(i=>calcTotal+=i.price*i.qty);total=calcTotal;if(total<MIN_ORDER){let need=MIN_ORDER-total;alert(`❌ Minimum is ₦${MIN_ORDER.toLocaleString()}\nYour cart: ₦${total.toLocaleString()}\nAdd ₦${need.toLocaleString()} more`);showCart();return;}const vendorSubaccounts={"emiguni.test@gmail.com":"RS_B21E99467BC252AB12248D9144B47E1F","deborah.test@gmail.com":"RS_2E5BAAE79F5E3758D3D477C350701B00"};const vendorTotals={};cart.forEach(item=>{if(item.vendor_email&&vendorSubaccounts[item.vendor_email]){vendorTotals[item.vendor_email]=(vendorTotals[item.vendor_email]||0)+item.price*item.qty;}});const subaccounts=Object.keys(vendorTotals).map(email=>({id:vendorSubaccounts[email],transaction_charge_type:"flat_subaccount",transaction_charge:Math.round(vendorTotals[email]*0.9)}));FlutterwaveCheckout({public_key:"FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X",tx_ref:"lgm_"+Date.now(),amount:total+delivery,currency:"NGN",customer:{email:curUser.email,name:name,phone_number:phone},customizations:{title:"Lokoja Grocery Mall"},subaccounts:subaccounts.length>0?subaccounts:undefined,callback:function(r){saveOrder(r.tx_ref||"lgm_"+Date.now(),name,phone,address,total+delivery);},onclose:function(){}});}
 async function saveOrder(tx_ref,name,phone,address,grandTotal){const curUser=JSON.parse(localStorage.getItem('lgm_user'));const cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let sub=cart.reduce((s,i)=>s+i.price*i.qty,0);if(sub<MIN_ORDER){alert(`Blocked - Less than ₦${MIN_ORDER.toLocaleString()}`);return;}try{const{data:order,error}=await supabaseClient.from('orders').insert({tx_ref:tx_ref,customer_id:curUser.id,customer_name:name,customer_email:curUser.email,customer_phone:phone,customer_address:address,items:cart,subtotal:sub,delivery_fee:delivery,total:grandTotal,payment_status:true,status:'paid'}).select().single();if(error)throw error;localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');try{await supabaseClient.from('carts').delete().eq('customer_id',curUser.id);}catch(e){}updateCart();try{await supabaseClient.from('vendor_orders').insert({order_id:order.id,vendor_id:cart[0]?.vendor_id||null,vendor_email:cart[0]?.vendor_email||null,items:cart,subtotal:sub,status:'new'});}catch(vErr){}try{await supabaseClient.from('delivery_assignments').insert({order_id:order.id,status:'pending_pickup',customer_id:curUser.id,customer_address:address,customer_phone:phone,items_summary:cart.map(i=>`${i.name}x${i.qty}`).join(', ')});}catch(dErr){}alert('✅ Payment Successful! Order #'+order.id);window.location.replace('customer.html');}catch(err){console.error(err);localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');updateCart();alert('Payment ok but save issue: '+err.message);window.location.replace('customer.html');}}
-
-// ===== FIXED: HIDE SUSPENDED VENDORS CATALOG =====
 async function loadProducts(){
   try{
-    // 1. Get only ACTIVE vendors
     const {data: activeVendors, error: vError} = await supabaseClient.from('users').select('email').eq('role','vendor').eq('is_approved', true);
     if(vError) throw vError;
     const activeEmails = (activeVendors||[]).map(u=> String(u.email).toLowerCase().trim());
-
-    if(activeEmails.length===0){
-      document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No active vendors</div>';
-      return;
-    }
-
-    // 2. Load products that are approved AND belong to active vendors
+    if(activeEmails.length===0){document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No active vendors</div>';return;}
     const {data,error}=await supabaseClient.from('products').select('*').eq('is_approved',true).order('created_at',{ascending:false}).limit(100);
     if(error) throw error;
-    if(!data||data.length===0){
-      document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products</div>';
-      return;
-    }
-
-    // 3. Filter out suspended vendors in JS (safest)
-    const filtered = data.filter(p=>{
-      if(!p.vendor_email) return false;
-      return activeEmails.includes(String(p.vendor_email).toLowerCase().trim());
-    });
-
-    if(filtered.length===0){
-      document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products from active vendors</div>';
-      return;
-    }
-
+    if(!data||data.length===0){document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products</div>';return;}
+    const filtered = data.filter(p=>{if(!p.vendor_email) return false;return activeEmails.includes(String(p.vendor_email).toLowerCase().trim());});
+    if(filtered.length===0){document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products from active vendors</div>';return;}
     let html='';
     filtered.forEach(p=>{
       const img=p.image||p.image_url||'';
       const imgTag=img?`<img src="${img}" class="h-full w-full object-cover rounded-xl">`:'🛒';
       const safeName=(p.name||'').replace(/'/g,"").replace(/"/g,'');
-      const vId=p.vendor_id||'';
-      const vEmail=p.vendor_email||'';
+      const vId=p.vendor_id||'';const vEmail=p.vendor_email||'';
       html+=`<div class="bg-white rounded-2xl p-3 shadow-sm"><div class="bg-gray-100 rounded-xl h-28 flex items-center justify-center text-3xl mb-2 overflow-hidden">${imgTag}</div><div class="font-bold text-[13px] truncate">${p.name}</div><div class="text-[11px] text-gray-500 truncate">${p.category||''}</div><div class="flex justify-between items-center mt-2"><b class="text-green-700 text-[13px]">₦${Number(p.price).toLocaleString()}</b><button onclick="addToCart(${p.id},'${safeName}',${p.price},'${img}','${vId}','${vEmail}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button></div></div>`;
     });
     document.getElementById('productsGrid').innerHTML=html;
-  }catch(err){
-    document.getElementById('productsGrid').innerHTML=`<div class="col-span-2 text-center text-sm text-red-400 py-10">Error: ${err.message}</div>`;
-  }
+  }catch(err){document.getElementById('productsGrid').innerHTML=`<div class="col-span-2 text-center text-sm text-red-400 py-10">Error: ${err.message}</div>`;}
 }
-
 function addToCart(id,name,price,image,vendor_id,vendor_email){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let f=cart.find(i=>i.id===id);if(f){f.qty++;}else{cart.push({id,name,price,image:image||'',vendor_id:vendor_id||null,vendor_email:vendor_email||null,qty:1});}localStorage.setItem('lgm_cart',JSON.stringify(cart));updateCart();alert(name+' added!');}
 updateCart();loadProducts();if(window.location.hash==='#checkout')showCheckout();
 </script>
+
 <div id="deliveryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-sm mx-4"><h1 class="text-2xl font-bold text-center text-green-700 mb-6">🔐 LGM Login</h1><input id="d_email" type="email" placeholder="Email" class="w-full p-3 border rounded-lg mb-3"><div class="relative mb-3"><input id="d_password" type="password" placeholder="Password" class="w-full p-3 border rounded-lg pr-10"><button type="button" onclick="togglePassword()" class="absolute right-3 top-3.5 text-xl">👁️</button></div><div class="text-right mb-4"><button type="button" onclick="forgotPassword()" class="text-xs text-green-600 font-bold">Forgot Password?</button></div><button onclick="deliveryLogin()" id="loginBtn" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold">Login</button><button onclick="hideDeliveryLogin()" class="w-full mt-2 text-gray-600">Cancel</button><p id="d_error" class="text-red-500 text-sm mt-3 text-center"></p></div></div>
+
 <script>
-let passVisible=false;function showDeliveryLogin(){document.getElementById('deliveryModal').classList.remove('hidden');}function hideDeliveryLogin(){document.getElementById('deliveryModal').classList.add('hidden');document.getElementById('d_error').innerText='';}function togglePassword(){const p=document.getElementById('d_password');passVisible=!passVisible;p.type=passVisible?'text':'password';}
+let passVisible=false;
+function showDeliveryLogin(){document.getElementById('deliveryModal').classList.remove('hidden');}
+function hideDeliveryLogin(){document.getElementById('deliveryModal').classList.add('hidden');document.getElementById('d_error').innerText='';}
+function togglePassword(){const p=document.getElementById('d_password');passVisible=!passVisible;p.type=passVisible?'text':'password';}
 async function forgotPassword(){const email=document.getElementById('d_email').value.trim();const e=document.getElementById('d_error');if(!email){e.innerText="Enter email first";return;}if(!confirm(`Send reset to ${email}?`))return;const{error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:'https://y-mall.vercel.app/'});if(error){e.innerText='Error: '+error.message;}else{e.className="text-green-600 text-sm mt-3 text-center";e.innerText='Reset link sent!';}}
-async function deliveryLogin(){const errorEl=document.getElementById('d_error');const btn=document.getElementById('loginBtn');errorEl.innerText="Checking...";btn.disabled=true;const email=document.getElementById('d_email').value.trim().toLowerCase();const password=document.getElementById('d_password').value.trim();if(!email||!password){errorEl.innerText="Enter email and password";btn.disabled=false;return;}try{const{data:authData,error:authError}=await supabaseClient.auth.signInWithPassword({email,password});if(authError)throw authError;const userId=authData.user.id;let{data:user}=await supabaseClient.from('users').select('*').eq('id',userId).maybeSingle();if(!user){const{data:newUser}=await supabaseClient.from('users').insert({id:userId,email:authData.user.email,full_name:authData.user_metadata?.full_name||'User',role:authData.user_metadata?.role||'customer',is_approved:true}).select().single();user=newUser;}if(user.role!=='customer'&&user.role!=='admin'&&user.is_approved===false){await supabaseClient.auth.signOut();errorEl.className="text-yellow-600 text-sm mt-3 text-center font-bold";errorEl.innerText=`⏳ Pending`;btn.disabled=false;return;}localStorage.setItem('lgm_user',JSON.stringify(user));errorEl.className="text-green-600 text-sm mt-3 text-center";errorEl.innerText="Login OK: "+user.role;setTimeout(()=>{if(user.role==='admin')location.href='admin.html';else if(user.role==='vendor')location.href='vendor.html';else if(user.role==='delivery_agent')location.href='delivery.html';else location.href='customer.html';},800);}catch(err){errorEl.className="text-red-500 text-sm mt-3 text-center";errorEl.innerText="Error: "+err.message;btn.disabled=false;}}
+async function deliveryLogin(){
+  const errorEl=document.getElementById('d_error');const btn=document.getElementById('loginBtn');
+  errorEl.innerText="Checking...";btn.disabled=true;
+  const email=document.getElementById('d_email').value.trim().toLowerCase();
+  const password=document.getElementById('d_password').value.trim();
+  if(!email||!password){errorEl.innerText="Enter email and password";btn.disabled=false;return;}
+  try{
+    const{data:authData,error:authError}=await supabaseClient.auth.signInWithPassword({email,password});
+    if(authError)throw authError;
+    const userId=authData.user.id;
+    let{data:user}=await supabaseClient.from('users').select('*').eq('id',userId).maybeSingle();
+    if(!user){
+      const{data:newUser}=await supabaseClient.from('users').insert({id:userId,email:authData.user.email,full_name:authData.user_metadata?.full_name||'User',role:authData.user_metadata?.role||'customer',is_approved:true}).select().single();
+      user=newUser;
+    }
+    if(user.role!=='customer'&&user.role!=='admin'&&user.is_approved===false){
+      await supabaseClient.auth.signOut();
+      errorEl.className="text-yellow-600 text-sm mt-3 text-center font-bold";
+      errorEl.innerText=`⏳ Pending`;btn.disabled=false;return;
+    }
+    localStorage.setItem('lgm_user',JSON.stringify(user));
+    errorEl.className="text-green-600 text-sm mt-3 text-center";
+    errorEl.innerText="Login OK: "+user.role;
+    setTimeout(()=>{if(user.role==='admin')location.href='admin.html';else if(user.role==='vendor')location.href='vendor.html';else if(user.role==='delivery_agent')location.href='delivery.html';else location.href='customer.html';},800);
+  }catch(err){errorEl.className="text-red-500 text-sm mt-3 text-center";errorEl.innerText="Error: "+err.message;btn.disabled=false;}
+}
 window.addEventListener('load',()=>{if(window.location.hash==='#login'){showDeliveryLogin();}});
 </script>
-  <!-- LOKOJA GROCERY MALL FOOTER -->
-<footer class="bg-[#0f172a] text-slate-400 mt-10">
-  <div class="max-w-6xl mx-auto px-6 py-10">
-    <!-- Brand -->
-    <div class="flex items-center gap-3 mb-4">
-      <div class="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-  <img src="logo.png" alt="LGM" class="w-10 h-10 object-contain">
-      </div>
-  <img src="logo.png" alt="LGM" class="w-10 h-10 object-contain">
-      </div>
-             onerror="this.outerHTML='<span class=text-white font-black text-[18px]>LGM</span>'">
-      </div>
-      <h2 class="text-white font-bold text-[20px]">Lokoja Grocery Mall</h2>
-    </div>
-
-    <p class="text-[15px] leading-6 max-w-xl mb-8">
-      Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State.
-      Fresh produce, meat, foodstuff and more — delivered to your door.
-    </p>
-
-    <div class="grid grid-cols-2 gap-8">
-      <!-- Shop -->
-      <div>
-        <h3 class="text-white font-bold mb-3">Shop</h3>
-        <ul class="space-y-2 text-[15px]">
-          <li><a href="/#products" class="hover:text-white">All Products</a></li>
-          <li><a href="/vendors" class="hover:text-white">Vendors</a></li>
-          <li><a href="/#category-fruits" class="hover:text-white">Fruits & Vegetables</a></li>
-          <li><a href="/#category-meat" class="hover:text-white">Meat & Fish</a></li>
-        </ul>
-      </div>
-      <!-- Account -->
-      <div>
-        <h3 class="text-white font-bold mb-3">Account</h3>
-        <ul class="space-y-2 text-[15px]">
-          <li><a href="customer.html#orders" class="hover:text-white">My Orders</a></li>
-          <li><a href="customer.html#cart" class="hover:text-white">Cart</a></li>
-          <li><a href="vendor-signup.html" class="hover:text-white">Become a Vendor</a></li>
-          <li><a href="login.html" class="hover:text-white">Sign In</a></li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- Contact -->
-    <div class="mt-8">
-      <h3 class="text-white font-bold mb-3">Contact</h3>
-      <div class="space-y-2 text-[15px]">
-        <div class="flex items-center gap-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          Lokoja, Kogi State
-        </div>
-        <div class="flex items-center gap-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-          <a href="tel:08052941223" class="hover:text-white">08052941223</a>
-        </div>
-        <div class="hover:text-white">lokojagrocerymall@gmail.com</div>
-      </div>
-    </div>
-
-    <div class="border-t border-slate-800 mt-10 pt-6 text-center text-[13px] text-slate-500">
-      © 2026 Lokoja Grocery Mall. All rights reserved.
-    </div>
-  </div>
-</footer>
-</body></html>
+</body>
+</html>
