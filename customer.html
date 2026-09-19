@@ -422,7 +422,6 @@ async function payWithPaystack(e){
   const delivery = Math.round(subtotal * 0.05);
   const total = subtotal + delivery;
 
-  // --- PAYSTACK SPLIT: Fetch vendor subaccount ---
   const vendorEmails = [...new Set(cart.map(i=>i.vendor_email).filter(Boolean))];
   if(vendorEmails.length===0) return alert('No vendor email in cart products');
 
@@ -439,7 +438,7 @@ async function payWithPaystack(e){
     return;
   }
 
-  const platformFee = Math.round(total * 0.10 * 100); // 10% in kobo
+  const platformFee = Math.round(total * 0.10 * 100);
 
   isSubmitting = true;
   const btn = document.getElementById('placeOrderBtn');
@@ -536,6 +535,7 @@ async function loadOrders(){
   renderOrdersList();
 }
 
+// ===== FIXED: FOLDABLE CUSTOMER ORDERS WITH VENDOR INFO LIKE ADMIN =====
 function renderOrdersList(){
   let html='';
   customerOrdersCache.forEach(o=>{
@@ -558,21 +558,55 @@ function renderOrdersList(){
     const isOnTheWay = o.status === 'picked' || o.status === 'on the way';
     const startTime = o.picked_at || o.delivery_started_at || o.updated_at;
 
+    // Vendor breakdown (same as admin)
+    let itemsBreakdown = '';
+    if(o.items && Array.isArray(o.items) && o.items.length>0){
+      itemsBreakdown = `<div class="mt-2 bg-white border rounded-lg p-2"><b class="text-[11px] text-green-700">📦 Ordered Items & Vendors:</b><div class="mt-1 space-y-1">` +
+        o.items.map(it=>{
+          const vEmail = it.vendor_email || 'N/A';
+          const itemTotal = (Number(it.price)||0) * (Number(it.qty||it.quantity)||1);
+          return `<div class="flex justify-between text-[11px] border-b border-dashed py-1">
+            <span class="flex-1"><b>${it.name||it.product_name||'Item'}</b> x${it.qty||it.quantity||1} <span class="text-gray-500">@ ₦${Number(it.price||0).toLocaleString()}</span><br><span class="text-[10px] text-blue-600">👤 Vendor: ${vEmail}</span></span>
+            <span class="font-bold">₦${itemTotal.toLocaleString()}</span>
+          </div>`;
+        }).join('') +
+        `<div class="text-[11px] mt-2 pt-2 border-t flex justify-between"><span>Subtotal: <b>₦${Number(o.subtotal||0).toLocaleString()}</b></span><span>Delivery 5%: <b>₦${Number(o.delivery_fee||0).toLocaleString()}</b></span></div>` +
+        `</div></div>`;
+    } else {
+      itemsBreakdown = `<div class="mt-2 text-[10px] text-gray-400 italic">No items data</div>`;
+    }
+
     html += `<div class="bg-white p-3 rounded-2xl shadow">
       <div class="flex justify-between"><b>Order #${o.id}</b><span class="${statusColor} font-bold capitalize">${o.status}</span></div>
       <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
       <div class="text-xs text-gray-500 mt-1">📍 ${o.customer_address}</div>
       <div class="text-xs text-gray-500">📱 ${o.customer_phone}</div>
-      ${agentInfo}
       <div class="bg-gray-50 p-2 rounded-lg mt-2 text-center font-bold text-sm">${statusText}</div>
-      ${isOnTheWay? `<div class="customer-timer" data-order="${o.id}" data-start="${startTime}">${formatCustomerCountdown(o.id, startTime)}</div>` : ''}
-      ${isOnTheWay? `<button onclick="markDelivered(${o.id})" class="w-full mt-2 bg-green-600 text-white py-2 rounded-full font-bold">✓ Mark Delivered</button>` : ''}
-      ${buildRatingUI(o)}
+
+      <button onclick="toggleCustDetails(${o.id})" id="btn-${o.id}" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-[11px] font-black py-2 rounded-lg">
+        ▼ Show Items & Vendors
+      </button>
+
+      <div id="cust-details-${o.id}" class="hidden">
+        ${agentInfo}
+        ${itemsBreakdown}
+        ${isOnTheWay? `<div class="customer-timer" data-order="${o.id}" data-start="${startTime}">${formatCustomerCountdown(o.id, startTime)}</div>` : ''}
+        ${isOnTheWay? `<button onclick="markDelivered(${o.id})" class="w-full mt-2 bg-green-600 text-white py-2 rounded-full font-bold">✓ Mark Delivered</button>` : ''}
+        ${buildRatingUI(o)}
+      </div>
+
       <div class="text-xs text-gray-400 mt-2">${new Date(o.created_at).toLocaleString()}</div>
     </div>`;
   });
   document.getElementById('ordersList').innerHTML = html || 'No orders yet';
   attachStarEvents();
+}
+
+function toggleCustDetails(id){
+  const el = document.getElementById('cust-details-'+id);
+  const btn = document.getElementById('btn-'+id);
+  el.classList.toggle('hidden');
+  if(btn) btn.innerText = el.classList.contains('hidden')? '▼ Show Items & Vendors' : '▲ Hide Details';
 }
 
 async function markDelivered(orderId) {
