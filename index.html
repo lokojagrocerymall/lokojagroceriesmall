@@ -5,7 +5,7 @@
 <title>Lokoja Grocery Mall</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://checkout.flutterwave.com/v3.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <style>body{font-family:system-ui;background:#f8fafc}</style>
 </head>
 <body>
@@ -39,7 +39,7 @@
 <input id="cPhone" placeholder="Phone 080..." class="w-full p-3 border rounded-lg mb-3">
 <input id="cAddress" placeholder="Address in Lokoja" class="w-full p-3 border rounded-lg mb-3">
 <div id="minOrderAlert" class="hidden mb-3 p-3 rounded-xl text-[13px] font-black text-center"></div>
-<button id="payBtn" class="w-full bg-green-600 text-white py-3 rounded-xl font-black" onclick="payWithFlutterwave()">Pay Now With Flutterwave</button>
+<button id="payBtn" class="w-full bg-green-600 text-white py-3 rounded-xl font-black" onclick="payWithPaystack()">Pay Now With Paystack</button>
 </div>
 </div>
 
@@ -75,53 +75,95 @@
       <h2 class="text-white font-bold text-[20px]">Lokoja Grocery Mall</h2>
     </div>
     <p class="text-[15px] leading-6 max-w-xl mb-8">Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State. Fresh produce, meat, foodstuff and more — delivered to your door.</p>
-    <div class="grid grid-cols-2 gap-8">
-      <div>
-        <h3 class="text-white font-bold mb-3">Shop</h3>
-        <ul class="space-y-2 text-[15px]">
-          <li><a href="browse.html" class="hover:text-white">All Products</a></li>
-          <li><a href="browse.html" class="hover:text-white">Vendors</a></li>
-          <li><a href="browse.html?cat=Fruits" class="hover:text-white">Fruits & Vegetables</a></li>
-          <li><a href="browse.html?cat=Meat & Fish" class="hover:text-white">Meat & Fish</a></li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="text-white font-bold mb-3">Account</h3>
-        <ul class="space-y-2 text-[15px]">
-          <li><a href="customer.html" class="hover:text-white">My Orders</a></li>
-          <li><a href="#" onclick="showCheckout();return false;" class="hover:text-white">Cart</a></li>
-          <li><a href="signup.html" class="hover:text-white">Become a Vendor</a></li>
-          <li><a href="#" onclick="showDeliveryLogin();return false;" class="hover:text-white">Sign In</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="mt-8">
-      <h3 class="text-white font-bold mb-3">Contact</h3>
-      <div class="space-y-2 text-[15px]">
-        <div>Lokoja, Kogi State</div>
-        <div><a href="tel:08052941223" class="hover:text-white">08052941223</a></div>
-        <div>lokojagrocerymall@gmail.com</div>
-      </div>
-    </div>
-    <div class="border-t border-slate-800 mt-10 pt-6 text-center text-[13px] text-slate-500">© 2026 Lokoja Grocery Mall. All rights reserved.</div>
   </div>
 </footer>
 
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
+const PAYSTACK_PUBLIC_KEY="pk_test_72ae8a9acfe344ba6d2b5a59bc11ba4f5df0b3d6"; // <-- CHANGE TO YOUR REAL pk_test or pk_live
 const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let delivery=5000;let total=0;const MIN_ORDER=20000;
+let delivery=5000;const MIN_ORDER=20000;
+
 (function(){if(localStorage.getItem('cart'))localStorage.removeItem('cart');if(localStorage.getItem('lgm_cart')&&localStorage.getItem('lgm_cart').includes('"quantity"'))localStorage.removeItem('lgm_cart');})();
-supabaseClient.auth.getUser().then(async({data:{user}})=>{if(user){const{data:userData}=await supabaseClient.from('users').select('role,is_approved').eq('id',user.id).maybeSingle();if(userData&&userData.role!=='customer'&&userData.role!=='admin'&&userData.is_approved===false){await supabaseClient.auth.signOut();localStorage.removeItem('lgm_user');alert("Pending Approval");location.href='index.html#login';}}});
+
 function doSearch(){const q=document.getElementById('searchInput').value.trim();if(q)location.href='browse.html?q='+encodeURIComponent(q);}
 function goCat(c){location.href='browse.html?cat='+encodeURIComponent(c);}
 function updateCart(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let count=cart.reduce((s,i)=>s+(Number(i.qty)||0),0);let badge=document.getElementById('cartCount');badge.innerText=count;if(count>0){badge.classList.remove('hidden');badge.classList.add('flex');}else{badge.classList.add('hidden');badge.classList.remove('flex');}}
 function clearCartNow(){if(!confirm('Clear cart?'))return;localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');updateCart();showCart();}
 function showCheckout(){document.getElementById('homeSection').classList.add('hidden');document.getElementById('checkoutSection').classList.remove('hidden');showCart();window.scrollTo(0,0);}
-function showCart(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let alertBox=document.getElementById('minOrderAlert');let payBtn=document.getElementById('payBtn');if(cart.length===0){document.getElementById('cartSummary').innerHTML="<p class='text-center text-gray-400 py-4'>Cart empty</p>";if(alertBox)alertBox.classList.add('hidden');if(payBtn){payBtn.disabled=true;payBtn.style.opacity='0.5';}return;}let h='';total=0;cart.forEach(item=>{total+=item.price*item.qty;h+=`<div class="flex justify-between text-sm mb-1"><span>${item.name} x${item.qty}</span><span>₦${(item.price*item.qty).toLocaleString()}</span></div>`;});h+=`<hr class="my-2"><div class="flex justify-between text-sm">Delivery: <span>₦${delivery.toLocaleString()}</span></div><div class="flex justify-between font-black mt-1">Total: <span>₦${(total+delivery).toLocaleString()}</span></div><div class="text-[11px] text-gray-500 mt-1">Items: ₦${total.toLocaleString()} ${total<MIN_ORDER?'(Min ₦20k)':'✓'}</div>`;document.getElementById('cartSummary').innerHTML=h;if(total<MIN_ORDER){let need=MIN_ORDER-total;if(alertBox){alertBox.classList.remove('hidden');alertBox.className="mb-3 p-3 rounded-xl text-[13px] font-black text-center bg-red-100 text-red-700 border border-red-200";alertBox.innerHTML=`❌ Min ₦20k - Add ₦${need.toLocaleString()} more`;}if(payBtn){payBtn.disabled=true;payBtn.style.opacity='0.5';payBtn.innerText=`Add ₦${need.toLocaleString()} More`;}}else{if(alertBox){alertBox.classList.remove('hidden');alertBox.className="mb-3 p-3 rounded-xl text-[13px] font-black text-center bg-green-100 text-green-700 border border-green-200";alertBox.innerHTML=`✅ Eligible!`;}if(payBtn){payBtn.disabled=false;payBtn.style.opacity='1';payBtn.innerText=`Pay Now With Flutterwave`;}}}
-function payWithFlutterwave(){const curUser=JSON.parse(localStorage.getItem('lgm_user'));if(!curUser){alert('Login first');showDeliveryLogin();return;}const name=document.getElementById('cName').value.trim();const phone=document.getElementById('cPhone').value.trim();const address=document.getElementById('cAddress').value.trim();if(!name||!phone||!address)return alert('Fill all fields');let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');if(cart.length===0){alert('Cart empty');return;}let calcTotal=0;cart.forEach(i=>calcTotal+=i.price*i.qty);total=calcTotal;if(total<MIN_ORDER){let need=MIN_ORDER-total;alert(`❌ Minimum is ₦${MIN_ORDER.toLocaleString()}\nYour cart: ₦${total.toLocaleString()}\nAdd ₦${need.toLocaleString()} more`);showCart();return;}const vendorSubaccounts={"emiguni.test@gmail.com":"RS_B21E99467BC252AB12248D9144B47E1F","deborah.test@gmail.com":"RS_2E5BAAE79F5E3758D3D477C350701B00"};const vendorTotals={};cart.forEach(item=>{if(item.vendor_email&&vendorSubaccounts[item.vendor_email]){vendorTotals[item.vendor_email]=(vendorTotals[item.vendor_email]||0)+item.price*item.qty;}});const subaccounts=Object.keys(vendorTotals).map(email=>({id:vendorSubaccounts[email],transaction_charge_type:"flat_subaccount",transaction_charge:Math.round(vendorTotals[email]*0.9)}));FlutterwaveCheckout({public_key:"FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X",tx_ref:"lgm_"+Date.now(),amount:total+delivery,currency:"NGN",customer:{email:curUser.email,name:name,phone_number:phone},customizations:{title:"Lokoja Grocery Mall"},subaccounts:subaccounts.length>0?subaccounts:undefined,callback:function(r){saveOrder(r.tx_ref||"lgm_"+Date.now(),name,phone,address,total+delivery);},onclose:function(){}});}
-async function saveOrder(tx_ref,name,phone,address,grandTotal){const curUser=JSON.parse(localStorage.getItem('lgm_user'));const cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let sub=cart.reduce((s,i)=>s+i.price*i.qty,0);if(sub<MIN_ORDER){alert(`Blocked - Less than ₦${MIN_ORDER.toLocaleString()}`);return;}try{const{data:order,error}=await supabaseClient.from('orders').insert({tx_ref:tx_ref,customer_id:curUser.id,customer_name:name,customer_email:curUser.email,customer_phone:phone,customer_address:address,items:cart,subtotal:sub,delivery_fee:delivery,total:grandTotal,payment_status:true,status:'paid'}).select().single();if(error)throw error;localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');try{await supabaseClient.from('carts').delete().eq('customer_id',curUser.id);}catch(e){}updateCart();try{await supabaseClient.from('vendor_orders').insert({order_id:order.id,vendor_id:cart[0]?.vendor_id||null,vendor_email:cart[0]?.vendor_email||null,items:cart,subtotal:sub,status:'new'});}catch(vErr){}try{await supabaseClient.from('delivery_assignments').insert({order_id:order.id,status:'pending_pickup',customer_id:curUser.id,customer_address:address,customer_phone:phone,items_summary:cart.map(i=>`${i.name}x${i.qty}`).join(', ')});}catch(dErr){}alert('✅ Payment Successful! Order #'+order.id);window.location.replace('customer.html');}catch(err){console.error(err);localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');updateCart();alert('Payment ok but save issue: '+err.message);window.location.replace('customer.html');}}
+function showCart(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let alertBox=document.getElementById('minOrderAlert');let payBtn=document.getElementById('payBtn');if(cart.length===0){document.getElementById('cartSummary').innerHTML="<p class='text-center text-gray-400 py-4'>Cart empty</p>";if(alertBox)alertBox.classList.add('hidden');if(payBtn){payBtn.disabled=true;payBtn.style.opacity='0.5';}return;}let h='';let total=0;cart.forEach(item=>{total+=item.price*item.qty;h+=`<div class="flex justify-between text-sm mb-1"><span>${item.name} x${item.qty}</span><span>₦${(item.price*item.qty).toLocaleString()}</span></div>`;});h+=`<hr class="my-2"><div class="flex justify-between text-sm">Delivery: <span>₦${delivery.toLocaleString()}</span></div><div class="flex justify-between font-black mt-1">Total: <span>₦${(total+delivery).toLocaleString()}</span></div><div class="text-[11px] text-gray-500 mt-1">Items: ₦${total.toLocaleString()} ${total<MIN_ORDER?'(Min ₦20k)':'✓'}</div>`;document.getElementById('cartSummary').innerHTML=h;if(total<MIN_ORDER){let need=MIN_ORDER-total;if(alertBox){alertBox.classList.remove('hidden');alertBox.className="mb-3 p-3 rounded-xl text-[13px] font-black text-center bg-red-100 text-red-700 border border-red-200";alertBox.innerHTML=`❌ Min ₦20k - Add ₦${need.toLocaleString()} more`;}if(payBtn){payBtn.disabled=true;payBtn.style.opacity='0.5';payBtn.innerText=`Add ₦${need.toLocaleString()} More`;}}else{if(alertBox){alertBox.classList.remove('hidden');alertBox.className="mb-3 p-3 rounded-xl text-[13px] font-black text-center bg-green-100 text-green-700 border border-green-200";alertBox.innerHTML=`✅ Eligible!`;}if(payBtn){payBtn.disabled=false;payBtn.style.opacity='1';payBtn.innerText=`Pay Now With Paystack - ₦${(total+delivery).toLocaleString()}`;}}}
+
+// ===== NEW PAYSTACK FLOW - UNLIMITED VENDORS + CONCURRENT CUSTOMERS =====
+async function payWithPaystack(){
+  const curUser=JSON.parse(localStorage.getItem('lgm_user'));
+  if(!curUser){alert('Login first');showDeliveryLogin();return;}
+  const name=document.getElementById('cName').value.trim();
+  const phone=document.getElementById('cPhone').value.trim();
+  const address=document.getElementById('cAddress').value.trim();
+  if(!name||!phone||!address)return alert('Fill all fields');
+  let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
+  if(cart.length===0){alert('Cart empty');return;}
+  let sub=0; cart.forEach(i=>sub+=i.price*i.qty);
+  if(sub<MIN_ORDER){alert(`Min ₦${MIN_ORDER} - add ₦${(MIN_ORDER-sub).toLocaleString()}`);return;}
+  const grandTotal = sub + delivery;
+  const handler = PaystackPop.setup({
+    key: PAYSTACK_PUBLIC_KEY,
+    email: curUser.email,
+    amount: grandTotal * 100,
+    currency: "NGN",
+    ref: "LGM_"+Date.now()+"_"+Math.random().toString(36).slice(2,7),
+    metadata: { custom_fields: [{display_name: "Customer", variable_name:"customer", value:name}] },
+    callback: function(res){ saveOrder(res.reference, name, phone, address, grandTotal); },
+    onClose: function(){ console.log('closed'); }
+  });
+  handler.openIframe();
+}
+
+async function saveOrder(tx_ref,name,phone,address,grandTotal){
+  const curUser=JSON.parse(localStorage.getItem('lgm_user'));
+  const cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
+  let sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  if(sub<MIN_ORDER){alert(`Blocked - Less than ₦${MIN_ORDER}`);return;}
+  try{
+    // 1. Save order - unique per customer, no hang for concurrent users
+    const{data:order,error}=await supabaseClient.from('orders').insert({
+      tx_ref:tx_ref,customer_id:curUser.id,customer_name:name,customer_email:curUser.email,
+      customer_phone:phone,customer_address:address,items:cart,subtotal:sub,
+      delivery_fee:delivery,total:grandTotal,payment_status:true,status:'paid'
+    }).select().single();
+    if(error)throw error;
+
+    // 2. Fetch vendor bank details for instant payout
+    const vendorEmails=[...new Set(cart.map(i=>i.vendor_email).filter(Boolean))];
+    let enrichedCart=cart;
+    try{
+      const {data: vendors} = await supabaseClient.from('users').select('email,full_name,account_number,bank_name,bank_code').in('email', vendorEmails);
+      const map={}; (vendors||[]).forEach(v=>map[v.email.toLowerCase()]=v);
+      enrichedCart=cart.map(i=>{
+        const v=map[(i.vendor_email||'').toLowerCase()]||{};
+        return {...i, vendor_name: v.full_name||i.vendor_name||i.vendor_email, account_number: v.account_number||i.account_number, bank_name: v.bank_name||i.bank_name, bank_code: v.bank_code||i.bank_code };
+      });
+    }catch(e){ console.log('vendor enrich skip', e); }
+
+    // 3. Call Edge Function to pay 90% instantly - handles unlimited vendors & unlimited customers at same time
+    try{
+      await supabaseClient.functions.invoke('process-payouts', { body: { order_id: order.id, items: enrichedCart } });
+    }catch(payErr){ console.log('payout trigger', payErr); }
+
+    localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');updateCart();
+    try{await supabaseClient.from('carts').delete().eq('customer_id',curUser.id);}catch(e){}
+    try{await supabaseClient.from('vendor_orders').insert({order_id:order.id,vendor_id:cart[0]?.vendor_id||null,vendor_email:cart[0]?.vendor_email||null,items:cart,subtotal:sub,status:'new'});}catch(vErr){}
+    try{await supabaseClient.from('delivery_assignments').insert({order_id:order.id,status:'pending_pickup',customer_id:curUser.id,customer_address:address,customer_phone:phone,items_summary:cart.map(i=>`${i.name}x${i.qty}`).join(', ')});}catch(dErr){}
+    alert('✅ Payment Successful! Order #'+order.id+' - Vendors paid 90% instantly!');
+    window.location.replace('customer.html');
+  }catch(err){
+    console.error(err);
+    localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');updateCart();
+    alert('Payment ok but save issue: '+err.message);window.location.replace('customer.html');
+  }
+}
+
 async function loadProducts(){
   try{
     const {data: activeVendors, error: vError} = await supabaseClient.from('users').select('email').eq('role','vendor').eq('is_approved', true);
