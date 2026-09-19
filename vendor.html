@@ -46,9 +46,9 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 </div>
 <div class="card"><b id="vName">Welcome...</b><div id="vEmail" class="small"></div><div id="vBadge" class="small" style="color:green"></div></div>
 <div class="stats">
-<div class="stat"><div class="small">Products</div><h2 id="pCount" style="margin:0">0</h2></div>
+<div class="stat"><div class="small">Products</div><h2 id="pCount" style="margin:0">0</h2><div class="small" id="catalogWorth">Worth: ₦0</div></div>
 <div class="stat"><div class="small">Orders</div><h2 id="oCount" style="margin:0;color:#2563eb">0</h2></div>
-<div class="stat wallet"><div class="small">Wallet (90%)</div><h2 id="wallet" style="margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:18px">₦0</h2></div>
+<div class="stat wallet"><div class="small">Earned (90%)</div><h2 id="wallet" style="margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:18px">₦0</h2><div class="small" style="color:#dcfce7">Auto-paid via Paystack</div></div>
 </div>
 <div class="tabs">
 <span class="tab active" id="tab-products" onclick="setTab('products')">Products</span>
@@ -74,7 +74,7 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 </select>
 <button class="btn" onclick="addProduct()">Add Product</button>
 </div>
-<div class="card"><h3>My Products</h3><div id="productList"></div></div>
+<div class="card"><h3>My Products</h3><div class="small">Total catalog value: <b id="catalogTotal">₦0</b></div><div id="productList" style="margin-top:10px"></div></div>
 </div>
 
 <div id="view-orders" class="view">
@@ -95,15 +95,18 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 
 <div id="view-wallet" class="view">
 <div class="card">
-<h3>💰 My Wallet (90%)</h3>
+<h3>💰 My Earnings (90% Auto-Payout)</h3>
 <h1 id="walletBig" style="color:#16a34a;margin:0">₦0</h1>
-<div class="small">Available for withdrawal</div>
+<div class="small">Total earnings from orders - paid directly to your bank</div>
 <hr>
-<h4>Withdraw to Bank</h4>
-<input id="wAccount" placeholder="Account Number">
-<input id="wBank" placeholder="Bank Name e.g. Opay, GTB">
-<input id="wAmount" type="number" placeholder="Amount to withdraw ₦">
-<button class="btn" onclick="requestWithdrawal()">Request Withdrawal</button>
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:12px;border-radius:12px;margin:12px 0">
+<div class="small" style="color:#166534;font-weight:800">✅ How you get paid:</div>
+<div class="small" style="color:#166534">Your 90% is sent automatically to your bank (Opay/UBA) by Paystack immediately after customer pays. No need to request withdrawal.</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
+<div class="stat" style="background:#f8fafc"><div class="small">Products in Catalog</div><b id="walletProdCount">0 items</b></div>
+<div class="stat" style="background:#f8fafc"><div class="small">Catalog Value</div><b id="walletCatalogValue">₦0</b></div>
+</div>
 <div id="withdrawHistory" class="small" style="margin-top:12px"></div>
 </div>
 </div>
@@ -138,7 +141,6 @@ function setTab(name){
 }
 function logout(){ localStorage.removeItem('lgm_user'); window.location.href='/'; }
 
-// === BOLD VISIBLE TIMER FOR VENDOR - SAME AS CUSTOMER ===
 function formatVendorCountdown(startTime){
   if(!startTime) return `<div style="background:#fff7ed;border:2px dashed #f97316;padding:10px;border-radius:12px;margin-top:10px;text-align:center;font-weight:900;color:#c2410c">⏰ Rider picked - timer starting...</div>`;
   const end = new Date(startTime).getTime() + TWO_HOURS_MS;
@@ -163,7 +165,7 @@ function triggerAlert(){
 async function init(){
   document.getElementById('vName').innerText="Welcome, "+ (curUser.full_name || curUser.name || curUser.email.split('@')[0]);
   document.getElementById('vEmail').innerText=curUser.email;
-  document.getElementById('vBadge').innerText=curUser.is_approved? "✅ Approved Vendor • You keep 90%" : "⏳ Pending Approval";
+  document.getElementById('vBadge').innerText=curUser.is_approved? "✅ Approved Vendor • You keep 90% • Auto-paid via Paystack" : "⏳ Pending Approval";
   document.getElementById('profName').value=curUser.full_name || curUser.name;
   document.getElementById('profEmail').value=curUser.email;
   loadProducts(); loadOrders(); loadWallet();
@@ -174,6 +176,13 @@ async function loadProducts(){
   const {data} = await supabaseClient.from('products').select('*').eq('vendor_email', curUser.email);
   allProducts = data||[];
   document.getElementById('pCount').innerText=allProducts.length;
+  // CALCULATE TOTAL CATALOG VALUE
+  let catalogValue = 0;
+  allProducts.forEach(p=> { catalogValue += Number(p.price||0) * Number(p.stock||1); });
+  document.getElementById('catalogWorth').innerText = 'Worth: ₦' + catalogValue.toLocaleString();
+  document.getElementById('catalogTotal').innerText = '₦' + catalogValue.toLocaleString();
+  document.getElementById('walletProdCount').innerText = allProducts.length + ' items';
+  document.getElementById('walletCatalogValue').innerText = '₦' + catalogValue.toLocaleString();
   let h=''; allProducts.forEach(p=>{
     h+=`<div class="product-item">
       <img src="${p.image_url || 'https://placehold.co/60x60/e5e7eb/6b7280?text=No+Img'}" alt="">
@@ -289,7 +298,7 @@ function renderVendorOrders(){
       <div class="small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Address: ${o.customer_address}</div>
       ${agentInfo}
       <div style="margin-top:8px;font-size:12px"><b>Your Items:</b> ${o.items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
-      <div style="margin-top:4px"><b>Your Items Total:</b> ₦${myTotal.toLocaleString()} | <b>Your Cut 90%:</b> <span style="color:#16a34a;font-weight:700">₦${myCut.toLocaleString()}</span></div>
+      <div style="margin-top:4px"><b>Your Items Total:</b> ₦${myTotal.toLocaleString()} | <b>Your Cut 90%:</b> <span style="color:#16a34a;font-weight:700">₦${myCut.toLocaleString()} (auto-paid)</span></div>
       ${countdown}
     </div>`;
   });
@@ -314,19 +323,8 @@ function calcVendorWallet(){
   document.getElementById('salesMonth').innerText='₦'+Math.round(m).toLocaleString();
 }
 async function loadWallet(){
-  const {data} = await supabaseClient.from('withdrawals').select('*').eq('vendor_email', curUser.email).order('created_at',{ascending:false});
-  let h='<b>Withdrawal History:</b><br>';
-  data?.forEach(w=> h+=`₦${Number(w.amount).toLocaleString()} - ${w.status} - ${new Date(w.created_at).toLocaleDateString()}<br>`);
-  document.getElementById('withdrawHistory').innerHTML = h || 'No withdrawals yet';
-}
-async function requestWithdrawal(){
-  const amount = document.getElementById('wAmount').value;
-  const account = document.getElementById('wAccount').value;
-  const bank = document.getElementById('wBank').value;
-  if(!amount ||!account ||!bank) return alert('Fill all fields');
-  await supabaseClient.from('withdrawals').insert({vendor_email:curUser.email, amount, account_number:account, bank_name:bank, status:'pending'});
-  alert('Withdrawal request sent! Admin will approve in 24hrs');
-  document.getElementById('wAmount').value=''; loadWallet();
+  // No withdrawal needed - Paystack auto-pays
+  document.getElementById('withdrawHistory').innerHTML = '<div class="small" style="color:#16a34a">✅ All earnings are automatically transferred to your bank account via Paystack subaccount.<br>No withdrawal request needed.</div>';
 }
 async function saveProfile(){
   await supabaseClient.from('users').update({full_name: document.getElementById('profName').value}).eq('email', curUser.email);
@@ -334,7 +332,6 @@ async function saveProfile(){
   localStorage.setItem('lgm_user', JSON.stringify(curUser));
   alert('Profile Updated!'); init();
 }
-// LIVE COUNTING EVERY SECOND - BOLD TIMER
 setInterval(()=>{
   document.querySelectorAll('.vendor-timer').forEach(el=>{
     const start = el.getAttribute('data-start');
