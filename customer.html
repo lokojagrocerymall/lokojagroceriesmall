@@ -397,20 +397,16 @@ function renderCart(){
   }
 }
 
-// ===== FIXED PAYSTACK - UNLIMITED VENDORS + NO HANG =====
 async function payWithPaystack(e){
   e.preventDefault();
   if(isSubmitting) return;
-
   if(cart.length===0) return alert('Cart is empty');
-
   const subtotalCheck = cart.reduce((s,i)=> s + cleanPrice(i.price)*(Number(i.qty)||1),0);
   if(subtotalCheck < MIN_ORDER){
     const need = MIN_ORDER - subtotalCheck;
     alert(`❌ Minimum ₦${MIN_ORDER.toLocaleString()} - Add ₦${need.toLocaleString()} more`);
     renderCart(); return;
   }
-
   const locationSelect = document.getElementById('checkoutLocation').value;
   const customLocation = document.getElementById('customLocation').value;
   const finalLocation = locationSelect === 'Other'? customLocation : locationSelect;
@@ -419,23 +415,18 @@ async function payWithPaystack(e){
   const checkoutWhatsApp = document.getElementById('checkoutWhatsApp').value.trim();
   const checkoutPhone = document.getElementById('checkoutPhone').value.trim();
   if(!finalLocation ||!checkoutAddress ||!checkoutLandmark ||!checkoutWhatsApp ||!checkoutPhone) return alert('Fill all delivery details');
-
   const subtotal = cart.reduce((s,i)=> s + cleanPrice(i.price)*(Number(i.qty)||1),0);
   const delivery = Math.round(subtotal * 0.05);
   const total = subtotal + delivery;
-
-  // FIX: No more subaccount check - unlimited vendors allowed
   if(typeof PaystackPop === 'undefined'){
     alert('Paystack not loaded. Check internet and reload');
     return;
   }
-
   isSubmitting = true;
   const btn = document.getElementById('placeOrderBtn');
   btn.disabled = true;
   btn.innerText = 'Opening Paystack...';
-  document.getElementById('orderMsg').innerHTML='<span style="color:blue">🔄 Paystack opening... Vendors get 90% instantly after pay</span>';
-
+  document.getElementById('orderMsg').innerHTML='';
   try{
     let handler = PaystackPop.setup({
       key: PAYSTACK_PUBLIC_KEY,
@@ -450,11 +441,9 @@ async function payWithPaystack(e){
         ]
       },
       callback: function(response){
-        document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Paid Ref: '+response.reference+' Saving order...</span>';
         saveOrderAfterPayment(response.reference, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total);
       },
       onClose: function(){
-        document.getElementById('orderMsg').innerText='Payment closed';
         isSubmitting=false;
         btn.disabled=false;
         btn.innerHTML = `💳 Pay Now With Paystack - <span id="payAmount">₦${total.toLocaleString()}</span>`;
@@ -491,7 +480,6 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
     }).select().single();
     if(error) throw error;
 
-    // FIX: Trigger edge function for 90% instant payout to ALL vendors in cart (unlimited)
     try{
       const vendorEmails=[...new Set(cart.map(i=>i.vendor_email).filter(Boolean))];
       const {data: vendors} = await supabaseClient.from('users').select('email,full_name,account_number,bank_name,bank_code').in('email', vendorEmails);
@@ -500,18 +488,18 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
         const v=map[(i.vendor_email||'').toLowerCase()]||{};
         return {...i, vendor_name: v.full_name||i.vendor_email, account_number: v.account_number, bank_name: v.bank_name, bank_code: v.bank_code };
       });
-      supabaseClient.functions.invoke('process-payouts', { body: { order_id: order.id, items: enriched } }).then(r=>console.log('payout:',r)).catch(e=>console.log('payout err',e));
-    }catch(pe){ console.log('enrich skip', pe); }
+      supabaseClient.functions.invoke('process-payouts', { body: { order_id: order.id, items: enriched } });
+    }catch(pe){}
 
     localStorage.removeItem('lgm_cart');
     cart = [];
     try{ await supabaseClient.from('carts').delete().eq('customer_id', user.id); }catch(e){}
     saveCart();
-    document.getElementById('orderMsg').innerHTML = `<span style="color:green;font-weight:bold">✅ Paid! Order #${order.id} - Vendors paid 90% instantly!</span>`;
-    setTimeout(()=>{ showTab('orders'); isSubmitting=false; },1200);
+    // ONLY Payment Successful - no vendor text
+    document.getElementById('orderMsg').innerHTML = `<div style="background:#dcfce7;border:2px solid #16a34a;color:#166534;padding:12px;border-radius:12px;font-weight:900;text-align:center">✅ Payment Successful! Order #${order.id} placed</div>`;
+    setTimeout(()=>{ showTab('orders'); isSubmitting=false; },1500);
   }catch(err){
     alert("❌ SAVE FAILED:\n" + err.message);
-    document.getElementById('orderMsg').innerHTML = `<span style="color:red">${err.message}</span>`;
     isSubmitting=false;
     const btn = document.getElementById('placeOrderBtn');
     btn.disabled=false;
@@ -522,7 +510,6 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
 async function loadOrders(){
   const {data} = await supabaseClient.from('orders').select('*').eq('customer_email', user.email).in('status',['paid','picked','on the way','delivered','failed']).order('id',{ascending:false}).limit(100);
   customerOrdersCache = data || [];
-
   customerOrdersCache.forEach(o=>{
     if(lastOrderStatus[o.id] && lastOrderStatus[o.id]!== o.status){
       if(o.status === 'picked' || o.status === 'on the way') triggerAlert(`🚚 Order #${o.id} is On The Way!`);
@@ -530,12 +517,10 @@ async function loadOrders(){
     }
     lastOrderStatus[o.id] = o.status;
   });
-
   let hasActive = customerOrdersCache.some(o=> o.status==='picked' || o.status==='on the way' || o.status==='paid');
   const ordersTab = document.getElementById('tabOrders');
   if(hasActive){ ordersTab.classList.add('alert-tab'); }
   else { ordersTab.classList.remove('alert-tab'); }
-
   renderOrdersList();
 }
 
@@ -548,7 +533,6 @@ function renderOrdersList(){
     if(o.status === 'picked' || o.status === 'on the way'){ statusText = 'Order On The Way, Please Be Available'; statusColor = 'text-orange-500'; }
     if(o.status === 'delivered'){ statusText = 'Delivered'; statusColor = 'text-green-600'; }
     if(o.status === 'failed'){ statusText = 'Delivery Failed. Admin will contact you'; statusColor = 'text-red-600'; }
-
     let agentInfo = '';
     if((o.status === 'picked' || o.status === 'on the way') && o.delivery_agent_name){
       agentInfo = `<div class="bg-blue-50 p-2 rounded-lg mt-2">
@@ -557,10 +541,8 @@ function renderOrdersList(){
         <div class="text-xs">📞 ${o.delivery_agent_phone || ''}</div>
       </div>`;
     }
-
     const isOnTheWay = o.status === 'picked' || o.status === 'on the way';
     const startTime = o.picked_at || o.delivery_started_at || o.updated_at;
-
     let itemsBreakdown = '';
     if(o.items && Array.isArray(o.items) && o.items.length>0){
       itemsBreakdown = `<div class="mt-2 bg-white border rounded-lg p-2"><b class="text-[11px] text-green-700">📦 Ordered Items & Vendors:</b><div class="mt-1 space-y-1">` +
@@ -574,21 +556,14 @@ function renderOrdersList(){
         }).join('') +
         `<div class="text-[11px] mt-2 pt-2 border-t flex justify-between"><span>Subtotal: <b>₦${Number(o.subtotal||0).toLocaleString()}</b></span><span>Delivery 5%: <b>₦${Number(o.delivery_fee||0).toLocaleString()}</b></span></div>` +
         `</div></div>`;
-    } else {
-      itemsBreakdown = `<div class="mt-2 text-[10px] text-gray-400 italic">No items data</div>`;
     }
-
     html += `<div class="bg-white p-3 rounded-2xl shadow">
       <div class="flex justify-between"><b>Order #${o.id}</b><span class="${statusColor} font-bold capitalize">${o.status}</span></div>
       <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
       <div class="text-xs text-gray-500 mt-1">📍 ${o.customer_address}</div>
       <div class="text-xs text-gray-500">📱 ${o.customer_phone}</div>
       <div class="bg-gray-50 p-2 rounded-lg mt-2 text-center font-bold text-sm">${statusText}</div>
-
-      <button onclick="toggleCustDetails(${o.id})" id="btn-${o.id}" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-[11px] font-black py-2 rounded-lg">
-        ▼ Show Items & Vendors
-      </button>
-
+      <button onclick="toggleCustDetails(${o.id})" id="btn-${o.id}" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-[11px] font-black py-2 rounded-lg">▼ Show Items & Vendors</button>
       <div id="cust-details-${o.id}" class="hidden">
         ${agentInfo}
         ${itemsBreakdown}
@@ -596,7 +571,6 @@ function renderOrdersList(){
         ${isOnTheWay? `<button onclick="markDelivered(${o.id})" class="w-full mt-2 bg-green-600 text-white py-2 rounded-full font-bold">✓ Mark Delivered</button>` : ''}
         ${buildRatingUI(o)}
       </div>
-
       <div class="text-xs text-gray-400 mt-2">${new Date(o.created_at).toLocaleString()}</div>
     </div>`;
   });
@@ -610,17 +584,12 @@ function toggleCustDetails(id){
   el.classList.toggle('hidden');
   if(btn) btn.innerText = el.classList.contains('hidden')? '▼ Show Items & Vendors' : '▲ Hide Details';
 }
-
 async function markDelivered(orderId) {
   if(!confirm('Confirm you received this order?')) return;
-  const { error } = await supabaseClient.from('orders').update({
-      status: 'delivered',
-      delivered_at: new Date().toISOString()
-    }).eq('id', orderId);
+  const { error } = await supabaseClient.from('orders').update({ status: 'delivered', delivered_at: new Date().toISOString() }).eq('id', orderId);
   if(error) { alert('Error: ' + error.message); }
   else { alert('Thank you! Order marked delivered. Please rate us below 👇'); loadOrders(); }
 }
-
 function attachStarEvents(){
   document.querySelectorAll('[id^=stars-]').forEach(starBox=>{
     starBox.onclick = (e)=>{
@@ -636,23 +605,14 @@ function attachStarEvents(){
     }
   });
 }
-
 async function submitRating(id){
   const rating = tempRating[id];
   const review = document.getElementById(`review-${id}`).value;
   if(!rating){ alert('Please tap stars to rate'); return; }
-  const { error } = await supabaseClient.from('orders').update({
-    customer_rating: rating,
-    customer_review: review
-  }).eq('id', id);
+  const { error } = await supabaseClient.from('orders').update({ customer_rating: rating, customer_review: review }).eq('id', id);
   if(error) alert(error.message);
-  else {
-    delete tempRating[id];
-    alert('Thank you for your feedback! 🙏');
-    loadOrders();
-  }
+  else { delete tempRating[id]; alert('Thank you for your feedback! 🙏'); loadOrders(); }
 }
-
 setInterval(()=>{
   if(document.getElementById('view-orders') &&!document.getElementById('view-orders').classList.contains('hidden')){
     if(!isUserInteracting){
@@ -666,10 +626,9 @@ setInterval(()=>{
     }
   }
 },1000);
-
 setInterval(()=>{
   if(document.getElementById('view-orders') &&!document.getElementById('view-orders').classList.contains('hidden') &&!isUserInteracting){
     loadOrders();
   }
-}, 1000);
+}, 10000);
 </script></body></html>
