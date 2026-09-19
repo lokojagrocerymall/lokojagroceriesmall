@@ -18,108 +18,108 @@
 <body class="bg-gray-100">
 <header class="bg-white p-4 flex justify-between items-center shadow sticky top-0 z-20">
   <b class="text-green-700">Admin Dashboard</b>
-  <button onclick="localStorage.removeItem('lgm_user'); location.href='/';" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Logout</button>
+  <button onclick="localStorage.removeItem('lgm_user'); http://location.href='/';" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Logout</button>
 </header>
 
 <div class="p-3 max-w-5xl mx-auto">
   <div class="grid grid-cols-3 gap-2 mb-3">
     <div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden">
-      <div class="text-[10px] text-gray-400 leading-tight">Gross Sales</div>
-      <div class="text-[13px] sm:text-base font-black truncate" id="sales" title="₦0">₦0</div>
+      <div class="text- text-gray-400 leading-tight">Gross Sales</div>
+      <div class="text- sm:text-base font-black truncate" id="sales" title="₦0">₦0</div>
     </div>
     <div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden">
-      <div class="text-[10px] text-gray-400 leading-tight">Platform Income (15%)</div>
-      <div class="text-[13px] sm:text-base font-black text-green-600 truncate" id="income" title="₦0">₦0</div>
+      <div class="text- text-gray-400 leading-tight">Platform Income (10%)</div>
+      <div class="text- sm:text-base font-black text-green-600 truncate" id="income" title="₦0">₦0</div>
     </div>
     <div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden">
-      <div class="text-[10px] text-gray-400 leading-tight">Pending Approvals</div>
+      <div class="text- text-gray-400 leading-tight">Pending Approvals</div>
       <div class="text-xl font-black text-orange-600" id="pendingCount">0</div>
     </div>
-  </div>
+  </div>[10px][13px]
 
   <div class="grid grid-cols-3 gap-2 mb-3">
     <div class="bg-white p-2 rounded-xl shadow min-w-0">
-      <div class="text-[10px] font-bold text-gray-500 text-center mb-1">TODAY</div>
-      <div class="text-[10px] text-gray-400">Sales</div>
-      <div class="text-[12px] font-black truncate" id="dSales">₦0</div>
-      <div class="text-[10px] text-gray-400 mt-1">Income</div>
-      <div class="text-[12px] font-bold text-green-600 truncate" id="dIncome">₦0</div>
+      <div class="text- font-bold text-gray-500 text-center mb-1">TODAY</div>
+      <div class="text- text-gray-400">Sales</div>
+      <div class="text- font-black truncate" id="dSales">₦0</div>
+      <div class="text- text-gray-400 mt-1">Income</div>
+      <div class="text- font-bold text-green-600 truncate" id="dIncome">₦0</div>
     </div>
     <div class="bg-white p-2 rounded-xl shadow min-w-0">
-      <div class="text-[10px] font-bold text-gray-500 text-center mb-1">THIS WEEK</div>
-      <div class="text-[10px] text-gray-400">Sales</div>
-      <div class="text-[12px] font-black truncate" id="wSales">₦0</div>
-      <div class="text-[10px] text-gray-400 mt-1">Income</div>
-      <div class="text-[12px] font-bold text-green-600 truncate" id="wIncome">₦0</div>
+      <div class="text- font-bold text-gray-500 text-center mb-1">THIS WEEK</div>
+      <div class="text- text-gray-400">Sales</div>
+      <div class="text- font-black truncate" id="wSales">₦0</div>
+      <div class="text- text-gray-400 mt-1">Income</div>
+      <div class="text- font-bold text-green-600 truncate" id="wIncome">₦0</div>
     </div>
     <div class="bg-white p-2 rounded-xl shadow min-w-0">
-      <div class="text-[10px] font-bold text-gray-500 text-center mb-1">THIS MONTH</div>
-      <div class="text-[10px] text-gray-400">Sales</div>
-      <div class="text-[12px] font-black truncate" id="mSales">₦0</div>
-      <div class="text-[10px] text-gray-400 mt-1">Income</div>
-      <div class="text-[12px] font-bold text-green-600 truncate" id="mIncome">₦0</div>
+      <div class="text- font-bold text-gray-500 text-center mb-1">THIS MONTH</div>
+      <div class="text- text-gray-400">Sales</div>
+      <div class="text- font-black truncate" id="mSales">₦0</div>
+      <div class="text- text-gray-400 mt-1">Income</div>
+      <div class="text- font-bold text-green-600 truncate" id="mIncome">₦0</div>
     </div>
-  </div>
+  </div>[10px][12px]
 
   <div class="bg-white p-3 rounded-xl shadow mb-3">
     <div class="flex justify-between items-center mb-2">
-      <b class="text-[12px]">📊 Platform Returns (Mon - Sat)</b>
-      <span class="text-[10px] text-gray-400">Daily Sales vs Income (15%)</span>
+      <b class="text-">📊 Platform Returns (Mon - Sat)</b>
+      <span class="text- text-gray-400">Daily Sales vs Income (10%)</span>
     </div>
     <canvas id="returnsChart" height="180"></canvas>
-  </div>
+  </div>[12px][10px]
 
   <div class="bg-white rounded-xl shadow">
-    <div id="mainTabs" class="tabs-scroll flex border-b overflow-x-auto text-[11px] sticky top-[56px] bg-white z-10">
+    <div id="mainTabs" class="tabs-scroll flex border-b overflow-x-auto text- sticky top- bg-white z-10">
       <button onclick="showTab('pending')" id="btnP" class="flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap">Pending (<span id="cP">0</span>)</button>
       <button onclick="showTab('vendors')" id="btnV" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Active V (<span id="cV">0</span>)</button>
       <button onclick="showTab('suspended')" id="btnS" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Suspended (<span id="cS">0</span>)</button>
       <button onclick="showTab('agents')" id="btnA" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Agents (<span id="cA">0</span>)</button>
       <button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Orders (<span id="cO">0</span>)</button>
       <button onclick="showTab('finance')" id="btnF" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">💰 Finance</button>
-    </div>
+    </div>[11px][56px]
 
-    <div id="orderFilters" class="hidden flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b">
+    <div id="orderFilters" class="hidden flex gap-1 p-2 bg-gray-50 overflow-x-auto text- border-b">
       <button onclick="filterOrders('all')" id="fAll" class="px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap">All (<span id="fcAll">0</span>)</button>
       <button onclick="filterOrders('paid')" id="fPaid" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">🆕 New (<span id="fcPaid">0</span>)</button>
       <button onclick="filterOrders('onway')" id="fOnway" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">🚚 On Way (<span id="fcOnway">0</span>)</button>
       <button onclick="filterOrders('delivered')" id="fDel" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">✅ Delivered (<span id="fcDel">0</span>)</button>
       <button onclick="filterOrders('failed')" id="fFail" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">❌ Failed (<span id="fcFail">0</span>)</button>
-    </div>
+    </div>[11px]
 
     <div id="list" class="p-3 text-sm">Loading...</div>
   </div>
 </div>
 
-<div id="detailModal" class="fixed inset-0 bg-black/70 z-[999] hidden flex items-center justify-center p-3">
-  <div class="bg-white rounded-2xl max-w-[480px] w-full max-h-[92vh] overflow-y-auto shadow-2xl">
+<div id="detailModal" class="fixed inset-0 bg-black/70 z- hidden flex items-center justify-center p-3">
+  <div class="bg-white rounded-2xl max-w- w-full max-h- overflow-y-auto shadow-2xl">
     <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center rounded-t-2xl">
       <b class="text-green-700 text-sm">📋 Full Signup Details</b>
       <button onclick="closeModal()" class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">✕ Close</button>
     </div>
-    <div id="modalBody" class="p-4 text-[12px] leading-6"></div>
+    <div id="modalBody" class="p-4 text- leading-6"></div>
   </div>
-</div>
+</div>[999][480px][92vh][12px]
 
 <script>
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = http://supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let users=[], orders=[], tab='pending', orderSubTab='all', lastSeenOrderCount=0;
 let returnsChart = null;
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
-let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
-if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='/'; }
+const TWO_HOURS_MS = 2 _ 60 _ 60 _ 1000;
+let curUser = http://JSON.parse(localStorage.getItem('lgm_user')||'{}');
+if(!curUser.email || http://curUser.role!=='admin'){ alert('Login as admin first'); http://location.href='/'; }
 
 function formatAdminCountdown(startTime){
   if(!startTime) return `<div style="background:#fff7ed;border:2px dashed #f97316;padding:8px;border-radius:10px;margin-top:8px;text-align:center;font-weight:900;color:#c2410c;font-size:11px">⏰ Rider picked - timer starting...</div>`;
   const end = new Date(startTime).getTime() + TWO_HOURS_MS;
   const diff = end - new Date().getTime();
   if(diff <= 0) return `<div style="background:#fee2e2;border:3px solid #dc2626;color:#dc2626;padding:10px;border-radius:12px;margin-top:8px;text-align:center;font-weight:900;font-size:12px">❌ TIME UP - FAILED</div>`;
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
+  const h = http://Math.floor(diff / 3600000);
+  const m = http://Math.floor((diff % 3600000) / 60000);
+  const s = http://Math.floor((diff % 60000) / 1000);
   const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
   return `<div style="background:linear-gradient(135deg,#ffffff,#fef3c7);border:3px solid #f59e0b;padding:12px;border-radius:14px;margin-top:8px;text-align:center;box-shadow:0 4px 12px rgba(245,158,11,0.25)">
     <div style="font-size:9px;font-weight:900;letter-spacing:1.5px;color:#92400e;background:#fde68a;display:inline-block;padding:2px 8px;border-radius:12px">⏰ DELIVERY COUNTDOWN</div>
@@ -129,83 +129,83 @@ function formatAdminCountdown(startTime){
 }
 
 async function load(){
-  document.getElementById('list').innerHTML = 'Loading...';
+  http://document.getElementById('list').innerHTML = 'Loading...';
   try{
-    const {data:u} = await supabaseClient.from('users').select('*');
+    const {data:u} = await http://supabaseClient.from('users').select('_');
     users = u||[];
-    const {data:o} = await supabaseClient.from('orders').select('*').in('status',['paid','picked','on the way','delivered','failed']).order('id',{ascending:false}).limit(200);
+    const {data:o} = await http://supabaseClient.from('orders').select('_').in('status',['paid','picked','on the way','delivered','failed']).order('id',{ascending:false}).limit(200);
     orders = o||[];
-    orders.sort((a,b)=>{ const priority = {paid:0, picked:1, 'on the way':1, delivered:2, failed:3}; const pa = priority[a.status]?? 4; const pb = priority[b.status]?? 4; if(pa!==pb) return pa - pb; return b.id - a.id; });
-    const paidOrders = orders.filter(x=>x.status==='paid');
+    http://orders.sort((a,b)=>{ const priority = {paid:0, picked:1, 'on the way':1, delivered:2, failed:3}; const pa = priority[a.status]?? 4; const pb = priority[b.status]?? 4; if(pa!==pb) return pa - pb; return http://b.id - http://a.id; });
+    const paidOrders = http://orders.filter(x=>x.status==='paid');
     if(paidOrders.length > lastSeenOrderCount && lastSeenOrderCount!== 0){ triggerNewOrderAlert(); }
-    lastSeenOrderCount = paidOrders.length;
-    let vendors = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor');
-    let agents = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
-    let pendingV = vendors.filter(x=>x.is_approved===false || x.is_approved===null);
-    let pendingA = agents.filter(x=>x.is_approved===false || x.is_approved===null);
-    let suspendedV = vendors.filter(x=>x.is_approved===false);
-    let suspendedA = agents.filter(x=>x.is_approved===false);
-    let activeV = vendors.filter(x=>x.is_approved===true);
-    document.getElementById('cP').innerText = pendingV.length + pendingA.length;
-    document.getElementById('cV').innerText = activeV.length;
-    document.getElementById('cS').innerText = suspendedV.length + suspendedA.length;
-    document.getElementById('cA').innerText = agents.length;
-    document.getElementById('cO').innerText = orders.length;
-    document.getElementById('pendingCount').innerText = pendingV.length + pendingA.length;
+    lastSeenOrderCount = http://paidOrders.length;
+    let vendors = http://users.filter(x=>String(x.role).toLowerCase().trim()==='vendor');
+    let agents = http://users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
+    let pendingV = http://vendors.filter(x=>x.is_approved===false || http://x.is_approved===null);
+    let pendingA = http://agents.filter(x=>x.is_approved===false || http://x.is_approved===null);
+    let suspendedV = http://vendors.filter(x=>x.is_approved===false);
+    let suspendedA = http://agents.filter(x=>x.is_approved===false);
+    let activeV = http://vendors.filter(x=>x.is_approved===true);
+    http://document.getElementById('cP').innerText = http://pendingV.length + http://pendingA.length;
+    http://document.getElementById('cV').innerText = http://activeV.length;
+    http://document.getElementById('cS').innerText = http://suspendedV.length + http://suspendedA.length;
+    http://document.getElementById('cA').innerText = http://agents.length;
+    http://document.getElementById('cO').innerText = http://orders.length;
+    http://document.getElementById('pendingCount').innerText = http://pendingV.length + http://pendingA.length;
     calcSales(); drawReturnsChart();
-    document.getElementById('fcAll').innerText = orders.length;
-    document.getElementById('fcPaid').innerText = orders.filter(x=>x.status==='paid').length;
-    document.getElementById('fcOnway').innerText = orders.filter(x=>x.status==='picked' || x.status==='on the way').length;
-    document.getElementById('fcDel').innerText = orders.filter(x=>x.status==='delivered').length;
-    document.getElementById('fcFail').innerText = orders.filter(x=>x.status==='failed').length;
+    http://document.getElementById('fcAll').innerText = http://orders.length;
+    http://document.getElementById('fcPaid').innerText = http://orders.filter(x=>x.status==='paid').length;
+    http://document.getElementById('fcOnway').innerText = http://orders.filter(x=>x.status==='picked' || http://x.status==='on the way').length;
+    http://document.getElementById('fcDel').innerText = http://orders.filter(x=>x.status==='delivered').length;
+    http://document.getElementById('fcFail').innerText = http://orders.filter(x=>x.status==='failed').length;
     updateOrdersTabAlert(); render();
-    setTimeout(()=>{ const tabsEl = document.getElementById('mainTabs'); if(tabsEl) tabsEl.scrollLeft = tabsEl.scrollWidth; }, 300);
-  }catch(e){ document.getElementById('list').innerHTML = `<div class="text-red-500">ERROR: ${e.message}</div>`; }
+    setTimeout(()=>{ const tabsEl = http://document.getElementById('mainTabs'); if(tabsEl) http://tabsEl.scrollLeft = http://tabsEl.scrollWidth; }, 300);
+  }catch(e){ http://document.getElementById('list').innerHTML = `<div class="text-red-500">ERROR: ${e.message}</div>`; }
 }
 
 function calcSales(){
-  let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
-  document.getElementById('sales').innerText = '₦'+Math.round(gross).toLocaleString();
-  document.getElementById('sales').title = '₦'+Math.round(gross).toLocaleString();
-  document.getElementById('income').innerText = '₦'+Math.round(gross*0.15).toLocaleString();
-  document.getElementById('income').title = '₦'+Math.round(gross*0.15).toLocaleString();
-  let now = new Date(); let todayStr = now.toDateString(); let weekAgo = new Date(); weekAgo.setDate(now.getDate()-7); let monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  let d = orders.filter(o=> new Date(o.created_at).toDateString()===todayStr); let w = orders.filter(o=> new Date(o.created_at) >= weekAgo); let m = orders.filter(o=> new Date(o.created_at) >= monthStart);
-  let dGross = d.reduce((s,x)=>s+Number(x.total||0),0); let wGross = w.reduce((s,x)=>s+Number(x.total||0),0); let mGross = m.reduce((s,x)=>s+Number(x.total||0),0);
-  document.getElementById('dSales').innerText = '₦'+Math.round(dGross).toLocaleString();
-  document.getElementById('dIncome').innerText = '₦'+Math.round(dGross*0.15).toLocaleString();
-  document.getElementById('wSales').innerText = '₦'+Math.round(wGross).toLocaleString();
-  document.getElementById('wIncome').innerText = '₦'+Math.round(wGross*0.15).toLocaleString();
-  document.getElementById('mSales').innerText = '₦'+Math.round(mGross).toLocaleString();
-  document.getElementById('mIncome').innerText = '₦'+Math.round(mGross*0.15).toLocaleString();
+  let gross = http://orders.reduce((s,x)=>s+Number(x.total||0),0);
+  http://document.getElementById('sales').innerText = '₦'+Math.round(gross).toLocaleString();
+  http://document.getElementById('sales').title = '₦'+Math.round(gross).toLocaleString();
+  http://document.getElementById('income').innerText = '₦'+Math.round(gross_0.10).toLocaleString();
+  http://document.getElementById('income').title = '₦'+Math.round(gross_0.10).toLocaleString();
+  let now = new Date(); let todayStr = http://now.toDateString(); let weekAgo = new Date(); http://weekAgo.setDate(now.getDate()-7); let monthStart = new Date(now.getFullYear(), http://now.getMonth(), 1);
+  let d = http://orders.filter(o=> new Date(o.created_at).toDateString()===todayStr); let w = http://orders.filter(o=> new Date(o.created_at) >= weekAgo); let m = http://orders.filter(o=> new Date(o.created_at) >= monthStart);
+  let dGross = http://d.reduce((s,x)=>s+Number(x.total||0),0); let wGross = http://w.reduce((s,x)=>s+Number(x.total||0),0); let mGross = http://m.reduce((s,x)=>s+Number(x.total||0),0);
+  http://document.getElementById('dSales').innerText = '₦'+Math.round(dGross).toLocaleString();
+  http://document.getElementById('dIncome').innerText = '₦'+Math.round(dGross_0.10).toLocaleString();
+  http://document.getElementById('wSales').innerText = '₦'+Math.round(wGross).toLocaleString();
+  http://document.getElementById('wIncome').innerText = '₦'+Math.round(wGross_0.10).toLocaleString();
+  http://document.getElementById('mSales').innerText = '₦'+Math.round(mGross).toLocaleString();
+  http://document.getElementById('mIncome').innerText = '₦'+Math.round(mGross_0.10).toLocaleString();
 }
 function drawReturnsChart(){
   const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat'];
-  const now = new Date(); const day = now.getDay(); const diffToMonday = day===0? -6 : 1 - day; const monday = new Date(now); monday.setDate(now.getDate() + diffToMonday); monday.setHours(0,0,0,0);
+  const now = new Date(); const day = http://now.getDay(); const diffToMonday = day===0? -6 : 1 - day; const monday = new Date(now); http://monday.setDate(now.getDate() + diffToMonday); http://monday.setHours(0,0,0,0);
   let salesPerDay = [0,0,0,0,0,0]; let incomePerDay = [0,0,0,0,0,0];
-  for(let i=0;i<6;i++){ const dStart = new Date(monday); dStart.setDate(monday.getDate()+i); const dEnd = new Date(dStart); dEnd.setDate(dStart.getDate()+1); const dayOrders = orders.filter(o=>{ const cd = new Date(o.created_at); return cd >= dStart && cd < dEnd; }); const gross = dayOrders.reduce((s,x)=>s+Number(x.total||0),0); salesPerDay[i]=Math.round(gross); incomePerDay[i]=Math.round(gross*0.15); }
-  const ctx = document.getElementById('returnsChart').getContext('2d'); if(returnsChart) returnsChart.destroy();
-  returnsChart = new Chart(ctx, { type: 'bar', data: { labels: dayNames, datasets: [ { label:'Sales', data:salesPerDay, backgroundColor:'#16a34a', borderRadius:6 }, { label:'Income (15%)', data:incomePerDay, backgroundColor:'#f59e0b', borderRadius:6 } ] }, options: { responsive:true, plugins:{ legend:{ display:true, position:'bottom', labels:{ font:{size:10}, boxWidth:12 } } }, scales:{ y:{ beginAtZero:true, ticks:{ font:{size:9}, callback:v=>'₦'+v } }, x:{ ticks:{ font:{size:10, weight:'bold'} } } } } });
+  for(let i=0;i<6;i++){ const dStart = new Date(monday); http://dStart.setDate(monday.getDate()+i); const dEnd = new Date(dStart); http://dEnd.setDate(dStart.getDate()+1); const dayOrders = http://orders.filter(o=>{ const cd = new Date(o.created_at); return cd >= dStart && cd < dEnd; }); const gross = http://dayOrders.reduce((s,x)=>s+Number(x.total||0),0); salesPerDay[i]=Math.round(gross); incomePerDay[i]=Math.round(gross_0.10); }
+  const ctx = http://document.getElementById('returnsChart').getContext('2d'); if(returnsChart) http://returnsChart.destroy();
+  returnsChart = new Chart(ctx, { type: 'bar', data: { labels: dayNames, datasets: [ { label:'Sales', data:salesPerDay, backgroundColor:'#16a34a', borderRadius:6 }, { label:'Income (10%)', data:incomePerDay, backgroundColor:'#f59e0b', borderRadius:6 } ] }, options: { responsive:true, plugins:{ legend:{ display:true, position:'bottom', labels:{ font:{size:10}, boxWidth:12 } } }, scales:{ y:{ beginAtZero:true, ticks:{ font:{size:9}, callback:v=>'₦'+v } }, x:{ ticks:{ font:{size:10, weight:'bold'} } } } } });
 }
 function updateOrdersTabAlert(){
-  const ordersTab = document.getElementById('btnO'); const newPaidOrders = orders.filter(o => o.status === 'paid').length;
-  if(newPaidOrders > 0){ ordersTab.classList.add('alert-tab'); ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>) <span class="badge">${newPaidOrders}</span>`; } else { ordersTab.classList.remove('alert-tab'); ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>)`; }
+  const ordersTab = http://document.getElementById('btnO'); const newPaidOrders = http://orders.filter(o => http://o.status === 'paid').length;
+  if(newPaidOrders > 0){ http://ordersTab.classList.add('alert-tab'); http://ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>) <span class="badge">${newPaidOrders}</span>`; } else { http://ordersTab.classList.remove('alert-tab'); http://ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>)`; }
 }
-function triggerNewOrderAlert(){ new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate([200,100,200]); if(Notification.permission === "granted"){ new Notification("🔔 New Order!", { body: `You have ${orders.filter(o=>o.status==='paid').length} pending order(s)` }); } else if(Notification.permission!== "denied"){ Notification.requestPermission(); } }
+function triggerNewOrderAlert(){ new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{}); if(navigator.vibrate) http://navigator.vibrate(); if(Notification.permission === "granted"){ new Notification("🔔 New Order!", { body: `You have ${orders.filter(o=>o.status==='paid').length} pending order(s)` }); } else if(Notification.permission!== "denied"){ http://Notification.requestPermission(); } }
 function filterOrders(type){
   orderSubTab = type;
-  document.querySelectorAll('#orderFilters button').forEach(b=> b.className = 'px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap');
+  http://document.querySelectorAll('#orderFilters button').forEach(b=> http://b.className = 'px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap');
   const activeMap = {all:'fAll', paid:'fPaid', onway:'fOnway', delivered:'fDel', failed:'fFail'};
-  document.getElementById(activeMap[type]).className = 'px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap';
+  http://document.getElementById(activeMap[type]).className = 'px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap';
   render();
-}
+}[200][100]
 
 function openAgentDetail(email){
-  const u = users.find(x=>x.email===email);
+  const u = http://users.find(x=>x.email===email);
   if(!u){ alert('User not found: '+email); return; }
-  const passport = u.passport_url || u.passport || u.photo_url || u.profile_image || u.image_url || '';
-  const ninImg = u.nin_image || u.nin_url || u.nin_photo || u.id_card_url || '';
-  const guarantorImg = u.guarantor_image || u.guarantor_nin_url || u.guarantor_id_url || u.guarantor_photo || '';
+  const passport = http://u.passport_url || http://u.passport || http://u.photo_url || http://u.profile_image || http://u.image_url || '';
+  const ninImg = http://u.nin_image || http://u.nin_url || http://u.nin_photo || http://u.id_card_url || '';
+  const guarantorImg = http://u.guarantor_image || http://u.guarantor_nin_url || http://u.guarantor_id_url || http://u.guarantor_photo || '';
   const html = `
     <div class="space-y-3">
       <div class="text-center">
@@ -227,8 +227,7 @@ function openAgentDetail(email){
         <b class="text-blue-700">🆔 NIN & Passport</b><br>
         NIN No: <b>${u.nin || u.nin_number || u.nin_no || 'N/A'}</b><br>
         <div class="flex gap-2 mt-2 flex-wrap">
-          ${passport? `<a href="${passport}" target="_blank" class="bg-green-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">🖼️ View Passport</a>` : '<span class="text-[11px] text-gray-400">No passport uploaded</span>'}
-          ${ninImg? `<a href="${ninImg}" target="_blank" class="bg-blue-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">📄 View NIN Card</a>` : '<span class="text-[11px] text-gray-400">No NIN image</span>'}
+          ${passport? `<a href=" ${passport}" target="_blank" class="bg-green-600 text-white px-3 py-1.5 rounded-full text- font-bold">🖼️ View Passport</a>` : '<span class="text-[11px] text-gray-400">No passport uploaded</span>'}           ${ninImg? `<a href="${ninImg}" target="_blank" class="bg-blue-600 text-white px-3 py-1.5 rounded-full text- font-bold">📄 View NIN Card</a>` : '<span class="text-[11px] text-gray-400">No NIN image</span>'}
         </div>
       </div>
       <div class="bg-yellow-50 p-3 rounded-xl border border-yellow-100">
@@ -238,62 +237,56 @@ function openAgentDetail(email){
         Address: ${u.guarantor_address || 'N/A'}<br>
         Relationship: ${u.guarantor_relationship || u.guarantor_relation || 'N/A'}<br>
         <div class="mt-2">
-          ${guarantorImg? `<a href="${guarantorImg}" target="_blank" class="bg-yellow-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">📄 View Guarantor ID</a>` : '<span class="text-[11px] text-gray-400">No guarantor ID</span>'}
+          ${guarantorImg? `<a href="${guarantorImg}" target="_blank" class="bg-yellow-600 text-white px-3 py-1.5 rounded-full text- font-bold">📄 View Guarantor ID</a>` : '<span class="text-[11px] text-gray-400">No guarantor ID</span>'}
         </div>
       </div>
       ${u.bank_name || u.account_number? `<div class="bg-purple-50 p-3 rounded-xl border border-purple-100"><b>🏦 Bank</b><br>Bank: ${u.bank_name||''}<br>Acct No: ${u.account_number||''}<br>Acct Name: ${u.account_name||''}<br>${u.paystack_subaccount_code? `Sub: <b>${u.paystack_subaccount_code}</b>`:''}</div>` : ''}
     </div>
   `;
-  document.getElementById('modalBody').innerHTML = html;
-  document.getElementById('detailModal').classList.remove('hidden');
+  http://document.getElementById('modalBody').innerHTML = html;
+  http://document.getElementById('detailModal').classList.remove('hidden');
 }
-function closeModal(){ document.getElementById('detailModal').classList.add('hidden'); }
+function closeModal(){ http://document.getElementById('detailModal').classList.add('hidden'); }[11px]
 
 function render(){
-  // ===== NEW FINANCE TAB - AUTO SPLIT EXPLANATION =====
   if(tab==='finance'){
-    let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
-    let platformIncome = Math.round(gross * 0.15);
-    let vendorPayouts = Math.round(gross * 0.85);
-    let vendors = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor' && x.is_approved===true);
-
+    let gross = http://orders.reduce((s,x)=>s+Number(x.total||0),0);
+    let platformIncome = http://Math.round(gross _ 0.10);
+    let vendorPayouts = http://Math.round(gross * 0.90);
+    let vendors = http://users.filter(x=>String(x.role).toLowerCase().trim()==='vendor' && http://x.is_approved===true);
     let financeHTML = `
       <div class="p-2 space-y-3">
         <div class="bg-gradient-to-r from-green-600 to-green-500 text-white p-4 rounded-xl shadow">
-          <div class="text-[10px] opacity-80">YOUR PLATFORM INCOME (15%) - Auto Settled to Your Bank</div>
+          <div class="text-[10px] opacity-80">YOUR PLATFORM INCOME (10%) - Auto Settled to Your Bank</div>
           <div class="text-2xl font-black mt-1">₦${platformIncome.toLocaleString()}</div>
           <div class="text-[11px] mt-2 bg-white/20 p-2 rounded-lg">This money goes to your MAIN Paystack account → Auto settles to your bank next day. No need to withdraw inside LGM.</div>
         </div>
-
         <div class="grid grid-cols-2 gap-2">
           <div class="bg-white border p-3 rounded-xl text-center">
             <div class="text-[10px] text-gray-400">Gross Sales</div>
             <div class="text-[14px] font-black">₦${Math.round(gross).toLocaleString()}</div>
           </div>
           <div class="bg-white border p-3 rounded-xl text-center">
-            <div class="text-[10px] text-gray-400">Paid to Vendors (85%)</div>
+            <div class="text-[10px] text-gray-400">Paid to Vendors (90%)</div>
             <div class="text-[14px] font-black text-blue-600">₦${vendorPayouts.toLocaleString()}</div>
             <div class="text-[9px] text-gray-400">${vendors.length} vendors via subaccounts</div>
           </div>
         </div>
-
         <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-xl text-[11px] leading-5">
-          <b class="text-yellow-700">💡 How Auto Split Works:</b><br>
+          <b class="text-yellow-700">💡 How Auto Split Works (90/10):</b><br>
           1. Customer pays ₦10k on LGM<br>
           2. Paystack splits instantly:<br>
-          &nbsp;&nbsp;• 85% → Vendor subaccount (${vendors.length} subaccounts active)<br>
-          &nbsp;&nbsp;&nbsp;• 15% → Your main account<br>
+          &nbsp;&nbsp;• 90% → Vendor subaccount (${vendors.length} subaccounts active)<br>
+          &nbsp;&nbsp;• 10% → Your main account<br>
           3. Paystack settles to both banks T+1 (next day)<br><br>
           <b>✅ Your subaccount system is WORKING PERFECTLY.</b> No manual withdrawal needed.
         </div>
-
         <div class="bg-white border rounded-xl p-3">
           <b class="text-[11px]">🏦 Your Vendors & Subaccounts</b>
           <div class="mt-2 space-y-1 max-h-[200px] overflow-y-auto">
-            ${vendors.map(v=>`<div class="flex justify-between text-[11px] border-b py-1"><span>${v.full_name||v.email} <span class="text-green-600 font-bold text-[9px]">${v.paystack_subaccount_code||'No Sub'}</span></span><span class="font-bold">${v.bank_name||''}</span></div>`).join('') || '<div class="text-gray-400 text-[11px]">No active vendors</div>'}
+            ${vendors.map(v=>`<div class="flex justify-between text- border-b py-1"><span> ${v.full_name||v.email} <span class="text-green-600 font-bold text-[9px]">${v.paystack_subaccount_code||'No Sub'}</span></span><span class="font-bold">${v.bank_name||''}</span></div>`).join('') || '<div class="text-gray-400 text-[11px]">No active vendors</div>'}
           </div>
         </div>
-
         <div class="bg-white border rounded-xl p-3">
           <b class="text-[11px]">🔗 Paystack Dashboard Links</b>
           <div class="flex gap-2 mt-2 flex-wrap">
@@ -304,45 +297,44 @@ function render(){
         </div>
       </div>
     `;
-    document.getElementById('list').innerHTML = financeHTML;
+    http://document.getElementById('list').innerHTML = financeHTML;
     return;
   }
-
   let data=[];
-  if(tab==='pending') data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' || String(x.role).toLowerCase().trim()==='delivery_agent') && (x.is_approved===false || x.is_approved===null));
-  if(tab==='vendors') data = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor' && x.is_approved===true);
-  if(tab==='suspended') data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' || String(x.role).toLowerCase().trim()==='delivery_agent') && x.is_approved===false);
-  if(tab==='agents') data = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
+  if(tab==='pending') data = http://users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' || String(x.role).toLowerCase().trim()==='delivery_agent') && (x.is_approved===false || http://x.is_approved===null));
+  if(tab==='vendors') data = http://users.filter(x=>String(x.role).toLowerCase().trim()==='vendor' && http://x.is_approved===true);
+  if(tab==='suspended') data = http://users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' || String(x.role).toLowerCase().trim()==='delivery_agent') && http://x.is_approved===false);
+  if(tab==='agents') data = http://users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
   if(tab==='orders'){
     if(orderSubTab==='all') data = orders;
-    if(orderSubTab==='paid') data = orders.filter(o=>o.status==='paid');
-    if(orderSubTab==='onway') data = orders.filter(o=>o.status==='picked' || o.status==='on the way');
-    if(orderSubTab==='delivered') data = orders.filter(o=>o.status==='delivered');
-    if(orderSubTab==='failed') data = orders.filter(o=>o.status==='failed');
+    if(orderSubTab==='paid') data = http://orders.filter(o=>o.status==='paid');
+    if(orderSubTab==='onway') data = http://orders.filter(o=>o.status==='picked' || http://o.status==='on the way');
+    if(orderSubTab==='delivered') data = http://orders.filter(o=>o.status==='delivered');
+    if(orderSubTab==='failed') data = http://orders.filter(o=>o.status==='failed');
   }
-  document.getElementById('orderFilters').className = tab==='orders'? 'flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b' : 'hidden';
-  if(data.length===0){ document.getElementById('list').innerHTML = `<div class="text-center text-gray-400 py-10">No ${orderSubTab==='all'?'':orderSubTab} ${tab} yet</div>`; return; }
+  http://document.getElementById('orderFilters').className = tab==='orders'? 'flex gap-1 p-2 bg-gray-50 overflow-x-auto text- border-b' : 'hidden';
+  if(data.length===0){ http://document.getElementById('list').innerHTML = `<div class="text-center text-gray-400 py-10">No ${orderSubTab==='all'?'':orderSubTab} ${tab} yet</div>`; return; }
   let html='';
   if(tab==='pending' || tab==='vendors' || tab==='suspended' || tab==='agents'){
-    data.forEach(u=>{
+    http://data.forEach(u=>{
       let roleBadge = String(u.role).toLowerCase().trim()==='delivery_agent'? `<span class="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px]">AGENT</span>` : `<span class="bg-green-500 text-white px-2 py-0.5 rounded text-[10px]">VENDOR</span>`;
       let actionBtn = (tab==='pending' || tab==='suspended')? `<button id="btn-${u.email}" onclick="updateStatus('${u.email}', true)" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve / Reactivate</button>` : `<button onclick="updateStatus('${u.email}', false)" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>`;
       let viewBtn = `<button onclick="openAgentDetail('${u.email}')" class="mt-2 ml-1 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">👁️ View Full Info</button>`;
-      let subInfo = u.paystack_subaccount_code? `<div class="text-[10px] text-green-600 font-bold mt-1">✅ ${u.paystack_subaccount_code}</div>` : '';
+      let subInfo = http://u.paystack_subaccount_code? `<div class="text-[10px] text-green-600 font-bold mt-1">✅ ${u.paystack_subaccount_code}</div>` : '';
       html += `<div class="border rounded-lg p-3 mb-2"><div class="font-bold">${u.full_name || 'null'} ${roleBadge}</div><div class="text-xs text-gray-500">${u.email} • ${u.phone||u.whatsapp||''} • ${u.location||''}</div><div class="text-xs mt-1">Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended'}</b> ${u.account_number? `• Acct: ${u.account_number} (${u.bank_name||'Opay'})`:''}</div>${subInfo}${actionBtn} ${viewBtn}</div>`;
     });
   }
   if(tab==='orders'){
-    data.forEach(o=>{
-      let statusColor = o.status==='paid'? 'text-orange-600' : (o.status==='picked' || o.status==='on the way')? 'text-blue-600' : o.status==='delivered'? 'text-green-600' : 'text-red-600';
-      let agentUser = users.find(u=>u.email===o.delivery_agent_email);
-      let agentDisplayName = o.delivery_agent_name || agentUser?.full_name || o.delivery_agent_email || 'N/A';
-      let agentDisplayPhone = o.delivery_agent_phone || agentUser?.phone || agentUser?.whatsapp || '';
-      let agentInfo = o.delivery_agent_email? `<div class="text-xs text-blue-600 font-bold truncate">🚚 Agent: ${agentDisplayName} (${agentDisplayPhone}) <button onclick="openAgentDetail('${o.delivery_agent_email}')" class="ml-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[9px] font-bold">View KYC</button></div>` : `<div class="text-xs text-orange-600 font-bold">⚠️ Waiting for Agent</div>`;
-      const startTime = o.picked_at || o.delivery_started_at;
-      const isActive = (o.status==='picked' || o.status==='on the way');
+    http://data.forEach(o=>{
+      let statusColor = http://o.status==='paid'? 'text-orange-600' : (o.status==='picked' || http://o.status==='on the way')? 'text-blue-600' : http://o.status==='delivered'? 'text-green-600' : 'text-red-600';
+      let agentUser = http://users.find(u=>u.email===o.delivery_agent_email);
+      let agentDisplayName = http://o.delivery_agent_name || agentUser?.full_name || http://o.delivery_agent_email || 'N/A';
+      let agentDisplayPhone = http://o.delivery_agent_phone || agentUser?.phone || agentUser?.whatsapp || '';
+      let agentInfo = http://o.delivery_agent_email? `<div class="text-xs text-blue-600 font-bold truncate">🚚 Agent: ${agentDisplayName} (${agentDisplayPhone}) <button onclick="openAgentDetail('${o.delivery_agent_email}')" class="ml-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[9px] font-bold">View KYC</button></div>` : `<div class="text-xs text-orange-600 font-bold">⚠️ Waiting for Agent</div>`;
+      const startTime = http://o.picked_at || http://o.delivery_started_at;
+      const isActive = (o.status==='picked' || http://o.status==='on the way');
       let timerHTML = isActive? `<div class="admin-timer" data-start="${startTime}">${formatAdminCountdown(startTime)}</div>` : '';
-      const newBorder = o.status==='paid'? 'border-2 border-green-500 bg-green-50' : 'border';
+      const newBorder = http://o.status==='paid'? 'border-2 border-green-500 bg-green-50' : 'border';
       html += `<div class="${newBorder} rounded-lg p-3 mb-2 min-w-0">
         <div class="flex justify-between gap-2"><div class="font-bold text-[12px] truncate">Order #${o.id} - <span class="${statusColor}">${o.status.toUpperCase()}</span> ${o.status==='paid'? '🆕 NEW FIRST':''}</div><div class="font-bold text-green-700 text-[12px] shrink-0">₦${Number(o.total||0).toLocaleString()}</div></div>
         <div class="text-xs truncate">Customer: ${o.customer_name || o.customer_email} - ${o.customer_phone||''}</div>
@@ -353,28 +345,27 @@ function render(){
       </div>`;
     });
   }
-  document.getElementById('list').innerHTML = html;
-}
+  http://document.getElementById('list').innerHTML = html;
+}[11px]
 
 function showTab(t){
   tab=t;
-  ['P','V','S','A','O','F'].forEach(k=> document.getElementById('btn'+k).className = 'flex-1 p-3 font-bold text-gray-400 whitespace-nowrap');
+  ['P','V','S','A','O','F'].forEach(k=> http://document.getElementById('btn'+k).className = 'flex-1 p-3 font-bold text-gray-400 whitespace-nowrap');
   const map={pending:'btnP',vendors:'btnV',suspended:'btnS',agents:'btnA',orders:'btnO',finance:'btnF'};
-  document.getElementById(map[t]).className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap';
-  if(t==='orders'){ document.getElementById('btnO').classList.remove('alert-tab'); setTimeout(()=>{ document.getElementById('mainTabs').scrollLeft = document.getElementById('mainTabs').scrollWidth; },100); }
-  if(t==='finance'){ setTimeout(()=>{ document.getElementById('mainTabs').scrollLeft = document.getElementById('mainTabs').scrollWidth; },100); }
+  http://document.getElementById(map[t]).className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap';
+  if(t==='orders'){ http://document.getElementById('btnO').classList.remove('alert-tab'); setTimeout(()=>{ http://document.getElementById('mainTabs').scrollLeft = http://document.getElementById('mainTabs').scrollWidth; },100); }
+  if(t==='finance'){ setTimeout(()=>{ http://document.getElementById('mainTabs').scrollLeft = http://document.getElementById('mainTabs').scrollWidth; },100); }
   render();
 }
 
-// ===== GENIUS FIX - NO DUPLICATE PAYSTACK ACCOUNT =====
 function getBankCode(bankName){
   if(!bankName) return "999992";
-  const n = bankName.toLowerCase();
+  const n = http://bankName.toLowerCase();
   if(n.includes("opay")) return "999992";
   if(n.includes("palm")) return "999991";
   if(n.includes("kuda")) return "090267";
   if(n.includes("monie")) return "50515";
-  if(n.includes("gtb") || n.includes("gtbank") || n.includes("guaranty")) return "058";
+  if(n.includes("gtb") || http://n.includes("gtbank") || http://n.includes("guaranty")) return "058";
   if(n.includes("access")) return "044";
   if(n.includes("uba")) return "033";
   if(n.includes("first")) return "011";
@@ -388,72 +379,61 @@ function getBankCode(bankName){
 }
 
 async function updateStatus(email, status){
-  const u = users.find(x=>x.email===email);
+  const u = http://users.find(x=>x.email===email);
   if(!u){ alert('User not found: '+email); return; }
   const isVendor = String(u.role).toLowerCase().trim() === 'vendor';
-
   if(!confirm(`${status?'Approve':'Suspend'} ${u.full_name || email}?${isVendor && status? '\n\nPaystack: ' + (u.account_number||'NO ACCOUNT') + ' ('+(u.bank_name||'Opay')+')' + (u.paystack_subaccount_code? '\nAlready has: '+u.paystack_subaccount_code+' (Will NOT create new)' : '\nWill create new subaccount') : ''}${isVendor &&!status? '\n\nAll products will be HIDDEN!' : ''}`)) return;
-
-  // VENDOR APPROVAL
   if(isVendor && status){
-
-    // ⭐⭐ YOUR GENIUS OBSERVATION FIX ⭐⭐
     if(u.paystack_subaccount_code){
-      // Already has subaccount - just reactivate, don't create duplicate!
-      await supabaseClient.from('users').update({is_approved: true}).eq('email', email);
-      await supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
+      await http://supabaseClient.from('users').update({is_approved: true}).eq('email', email);
+      await http://supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
       alert(`✅ REACTIVATED!\n\nKeeps old subaccount: ${u.paystack_subaccount_code}\nNo duplicate created!\nProducts VISIBLE!`);
       load();
       return;
     }
-
-    // New vendor - needs new subaccount
     if(!u.account_number){
       if(!confirm('❌ No account_number!\n\nApprove without Paystack?')) return;
-      await supabaseClient.from('users').update({is_approved: true}).eq('email',email);
-      await supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
+      await http://supabaseClient.from('users').update({is_approved: true}).eq('email',email);
+      await http://supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
       alert('Approved without Paystack + Products VISIBLE');
       load(); return;
     }
-
-    const btn = document.getElementById(`btn-${email}`);
-    if(btn){ btn.innerText = '⏳ Creating...'; btn.disabled = true; }
-
+    const btn = http://document.getElementById(`btn-${email}`);
+    if(btn){ http://btn.innerText = '⏳ Creating...'; http://btn.disabled = true; }
     try{
-      document.getElementById('list').innerHTML = `<div class="text-center py-12"><div class="text-green-600 font-black">⏳ Creating Paystack subaccount...</div><div class="text-xs mt-2">${u.full_name} - ${u.account_number} - ${u.bank_name||'Opay'}</div></div>`;
-      const bankCode = u.bank_code || getBankCode(u.bank_name);
-      const { data, error } = await supabaseClient.functions.invoke('create-vendor-subaccount', {
+      http://document.getElementById('list').innerHTML = `<div class="text-center py-12"><div class="text-green-600 font-black">⏳ Creating Paystack subaccount...</div><div class="text-xs mt-2">${u.full_name} - ${u.account_number} - ${u.bank_name||'Opay'}</div></div>`;
+      const bankCode = http://u.bank_code || getBankCode(u.bank_name);
+      const { data, error } = await http://supabaseClient.functions.invoke('create-vendor-subaccount', {
         body: {
           account_number: String(u.account_number).trim(),
           bank_code: String(bankCode).trim(),
-          vendor_name: u.full_name || u.business_name || 'Vendor',
-          vendor_email: u.email,
-          vendor_phone: u.phone || u.whatsapp || '08000000000'
+          vendor_name: http://u.full_name || http://u.business_name || 'Vendor',
+          vendor_email: http://u.email,
+          vendor_phone: http://u.phone || http://u.whatsapp || '08000000000'
         }
       });
-      if(error) throw new Error(error.message || JSON.stringify(error));
-      if(!data?.data?.subaccount_code) throw new Error('No subaccount_code: ' + JSON.stringify(data));
-      const subCode = data.data.subaccount_code;
-      const { error: updErr } = await supabaseClient.from('users').update({
+      if(error) throw new Error(error.message || http://JSON.stringify(error));
+      if(!data?.data?.subaccount_code) throw new Error('No subaccount_code: ' + http://JSON.stringify(data));
+      const subCode = http://data.data.subaccount_code;
+      const { error: updErr } = await http://supabaseClient.from('users').update({
         is_approved: true,
         paystack_subaccount_code: subCode,
-        paystack_bank: data.data.settlement_bank || u.bank_name || 'Opay',
-        account_name_resolved: data.data.account_name || '',
+        paystack_bank: http://data.data.settlement_bank || http://u.bank_name || 'Opay',
+        account_name_resolved: http://data.data.account_name || '',
         bank_code: bankCode
       }).eq('email', email);
-      if(updErr){ await supabaseClient.from('users').update({is_approved: true}).eq('email', email); }
-      await supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
+      if(updErr){ await http://supabaseClient.from('users').update({is_approved: true}).eq('email', email); }
+      await http://supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
       alert(`✅ APPROVED & LINKED!\n\nName: ${data.data.account_name}\nBank: ${data.data.settlement_bank}\nSub: ${subCode}\nYou 10% / Vendor 90%!\nProducts VISIBLE!`);
     }catch(err){
-      console.error(err);
-      alert('❌ Paystack Failed: ' + err.message);
+      http://console.error(err);
+      alert('❌ Paystack Failed: ' + http://err.message);
       load(); return;
     }
   } else {
-    // Suspend or Agent
-    await supabaseClient.from('users').update({is_approved: status}).eq('email',email);
+    await http://supabaseClient.from('users').update({is_approved: status}).eq('email',email);
     if(isVendor &&!status){
-      await supabaseClient.from('products').update({is_approved: false}).eq('vendor_email', email);
+      await http://supabaseClient.from('products').update({is_approved: false}).eq('vendor_email', email);
       alert(`🚫 Suspended!\nProducts from ${email} HIDDEN!`);
     } else {
       alert(`Account ${status?'Approved':'Suspended'}!`);
@@ -462,7 +442,7 @@ async function updateStatus(email, status){
   load();
 }
 
-setInterval(()=>{ document.querySelectorAll('.admin-timer').forEach(el=>{ const start = el.getAttribute('data-start'); if(start && start!=='null' && start!=='undefined'){ el.innerHTML = formatAdminCountdown(start); } }); },1000);
+setInterval(()=>{ http://document.querySelectorAll('.admin-timer').forEach(el=>{ const start = http://el.getAttribute('data-start'); if(start && start!=='null' && start!=='undefined'){ http://el.innerHTML = formatAdminCountdown(start); } }); },1000);
 setInterval(load, 40000);
 load();
 </script>
