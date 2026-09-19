@@ -95,17 +95,22 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 
 <div id="view-wallet" class="view">
 <div class="card">
-<h3>💰 My Earnings (90% Auto-Payout)</h3>
+<h3>💰 My Wallet (90% Auto-Payout)</h3>
 <h1 id="walletBig" style="color:#16a34a;margin:0">₦0</h1>
-<div class="small">Total earnings from orders - paid directly to your bank</div>
+<div class="small">Total earnings - paid directly to your bank via Paystack</div>
 <hr>
-<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:12px;border-radius:12px;margin:12px 0">
-<div class="small" style="color:#166534;font-weight:800">✅ How you get paid:</div>
-<div class="small" style="color:#166534">Your 90% is sent automatically to your bank (Opay/UBA) by Paystack immediately after customer pays. No need to request withdrawal.</div>
+<div class="sales-grid" style="margin-top:12px">
+<div class="stat" style="background:#f0fdf4;border:1px solid #bbf7d0"><div class="small">📅 Today</div><b id="walletToday">₦0</b><div class="small" style="color:#16a34a">90% cut</div></div>
+<div class="stat" style="background:#eff6ff;border:1px solid #bfdbfe"><div class="small">📊 This Week</div><b id="walletWeek">₦0</b><div class="small" style="color:#2563eb">90% cut</div></div>
+<div class="stat" style="background:#fefce8;border:1px solid #fde68a"><div class="small">📈 This Month</div><b id="walletMonth">₦0</b><div class="small" style="color:#a16207">90% cut</div></div>
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
 <div class="stat" style="background:#f8fafc"><div class="small">Products in Catalog</div><b id="walletProdCount">0 items</b></div>
 <div class="stat" style="background:#f8fafc"><div class="small">Catalog Value</div><b id="walletCatalogValue">₦0</b></div>
+</div>
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:12px;border-radius:12px;margin:12px 0">
+<div class="small" style="color:#166534;font-weight:800">✅ How you get paid:</div>
+<div class="small" style="color:#166534">Your 90% is sent automatically to your bank by Paystack immediately after customer pays. No withdrawal needed. No admin approval.</div>
 </div>
 <div id="withdrawHistory" class="small" style="margin-top:12px"></div>
 </div>
@@ -165,7 +170,7 @@ function triggerAlert(){
 async function init(){
   document.getElementById('vName').innerText="Welcome, "+ (curUser.full_name || curUser.name || curUser.email.split('@')[0]);
   document.getElementById('vEmail').innerText=curUser.email;
-  document.getElementById('vBadge').innerText=curUser.is_approved? "✅ Approved Vendor • You keep 90% • Auto-paid via Paystack" : "⏳ Pending Approval";
+  document.getElementById('vBadge').innerText=curUser.is_approved? "✅ Approved Vendor • 90% Auto-paid via Paystack" : "⏳ Pending Approval";
   document.getElementById('profName').value=curUser.full_name || curUser.name;
   document.getElementById('profEmail').value=curUser.email;
   loadProducts(); loadOrders(); loadWallet();
@@ -176,7 +181,6 @@ async function loadProducts(){
   const {data} = await supabaseClient.from('products').select('*').eq('vendor_email', curUser.email);
   allProducts = data||[];
   document.getElementById('pCount').innerText=allProducts.length;
-  // CALCULATE TOTAL CATALOG VALUE
   let catalogValue = 0;
   allProducts.forEach(p=> { catalogValue += Number(p.price||0) * Number(p.stock||1); });
   document.getElementById('catalogWorth').innerText = 'Worth: ₦' + catalogValue.toLocaleString();
@@ -321,10 +325,15 @@ function calcVendorWallet(){
   document.getElementById('salesToday').innerText='₦'+Math.round(t).toLocaleString();
   document.getElementById('salesWeek').innerText='₦'+Math.round(w).toLocaleString();
   document.getElementById('salesMonth').innerText='₦'+Math.round(m).toLocaleString();
+  // NEW - Wallet daily/weekly/monthly
+  if(document.getElementById('walletToday')){
+    document.getElementById('walletToday').innerText='₦'+Math.round(t).toLocaleString();
+    document.getElementById('walletWeek').innerText='₦'+Math.round(w).toLocaleString();
+    document.getElementById('walletMonth').innerText='₦'+Math.round(m).toLocaleString();
+  }
 }
 async function loadWallet(){
-  // No withdrawal needed - Paystack auto-pays
-  document.getElementById('withdrawHistory').innerHTML = '<div class="small" style="color:#16a34a">✅ All earnings are automatically transferred to your bank account via Paystack subaccount.<br>No withdrawal request needed.</div>';
+  document.getElementById('withdrawHistory').innerHTML = '<div class="small" style="color:#16a34a">✅ All earnings are automatically transferred to your bank via Paystack subaccount.<br>No withdrawal request needed.</div>';
 }
 async function saveProfile(){
   await supabaseClient.from('users').update({full_name: document.getElementById('profName').value}).eq('email', curUser.email);
@@ -340,7 +349,6 @@ setInterval(()=>{
     }
   });
 },1000);
-
 setInterval(loadOrders, 10000);
 </script>
 </body>
