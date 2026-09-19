@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Account - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://checkout.flutterwave.com/v3.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <style>
   @keyframes pulse-red {0%,100%{background:#fee2e2;border-color:#ef4444}50%{background:#fecaca;border-color:#dc2626}}
   @keyframes timer-pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
@@ -37,7 +37,7 @@
   </div>
 
   <div id="view-cart" class="view hidden">
-    <form onsubmit="payWithFlutterwave(event)" class="bg-white p-4 rounded-2xl shadow">
+    <form onsubmit="payWithPaystack(event)" class="bg-white p-4 rounded-2xl shadow">
       <h3 class="font-bold mb-3">Your Cart</h3>
       <div id="cartList">Cart is empty</div>
       <div id="minOrderAlertCust" class="hidden mt-3 p-3 rounded-xl text-[13px] font-black text-center"></div>
@@ -73,7 +73,7 @@
         <div class="flex justify-between text-sm"><span>Subtotal</span><span id="subTotal">₦0</span></div>
         <div class="flex justify-between text-sm text-gray-600"><span>Delivery Fee 5%</span><span id="deliveryFee">₦0</span></div>
         <div class="flex justify-between font-bold text-lg border-t pt-2"><span>Total</span><span id="cartTotal">₦0</span></div>
-        <button type="submit" id="placeOrderBtn" class="w-full bg-[#f5a623] text-white py-3 rounded-full font-bold mt-3 hidden">💳 Pay Now With Flutterwave - <span id="payAmount">₦0</span></button>
+        <button type="submit" id="placeOrderBtn" class="w-full bg-[#00C566] text-white py-3 rounded-full font-bold mt-3 hidden">💳 Pay Now With Paystack - <span id="payAmount">₦0</span></button>
       </div>
       <div id="orderMsg" class="text-sm text-center mt-2"></div>
     </form>
@@ -391,12 +391,12 @@ function renderCart(){
     if(payBtn){
       payBtn.disabled = false;
       payBtn.style.opacity = '1';
-      payBtn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
+      payBtn.innerHTML = `💳 Pay Now With Paystack - <span id="payAmount">₦${total.toLocaleString()}</span>`;
     }
   }
 }
 
-async function payWithFlutterwave(e){
+async function payWithPaystack(e){
   e.preventDefault();
   if(isSubmitting) return;
   if(cart.length===0) return alert('Cart is empty');
@@ -416,63 +416,63 @@ async function payWithFlutterwave(e){
   const checkoutLandmark = document.getElementById('checkoutLandmark').value;
   const checkoutWhatsApp = document.getElementById('checkoutWhatsApp').value;
   const checkoutPhone = document.getElementById('checkoutPhone').value;
-
   if(!finalLocation ||!checkoutAddress ||!checkoutLandmark ||!checkoutWhatsApp ||!checkoutPhone) return alert('Fill all delivery details');
 
   const subtotal = cart.reduce((s,i)=> s + cleanPrice(i.price)*(Number(i.qty)||1),0);
   const delivery = Math.round(subtotal * 0.05);
   const total = subtotal + delivery;
-  const tx_ref = "LGM-" + Date.now();
+
+  // --- PAYSTACK SPLIT: Fetch vendor subaccount ---
+  const vendorEmails = [...new Set(cart.map(i=>i.vendor_email).filter(Boolean))];
+  if(vendorEmails.length===0) return alert('No vendor email in cart products');
+
+  const { data: vendorData } = await supabaseClient.from('users').select('email, paystack_subaccount_code').in('email', vendorEmails);
+  if(!vendorData || vendorData.length===0){
+    alert('Vendor Paystack account not ready. Ask Admin to approve vendor.');
+    return;
+  }
+
+  const mainVendor = vendorData[0];
+  const subaccountCode = mainVendor.paystack_subaccount_code;
+  if(!subaccountCode){
+    alert('Vendor subaccount missing. Admin should Approve this vendor again to create ACCT_...');
+    return;
+  }
+
+  const platformFee = Math.round(total * 0.10 * 100); // 10% in kobo
 
   isSubmitting = true;
   const btn = document.getElementById('placeOrderBtn');
   btn.disabled = true;
-  btn.innerText = 'Processing Payment...';
-  document.getElementById('orderMsg').innerHTML='<span style="color:blue">🔄 Opening Flutterwave...</span>';
+  btn.innerText = 'Processing Paystack...';
+  document.getElementById('orderMsg').innerHTML='<span style="color:blue">🔄 Opening Paystack - 90% to vendor, 10% to you...</span>';
 
-  const vendorSubaccounts = {
-    "emiguni.test@gmail.com": "RS_B21E99467BC252AB12248D9144B47E1F",
-    "deborah.test@gmail.com": "RS_2E5BAAE79F5E3758D3D477C350701B00"
-  };
-  const vendorTotals = {};
-  cart.forEach(item => { if(item.vendor_email) vendorTotals[item.vendor_email] = (vendorTotals[item.vendor_email]||0) + cleanPrice(item.price)*(Number(item.qty)||1); });
-
-  const subaccounts = Object.keys(vendorTotals).map(email=>{
-    const id = vendorSubaccounts[email];
-    if(!id) return null;
-    return { id: id, transaction_charge_type: "flat_subaccount", transaction_charge: Math.round(vendorTotals[email]*0.9) };
-  }).filter(s=>s && s.id);
-
-  FlutterwaveCheckout({
-    public_key: "FLWPUBK_TEST-cfe61c65283af734853546574ed4c60f-X",
-    tx_ref: tx_ref,
-    amount: total,
-    currency: "NGN",
-    payment_options: "card",
-    customer: { email: user.email, phone_number: checkoutPhone, name: displayName },
-    subaccounts: subaccounts.length>0? subaccounts : undefined,
-    customizations: { title: "Lokoja Grocery Mall", description: "Groceries + 5% delivery" },
-    callback: async function(data){
-      if(data.status === "successful"){
-        document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Saving order...</span>';
-        await saveOrderAfterPayment(data.tx_ref || tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total);
-      } else {
-        alert('Payment not completed: ' + data.status);
-        document.getElementById('orderMsg').innerHTML='<span style="color:red">❌ Payment '+data.status+'</span>';
-        isSubmitting=false; btn.disabled=false; btn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
-      }
+  let handler = PaystackPop.setup({
+    key: 'pk_test_41f9bb4c711e87d17abf93862041dea2328007a6',
+    email: user.email,
+    amount: total * 100,
+    currency: 'NGN',
+    subaccount: subaccountCode,
+    transaction_charge: platformFee,
+    bearer: 'subaccount',
+    metadata: {
+      custom_fields: [
+        { display_name: "Vendor", variable_name: "vendor_email", value: mainVendor.email },
+        { display_name: "Location", variable_name: "delivery_location", value: finalLocation }
+      ]
     },
-    onclose: function(){
-      setTimeout(()=>{
-        if(isSubmitting){
-          document.getElementById('orderMsg').innerText='Payment window closed - if you paid, check My Orders in 5s';
-          isSubmitting=false;
-          btn.disabled=false;
-          btn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
-        }
-      }, 3000);
+    callback: async function(response){
+      document.getElementById('orderMsg').innerHTML='<span style="color:green">✅ Payment successful! Ref: '+response.reference+' Saving order...</span>';
+      await saveOrderAfterPayment(response.reference, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total);
+    },
+    onClose: function(){
+      document.getElementById('orderMsg').innerText='Payment window closed';
+      isSubmitting=false;
+      btn.disabled=false;
+      btn.innerHTML = `💳 Pay Now With Paystack - <span id="payAmount">₦${total.toLocaleString()}</span>`;
     }
   });
+  handler.openIframe();
 }
 
 async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total){
@@ -504,7 +504,7 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
     cart = [];
     try{ await supabaseClient.from('carts').delete().eq('customer_id', user.id); }catch(e){}
     saveCart();
-    document.getElementById('orderMsg').innerHTML = `<span style="color:green;font-weight:bold">✅ Paid! Order #${order.id} saved.</span>`;
+    document.getElementById('orderMsg').innerHTML = `<span style="color:green;font-weight:bold">✅ Paid! Order #${order.id} saved. Vendor gets 90% auto!</span>`;
     setTimeout(()=>{ showTab('orders'); isSubmitting=false; },1500);
   }catch(err){
     alert("❌ ORDER SAVE FAILED:\n" + err.message);
@@ -512,7 +512,7 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
     isSubmitting=false;
     const btn = document.getElementById('placeOrderBtn');
     btn.disabled=false;
-    btn.innerHTML = `💳 Pay Now With Flutterwave - <span id="payAmount">₦${total.toLocaleString()}</span>`;
+    btn.innerHTML = `💳 Pay Now With Paystack - <span id="payAmount">₦${total.toLocaleString()}</span>`;
   }
 }
 
