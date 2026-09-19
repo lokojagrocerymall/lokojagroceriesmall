@@ -28,7 +28,7 @@
       <div class="text-[13px] sm:text-base font-black truncate" id="sales" title="₦0">₦0</div>
     </div>
     <div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden">
-      <div class="text-[10px] text-gray-400 leading-tight">Platform Income (10%)</div>
+      <div class="text-[10px] text-gray-400 leading-tight">Platform Income (10% + 5% delivery)</div>
       <div class="text-[13px] sm:text-base font-black text-green-600 truncate" id="income" title="₦0">₦0</div>
     </div>
     <div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden">
@@ -64,7 +64,7 @@
   <div class="bg-white p-3 rounded-xl shadow mb-3">
     <div class="flex justify-between items-center mb-2">
       <b class="text-[12px]">📊 Platform Returns (Mon - Sat)</b>
-      <span class="text-[10px] text-gray-400">Daily Sales vs Income (10%)</span>
+      <span class="text-[10px] text-gray-400">Daily Sales vs Income</span>
     </div>
     <canvas id="returnsChart" height="180"></canvas>
   </div>
@@ -109,6 +109,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let users=[], orders=[], tab='pending', orderSubTab='all', lastSeenOrderCount=0;
 let returnsChart = null;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const DELIVERY_RATE = 0.05;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
 if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='/'; }
 
@@ -165,27 +166,33 @@ async function load(){
 
 function calcSales(){
   let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
+  let subtotal = orders.reduce((s,x)=>s+Number(x.subtotal||0),0);
+  let deliveryTotal = orders.reduce((s,x)=>s+Number(x.delivery_fee||0),0);
+  // Platform income = 10% of subtotal + 5% delivery fee
+  let income = Math.round(subtotal*0.10 + deliveryTotal);
   document.getElementById('sales').innerText = '₦'+Math.round(gross).toLocaleString();
   document.getElementById('sales').title = '₦'+Math.round(gross).toLocaleString();
-  document.getElementById('income').innerText = '₦'+Math.round(gross*0.10).toLocaleString();
-  document.getElementById('income').title = '₦'+Math.round(gross*0.10).toLocaleString();
+  document.getElementById('income').innerText = '₦'+income.toLocaleString();
+  document.getElementById('income').title = '₦'+income.toLocaleString() + ' (10% + delivery)';
   let now = new Date(); let todayStr = now.toDateString(); let weekAgo = new Date(); weekAgo.setDate(now.getDate()-7); let monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   let d = orders.filter(o=> new Date(o.created_at).toDateString()===todayStr); let w = orders.filter(o=> new Date(o.created_at) >= weekAgo); let m = orders.filter(o=> new Date(o.created_at) >= monthStart);
   let dGross = d.reduce((s,x)=>s+Number(x.total||0),0); let wGross = w.reduce((s,x)=>s+Number(x.total||0),0); let mGross = m.reduce((s,x)=>s+Number(x.total||0),0);
+  let dSub = d.reduce((s,x)=>s+Number(x.subtotal||0),0); let wSub = w.reduce((s,x)=>s+Number(x.subtotal||0),0); let mSub = m.reduce((s,x)=>s+Number(x.subtotal||0),0);
+  let dDel = d.reduce((s,x)=>s+Number(x.delivery_fee||0),0); let wDel = w.reduce((s,x)=>s+Number(x.delivery_fee||0),0); let mDel = m.reduce((s,x)=>s+Number(x.delivery_fee||0),0);
   document.getElementById('dSales').innerText = '₦'+Math.round(dGross).toLocaleString();
-  document.getElementById('dIncome').innerText = '₦'+Math.round(dGross*0.10).toLocaleString();
+  document.getElementById('dIncome').innerText = '₦'+Math.round(dSub*0.10 + dDel).toLocaleString();
   document.getElementById('wSales').innerText = '₦'+Math.round(wGross).toLocaleString();
-  document.getElementById('wIncome').innerText = '₦'+Math.round(wGross*0.10).toLocaleString();
+  document.getElementById('wIncome').innerText = '₦'+Math.round(wSub*0.10 + wDel).toLocaleString();
   document.getElementById('mSales').innerText = '₦'+Math.round(mGross).toLocaleString();
-  document.getElementById('mIncome').innerText = '₦'+Math.round(mGross*0.10).toLocaleString();
+  document.getElementById('mIncome').innerText = '₦'+Math.round(mSub*0.10 + mDel).toLocaleString();
 }
 function drawReturnsChart(){
   const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat'];
   const now = new Date(); const day = now.getDay(); const diffToMonday = day===0? -6 : 1 - day; const monday = new Date(now); monday.setDate(now.getDate() + diffToMonday); monday.setHours(0,0,0,0);
   let salesPerDay = [0,0,0,0,0,0]; let incomePerDay = [0,0,0,0,0,0];
-  for(let i=0;i<6;i++){ const dStart = new Date(monday); dStart.setDate(monday.getDate()+i); const dEnd = new Date(dStart); dEnd.setDate(dStart.getDate()+1); const dayOrders = orders.filter(o=>{ const cd = new Date(o.created_at); return cd >= dStart && cd < dEnd; }); const gross = dayOrders.reduce((s,x)=>s+Number(x.total||0),0); salesPerDay[i]=Math.round(gross); incomePerDay[i]=Math.round(gross*0.10); }
+  for(let i=0;i<6;i++){ const dStart = new Date(monday); dStart.setDate(monday.getDate()+i); const dEnd = new Date(dStart); dEnd.setDate(dStart.getDate()+1); const dayOrders = orders.filter(o=>{ const cd = new Date(o.created_at); return cd >= dStart && cd < dEnd; }); const gross = dayOrders.reduce((s,x)=>s+Number(x.total||0),0); const sub = dayOrders.reduce((s,x)=>s+Number(x.subtotal||0),0); const del = dayOrders.reduce((s,x)=>s+Number(x.delivery_fee||0),0); salesPerDay[i]=Math.round(gross); incomePerDay[i]=Math.round(sub*0.10 + del); }
   const ctx = document.getElementById('returnsChart').getContext('2d'); if(returnsChart) returnsChart.destroy();
-  returnsChart = new Chart(ctx, { type: 'bar', data: { labels: dayNames, datasets: [ { label:'Sales', data:salesPerDay, backgroundColor:'#16a34a', borderRadius:6 }, { label:'Income (10%)', data:incomePerDay, backgroundColor:'#f59e0b', borderRadius:6 } ] }, options: { responsive:true, plugins:{ legend:{ display:true, position:'bottom', labels:{ font:{size:10}, boxWidth:12 } } }, scales:{ y:{ beginAtZero:true, ticks:{ font:{size:9}, callback:v=>'₦'+v } }, x:{ ticks:{ font:{size:10, weight:'bold'} } } } } });
+  returnsChart = new Chart(ctx, { type: 'bar', data: { labels: dayNames, datasets: [ { label:'Sales', data:salesPerDay, backgroundColor:'#16a34a', borderRadius:6 }, { label:'Income (10%+5%)', data:incomePerDay, backgroundColor:'#f59e0b', borderRadius:6 } ] }, options: { responsive:true, plugins:{ legend:{ display:true, position:'bottom', labels:{ font:{size:10}, boxWidth:12 } } }, scales:{ y:{ beginAtZero:true, ticks:{ font:{size:9}, callback:v=>'₦'+v } }, x:{ ticks:{ font:{size:10, weight:'bold'} } } } } });
 }
 function updateOrdersTabAlert(){
   const ordersTab = document.getElementById('btnO'); const newPaidOrders = orders.filter(o => o.status === 'paid').length;
@@ -252,20 +259,23 @@ function closeModal(){ document.getElementById('detailModal').classList.add('hid
 function render(){
   if(tab==='finance'){
     let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
-    let platformIncome = Math.round(gross * 0.10);
-    let vendorPayouts = Math.round(gross * 0.90);
+    let subtotal = orders.reduce((s,x)=>s+Number(x.subtotal||0),0);
+    let deliveryTotal = orders.reduce((s,x)=>s+Number(x.delivery_fee||0),0);
+    let platformIncome = Math.round(subtotal*0.10 + deliveryTotal);
+    let vendorPayouts = Math.round(subtotal*0.90);
     let vendors = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor' && x.is_approved===true);
     let financeHTML = `
       <div class="p-2 space-y-3">
         <div class="bg-gradient-to-r from-green-600 to-green-500 text-white p-4 rounded-xl shadow">
-          <div class="text-[10px] opacity-80">YOUR PLATFORM INCOME (10%) - Auto Settled to Your Bank</div>
+          <div class="text-[10px] opacity-80">YOUR PLATFORM INCOME (10% + 5% delivery)</div>
           <div class="text-2xl font-black mt-1">₦${platformIncome.toLocaleString()}</div>
-          <div class="text-[11px] mt-2 bg-white/20 p-2 rounded-lg">This money goes to your MAIN Paystack account → Auto settles to your bank next day. No need to withdraw inside LGM.</div>
+          <div class="text-[11px] mt-2 bg-white/20 p-2 rounded-lg">Gross: ₦${gross.toLocaleString()} = Subtotal ₦${subtotal.toLocaleString()} + Delivery 5% ₦${deliveryTotal.toLocaleString()}<br>Income = 10% of subtotal (₦${Math.round(subtotal*0.10).toLocaleString()}) + Delivery (₦${deliveryTotal.toLocaleString()}) = ₦${platformIncome.toLocaleString()}</div>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div class="bg-white border p-3 rounded-xl text-center">
             <div class="text-[10px] text-gray-400">Gross Sales</div>
             <div class="text-[14px] font-black">₦${Math.round(gross).toLocaleString()}</div>
+            <div class="text-[9px] text-gray-400">Sub ₦${subtotal.toLocaleString()} + Del 5% ₦${deliveryTotal.toLocaleString()}</div>
           </div>
           <div class="bg-white border p-3 rounded-xl text-center">
             <div class="text-[10px] text-gray-400">Paid to Vendors (90%)</div>
@@ -274,26 +284,16 @@ function render(){
           </div>
         </div>
         <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-xl text-[11px] leading-5">
-          <b class="text-yellow-700">💡 How Auto Split Works (90/10):</b><br>
-          1. Customer pays ₦10k on LGM<br>
-          2. Paystack splits instantly:<br>
-          &nbsp;&nbsp;• 90% → Vendor subaccount (${vendors.length} subaccounts active)<br>
-          &nbsp;&nbsp;• 10% → Your main account<br>
-          3. Paystack settles to both banks T+1 (next day)<br><br>
-          <b>✅ Your subaccount system is WORKING PERFECTLY.</b> No manual withdrawal needed.
+          <b class="text-yellow-700">💡 How Auto Split Works (90% + 5% delivery):</b><br>
+          1. Customer pays subtotal + 5% delivery<br>
+          2. Paystack splits: 90% → Vendor subaccount, 10% + 5% delivery → Your main account<br>
+          3. Settled T+1<br><br>
+          <b>✅ Delivery is 5% of every paid order, not flat ₦5k.</b>
         </div>
         <div class="bg-white border rounded-xl p-3">
           <b class="text-[11px]">🏦 Your Vendors & Subaccounts</b>
           <div class="mt-2 space-y-1 max-h-[200px] overflow-y-auto">
             ${vendors.map(v=>`<div class="flex justify-between text-[11px] border-b py-1"><span>${v.full_name||v.email} <span class="text-green-600 font-bold text-[9px]">${v.paystack_subaccount_code||'No Sub'}</span></span><span class="font-bold">${v.bank_name||''}</span></div>`).join('') || '<div class="text-gray-400 text-[11px]">No active vendors</div>'}
-          </div>
-        </div>
-        <div class="bg-white border rounded-xl p-3">
-          <b class="text-[11px]">🔗 Paystack Dashboard Links</b>
-          <div class="flex gap-2 mt-2 flex-wrap">
-            <a href="https://dashboard.paystack.com/#/balance" target="_blank" class="bg-green-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">View Balance</a>
-            <a href="https://dashboard.paystack.com/#/transactions" target="_blank" class="bg-blue-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">Transactions</a>
-            <a href="https://dashboard.paystack.com/#/subaccounts" target="_blank" class="bg-purple-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">Subaccounts (${vendors.length})</a>
           </div>
         </div>
       </div>
@@ -337,13 +337,36 @@ function render(){
       const isActive = (o.status==='picked' || o.status==='on the way');
       let timerHTML = isActive? `<div class="admin-timer" data-start="${startTime}">${formatAdminCountdown(startTime)}</div>` : '';
       const newBorder = o.status==='paid'? 'border-2 border-green-500 bg-green-50' : 'border';
-      html += `<div class="${newBorder} rounded-lg p-3 mb-2 min-w-0">
+
+      // ===== NEW: SHOW ITEMS + VENDORS FOR DISPUTE TRACKING =====
+      let itemsBreakdown = '';
+      if(o.items && Array.isArray(o.items) && o.items.length>0){
+        itemsBreakdown = `<div class="mt-2 bg-white border rounded-lg p-2"><b class="text-[11px] text-green-700">📦 Ordered Items & Vendors (Dispute Tracking):</b><div class="mt-1 space-y-1">` +
+          o.items.map(it=>{
+            const vEmail = it.vendor_email || o.vendor_email || 'N/A';
+            const vId = it.vendor_id || '';
+            const vendorUser = users.find(u=> u.email===vEmail || u.id===vId);
+            const vendorName = vendorUser?.full_name || vEmail;
+            const itemTotal = (Number(it.price)||0) * (Number(it.qty||it.quantity)||1);
+            return `<div class="flex justify-between text-[11px] border-b border-dashed py-1">
+              <span class="flex-1"><b>${it.name||it.product_name||'Item'}</b> x${it.qty||it.quantity||1} <span class="text-gray-500">@ ₦${Number(it.price||0).toLocaleString()}</span><br><span class="text-[10px] text-blue-600">👤 Vendor: ${vendorName}</span></span>
+              <span class="font-bold">₦${itemTotal.toLocaleString()}</span>
+            </div>`;
+          }).join('') +
+          `<div class="text-[11px] mt-1 pt-1 flex justify-between"><span>Subtotal: <b>₦${Number(o.subtotal||0).toLocaleString()}</b></span><span>Delivery 5%: <b>₦${Number(o.delivery_fee||Math.round((o.subtotal||0)*0.05)).toLocaleString()}</b></span></div>` +
+          `</div></div>`;
+      } else {
+        itemsBreakdown = `<div class="mt-2 text-[10px] text-gray-400 italic">No items data (old order)</div>`;
+      }
+
+      html += `<div class="${newBorder} rounded-lg p-3 mb-3 min-w-0">
         <div class="flex justify-between gap-2"><div class="font-bold text-[12px] truncate">Order #${o.id} - <span class="${statusColor}">${o.status.toUpperCase()}</span> ${o.status==='paid'? '🆕 NEW FIRST':''}</div><div class="font-bold text-green-700 text-[12px] shrink-0">₦${Number(o.total||0).toLocaleString()}</div></div>
         <div class="text-xs truncate">Customer: ${o.customer_name || o.customer_email} - ${o.customer_phone||''}</div>
         <div class="text-xs text-gray-500 truncate">${o.customer_address||''}</div>
         ${agentInfo}
+        ${itemsBreakdown}
         ${timerHTML}
-        <div class="text-[10px] text-gray-400 mt-1">${new Date(o.created_at).toLocaleString()}</div>
+        <div class="text-[10px] text-gray-400 mt-1 flex justify-between"><span>${new Date(o.created_at).toLocaleString()}</span><span>Tx: ${o.tx_ref||'N/A'}</span></div>
       </div>`;
     });
   }
