@@ -306,7 +306,7 @@ function showTab(t){
   render();
 }
 
-// ===== FIXED UPDATE STATUS - AUTO PAYSTACK + AUTO HIDE/SHOW PRODUCTS =====
+// ===== GENIUS FIX - NO DUPLICATE PAYSTACK ACCOUNT =====
 function getBankCode(bankName){
   if(!bankName) return "999992";
   const n = bankName.toLowerCase();
@@ -332,16 +332,27 @@ async function updateStatus(email, status){
   if(!u){ alert('User not found: '+email); return; }
   const isVendor = String(u.role).toLowerCase().trim() === 'vendor';
 
-  if(!confirm(`${status?'Approve':'Suspend'} ${u.full_name || email}?${isVendor && status? '\n\nThis will auto-create Paystack subaccount for: ' + (u.account_number||'NO ACCOUNT') + ' ('+(u.bank_name||'Opay')+')' : ''}${isVendor &&!status? '\n\nAll his products will be HIDDEN from Store!' : ''}`)) return;
+  if(!confirm(`${status?'Approve':'Suspend'} ${u.full_name || email}?${isVendor && status? '\n\nPaystack: ' + (u.account_number||'NO ACCOUNT') + ' ('+(u.bank_name||'Opay')+')' + (u.paystack_subaccount_code? '\nAlready has: '+u.paystack_subaccount_code+' (Will NOT create new)' : '\nWill create new subaccount') : ''}${isVendor &&!status? '\n\nAll products will be HIDDEN!' : ''}`)) return;
 
-  // VENDOR APPROVAL = CREATE PAYSTACK SUBACCOUNT + SHOW PRODUCTS
+  // VENDOR APPROVAL
   if(isVendor && status){
-    if(!u.account_number){
-      if(!confirm('❌ No account_number found for this vendor!\n\nVendor email: '+u.email+'\n\nDo you still want to APPROVE without Paystack? (vendor will NOT get auto-split)')) return;
-      await supabaseClient.from('users').update({is_approved: true}).eq('email',email);
-      // FIX 2: Show products again
+
+    // ⭐⭐ YOUR GENIUS OBSERVATION FIX ⭐⭐
+    if(u.paystack_subaccount_code){
+      // Already has subaccount - just reactivate, don't create duplicate!
+      await supabaseClient.from('users').update({is_approved: true}).eq('email', email);
       await supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
-      alert('Approved without Paystack subaccount + Products now VISIBLE');
+      alert(`✅ REACTIVATED!\n\nKeeps old subaccount: ${u.paystack_subaccount_code}\nNo duplicate created!\nProducts VISIBLE!`);
+      load();
+      return;
+    }
+
+    // New vendor - needs new subaccount
+    if(!u.account_number){
+      if(!confirm('❌ No account_number!\n\nApprove without Paystack?')) return;
+      await supabaseClient.from('users').update({is_approved: true}).eq('email',email);
+      await supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
+      alert('Approved without Paystack + Products VISIBLE');
       load(); return;
     }
 
@@ -350,9 +361,7 @@ async function updateStatus(email, status){
 
     try{
       document.getElementById('list').innerHTML = `<div class="text-center py-12"><div class="text-green-600 font-black">⏳ Creating Paystack subaccount...</div><div class="text-xs mt-2">${u.full_name} - ${u.account_number} - ${u.bank_name||'Opay'}</div></div>`;
-
       const bankCode = u.bank_code || getBankCode(u.bank_name);
-
       const { data, error } = await supabaseClient.functions.invoke('create-vendor-subaccount', {
         body: {
           account_number: String(u.account_number).trim(),
@@ -362,13 +371,9 @@ async function updateStatus(email, status){
           vendor_phone: u.phone || u.whatsapp || '08000000000'
         }
       });
-
       if(error) throw new Error(error.message || JSON.stringify(error));
-      if(!data?.data?.subaccount_code) throw new Error('No subaccount_code returned: ' + JSON.stringify(data));
-
+      if(!data?.data?.subaccount_code) throw new Error('No subaccount_code: ' + JSON.stringify(data));
       const subCode = data.data.subaccount_code;
-
-      // Save to DB + approve
       const { error: updErr } = await supabaseClient.from('users').update({
         is_approved: true,
         paystack_subaccount_code: subCode,
@@ -376,30 +381,20 @@ async function updateStatus(email, status){
         account_name_resolved: data.data.account_name || '',
         bank_code: bankCode
       }).eq('email', email);
-
-      if(updErr){
-        await supabaseClient.from('users').update({is_approved: true}).eq('email', email);
-      }
-
-      // FIX 2: Show products again on re-approve
+      if(updErr){ await supabaseClient.from('users').update({is_approved: true}).eq('email', email); }
       await supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
-
-      alert(`✅ VENDOR APPROVED & LINKED!\n\nName: ${data.data.account_name}\nBank: ${data.data.settlement_bank}\nSubaccount: ${subCode}\n\nSplit: You 10% / Vendor 90% auto!\nProducts now VISIBLE in Store!`);
-
+      alert(`✅ APPROVED & LINKED!\n\nName: ${data.data.account_name}\nBank: ${data.data.settlement_bank}\nSub: ${subCode}\nYou 10% / Vendor 90%!\nProducts VISIBLE!`);
     }catch(err){
       console.error(err);
-      alert('❌ Paystack Failed: ' + err.message + '\n\nCheck: 1) Vendor Opay number correct? 2) Edge Function deployed? 3) Paystack secret key set?\n\nYou can retry Approve.');
-      load();
-      return;
+      alert('❌ Paystack Failed: ' + err.message);
+      load(); return;
     }
   } else {
-    // Agent approval OR suspending vendor/agent
+    // Suspend or Agent
     await supabaseClient.from('users').update({is_approved: status}).eq('email',email);
-
-    // FIX 1: Hide products when suspending vendor
     if(isVendor &&!status){
       await supabaseClient.from('products').update({is_approved: false}).eq('vendor_email', email);
-      alert(`🚫 Vendor Suspended!\n\nAll products from ${email} are now HIDDEN from Store!`);
+      alert(`🚫 Suspended!\nProducts from ${email} HIDDEN!`);
     } else {
       alert(`Account ${status?'Approved':'Suspended'}!`);
     }
