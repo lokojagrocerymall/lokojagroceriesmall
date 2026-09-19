@@ -168,7 +168,6 @@ function calcSales(){
   let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
   let subtotal = orders.reduce((s,x)=>s+Number(x.subtotal||0),0);
   let deliveryTotal = orders.reduce((s,x)=>s+Number(x.delivery_fee||0),0);
-  // Platform income = 10% of subtotal + 5% delivery fee
   let income = Math.round(subtotal*0.10 + deliveryTotal);
   document.getElementById('sales').innerText = '₦'+Math.round(gross).toLocaleString();
   document.getElementById('sales').title = '₦'+Math.round(gross).toLocaleString();
@@ -296,6 +295,15 @@ function render(){
             ${vendors.map(v=>`<div class="flex justify-between text-[11px] border-b py-1"><span>${v.full_name||v.email} <span class="text-green-600 font-bold text-[9px]">${v.paystack_subaccount_code||'No Sub'}</span></span><span class="font-bold">${v.bank_name||''}</span></div>`).join('') || '<div class="text-gray-400 text-[11px]">No active vendors</div>'}
           </div>
         </div>
+        <div class="bg-white border rounded-xl p-3">
+          <b class="text-[11px]">🔗 Paystack Dashboard Links</b>
+          <div class="flex gap-2 mt-2 flex-wrap">
+            <a href="https://dashboard.paystack.com/#/balance" target="_blank" class="bg-green-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">View Balance</a>
+            <a href="https://dashboard.paystack.com/#/transactions" target="_blank" class="bg-blue-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">Transactions</a>
+            <a href="https://dashboard.paystack.com/#/subaccounts" target="_blank" class="bg-purple-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">Subaccounts (${vendors.length})</a>
+            <a href="https://dashboard.paystack.com/#/settlements" target="_blank" class="bg-orange-500 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">Settlements</a>
+          </div>
+        </div>
       </div>
     `;
     document.getElementById('list').innerHTML = financeHTML;
@@ -337,8 +345,6 @@ function render(){
       const isActive = (o.status==='picked' || o.status==='on the way');
       let timerHTML = isActive? `<div class="admin-timer" data-start="${startTime}">${formatAdminCountdown(startTime)}</div>` : '';
       const newBorder = o.status==='paid'? 'border-2 border-green-500 bg-green-50' : 'border';
-
-      // ===== NEW: SHOW ITEMS + VENDORS FOR DISPUTE TRACKING =====
       let itemsBreakdown = '';
       if(o.items && Array.isArray(o.items) && o.items.length>0){
         itemsBreakdown = `<div class="mt-2 bg-white border rounded-lg p-2"><b class="text-[11px] text-green-700">📦 Ordered Items & Vendors (Dispute Tracking):</b><div class="mt-1 space-y-1">` +
@@ -358,7 +364,6 @@ function render(){
       } else {
         itemsBreakdown = `<div class="mt-2 text-[10px] text-gray-400 italic">No items data (old order)</div>`;
       }
-
       html += `<div class="${newBorder} rounded-lg p-3 mb-3 min-w-0">
         <div class="flex justify-between gap-2"><div class="font-bold text-[12px] truncate">Order #${o.id} - <span class="${statusColor}">${o.status.toUpperCase()}</span> ${o.status==='paid'? '🆕 NEW FIRST':''}</div><div class="font-bold text-green-700 text-[12px] shrink-0">₦${Number(o.total||0).toLocaleString()}</div></div>
         <div class="text-xs truncate">Customer: ${o.customer_name || o.customer_email} - ${o.customer_phone||''}</div>
