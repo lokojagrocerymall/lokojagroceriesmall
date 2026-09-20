@@ -107,6 +107,7 @@ let isSubmitting = false;
 let lastOrderStatus = {};
 let customerOrdersCache = [];
 let openOrderDetails = new Set();
+let vendorMap = {};
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const MIN_ORDER = 20000;
@@ -252,12 +253,23 @@ function buildRatingUI(o){
 async function loadProducts(){
   const {data} = await supabaseClient.from('products').select('*').eq('is_approved', true);
   allProducts = data||[];
+  // FETCH VENDOR BUSINESS NAMES - NEW UPDATE
+  try{
+    const emails = [...new Set(allProducts.map(p=>p.vendor_email).filter(Boolean))];
+    if(emails.length){
+      const {data: vendors} = await supabaseClient.from('users').select('email,business_name,store_name,full_name').in('email', emails);
+      (vendors||[]).forEach(v=>{
+        vendorMap[v.email.toLowerCase()] = v.business_name || v.store_name || v.full_name || v.email;
+      });
+    }
+  }catch(e){ console.log("vendor map error", e.message); }
   let html = '';
   allProducts.forEach(p=>{
+    const businessName = vendorMap[(p.vendor_email||'').toLowerCase()] || p.business_name || p.store_name || 'LGM Vendor';
     html += `<div class="bg-white p-3 rounded-2xl shadow">
       <img src="${p.image_url || p.image || 'https://placehold.co/200x200/e5e7eb/6b7280?text=No+Img'}" class="w-full h-32 object-cover rounded-lg mb-2">
       <b class="text-sm">${p.name}</b>
-      <div class="text-xs text-gray-500">${p.vendor_email}</div>
+      <div class="text-xs text-green-700 font-bold">🏪 ${businessName}</div>
       <div class="font-bold text-green-600">₦${Number(p.price).toLocaleString()}</div>
       <button onclick="addToCart(${p.id})" class="w-full bg-orange-500 text-white py-1.5 rounded-full text-xs mt-2">Add to Cart</button>
     </div>`;
@@ -461,7 +473,8 @@ async function payWithPaystack(e){
 async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total){
   const itemsWithVendor = cart.map(i => ({
     id: i.id, name: i.name, price: cleanPrice(i.price), qty: Number(i.qty)||1,
-    vendor_email: i.vendor_email, vendor_id: i.vendor_id
+    vendor_email: i.vendor_email, vendor_id: i.vendor_id,
+    vendor_business_name: vendorMap[(i.vendor_email||'').toLowerCase()] || i.vendor_email
   }));
   try{
     const { data: order, error } = await supabaseClient.from('orders').insert({
@@ -546,10 +559,10 @@ function renderOrdersList(){
     if(o.items && Array.isArray(o.items) && o.items.length>0){
       itemsBreakdown = `<div class="mt-2 bg-white border rounded-lg p-2"><b class="text-[11px] text-green-700">📦 Ordered Items & Vendors:</b><div class="mt-1 space-y-1">` +
         o.items.map(it=>{
-          const vEmail = it.vendor_email || 'N/A';
+          const vName = it.vendor_business_name || vendorMap[(it.vendor_email||'').toLowerCase()] || it.business_name || 'LGM Vendor';
           const itemTotal = (Number(it.price)||0) * (Number(it.qty||it.quantity)||1);
           return `<div class="flex justify-between text-[11px] border-b border-dashed py-1">
-            <span class="flex-1"><b>${it.name||it.product_name||'Item'}</b> x${it.qty||it.quantity||1} <span class="text-gray-500">@ ₦${Number(it.price||0).toLocaleString()}</span><br><span class="text-[10px] text-blue-600">👤 Vendor: ${vEmail}</span></span>
+            <span class="flex-1"><b>${it.name||it.product_name||'Item'}</b> x${it.qty||it.quantity||1} <span class="text-gray-500">@ ₦${Number(it.price||0).toLocaleString()}</span><br><span class="text-[10px] text-green-700 font-bold">🏪 ${vName}</span></span>
             <span class="font-bold">₦${itemTotal.toLocaleString()}</span>
           </div>`;
         }).join('') +
@@ -559,7 +572,6 @@ function renderOrdersList(){
 
     const isOpen = openOrderDetails.has(o.id);
     const timerHtml = isOnTheWay? formatCustomerCountdown(o.id, startTime) : '';
-    // FIXED: Mark Delivered button OUTSIDE folding - always visible
     const markDeliveredBtn = isOnTheWay? `<button onclick="markDelivered(${o.id})" class="w-full mt-3 bg-green-600 hover:bg-green-700 text-white py-3 rounded-full font-bold text-sm shadow-lg">✓ Mark Delivered - I Received My Order</button>` : '';
 
     html += `<div class="bg-white p-3 rounded-2xl shadow">
@@ -628,7 +640,6 @@ async function submitRating(id){
   if(error) alert(error.message);
   else { delete tempRating[id]; alert('Thank you for your feedback! 🙏'); loadOrders(); }
 }
-// LIVE per-second: updates ONLY the numbers, not whole page - fold stays open
 setInterval(()=>{
   document.querySelectorAll('.customer-timer').forEach(el=>{
     const orderId = el.getAttribute('data-order');
@@ -649,7 +660,6 @@ setInterval(()=>{
     timeEl.innerText = `${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
   });
 },1000);
-// Slow status refresh every 30s - preserves open details
 setInterval(()=>{
   if(document.getElementById('view-orders') &&!document.getElementById('view-orders').classList.contains('hidden') &&!isUserInteracting){
     loadOrders();
