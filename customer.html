@@ -3,10 +3,12 @@
 <title>My Account - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   @keyframes pulse-red {0%,100%{background:#fee2e2;border-color:#ef4444}50%{background:#fecaca;border-color:#dc2626}}
 .alert-tab{animation:pulse-red 1s infinite;border:2px solid #ef4444!important;border-radius:8px}
 .badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900}
+.receipt-footer{border-top:2px dashed #16a34a;margin-top:12px;padding-top:12px;text-align:center;background:#f0fdf4;border-radius:0 0 12px 12px}
 </style>
 </head>
 <body class="bg-gray-100">
@@ -427,7 +429,6 @@ async function payWithPaystack(e){
   const checkoutPhone = document.getElementById('checkoutPhone').value.trim();
   if(!finalLocation ||!checkoutAddress ||!checkoutLandmark ||!checkoutWhatsApp ||!checkoutPhone) return alert('Fill all delivery details');
 
-  // 🧪 TEST MODE FAST BYPASS - Fixes 4 mins hanging
   if(PAYSTACK_PUBLIC_KEY.startsWith('pk_test')){
     if(confirm('🧪 TEST MODE: Skip Paystack and simulate success?\n\nOK = Simulate Payment (2 sec)\nCancel = Open Real Paystack Popup')){
       const subtotal = cart.reduce((s,i)=> s + cleanPrice(i.price)*(Number(i.qty)||1),0);
@@ -586,19 +587,45 @@ function renderOrdersList(){
     const timerHtml = isOnTheWay? formatCustomerCountdown(o.id, startTime) : '';
     const markDeliveredBtn = isOnTheWay? `<button onclick="markDelivered(${o.id})" class="w-full mt-3 bg-green-600 hover:bg-green-700 text-white py-3 rounded-full font-bold text-sm shadow-lg">✓ Mark Delivered - I Received My Order</button>` : '';
 
+    const qrData = encodeURIComponent(`https://www.lokojagrocerymall.com.ng/verify?order=${o.id}&ref=${o.tx_ref||''}`);
+    const receiptFooter = `
+      <div class="receipt-footer">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <img src="logo.png" onerror="this.src='https://placehold.co/70x70/16a34a/ffffff?text=LGM'" style="width:60px;height:60px;object-fit:contain;border-radius:10px;background:white;padding:2px;border:2px solid #16a34a" />
+          <div style="font-weight:900;color:#166534;font-size:14px">LOKOJA GROCERY MALL</div>
+          <div style="font-size:11px;color:#374151;font-weight:700">3rd Floor Mary Plaza Ganaja Roundabout.</div>
+          <div style="font-size:11px;color:#065f46">www.lokojagrocerymall.com.ng</div>
+          <div style="font-size:11px;color:#065f46">lokojagrocerymall@gmail.com</div>
+          <div style="margin:8px 0;background:white;padding:6px;border-radius:10px;border:1px solid #a7f3d0">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${qrData}" style="width:100px;height:100px" crossorigin="anonymous" />
+            <div style="font-size:8px;font-weight:900;color:#065f46;margin-top:2px">SCAN TO VERIFY ORDER #${o.id}</div>
+          </div>
+          <div style="font-size:10px;color:#6b7280">Thank you for shopping with us! 🙏</div>
+          <div style="font-size:8px;color:#9ca3af">Order #${o.id} • ${new Date(o.created_at).toLocaleString()} • Ref: ${o.tx_ref||'N/A'}</div>
+        </div>
+      </div>
+    `;
+
     html += `<div class="bg-white p-3 rounded-2xl shadow">
-      <div class="flex justify-between"><b>Order #${o.id}</b><span class="${statusColor} font-bold capitalize">${o.status}</span></div>
-      <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
-      <div class="text-xs text-gray-500 mt-1">📍 ${o.customer_address}</div>
-      <div class="text-xs text-gray-500">📱 ${o.customer_phone}</div>
-      <div class="bg-gray-50 p-2 rounded-lg mt-2 text-center font-bold text-sm">${statusText}</div>
-      ${agentInfo}
-      ${timerHtml}
-      ${markDeliveredBtn}
-      <button onclick="toggleCustDetails(${o.id})" id="btn-${o.id}" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-[11px] font-black py-2 rounded-lg">${isOpen? '▲ Hide Details' : '▼ Show Items & Vendors'}</button>
-      <div id="cust-details-${o.id}" class="${isOpen? '' : 'hidden'}">
-        ${itemsBreakdown}
-        ${buildRatingUI(o)}
+      <div id="receipt-${o.id}" style="background:white;padding:8px;border-radius:12px">
+        <div class="flex justify-between"><b>Order #${o.id}</b><span class="${statusColor} font-bold capitalize">${o.status}</span></div>
+        <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
+        <div class="text-xs text-gray-500 mt-1">📍 ${o.customer_address}</div>
+        <div class="text-xs text-gray-500">📱 ${o.customer_phone}</div>
+        <div class="bg-gray-50 p-2 rounded-lg mt-2 text-center font-bold text-sm">${statusText}</div>
+        ${agentInfo}
+        ${timerHtml}
+        ${markDeliveredBtn}
+        <button onclick="toggleCustDetails(${o.id})" id="btn-${o.id}" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-[11px] font-black py-2 rounded-lg">${isOpen? '▲ Hide Details' : '▼ Show Items & Vendors'}</button>
+        <div id="cust-details-${o.id}" class="${isOpen? '' : 'hidden'}">
+          ${itemsBreakdown}
+          ${buildRatingUI(o)}
+        </div>
+        ${receiptFooter}
+      </div>
+      <div class="flex gap-2 mt-2">
+        <button onclick="toggleCustDetails(${o.id})" id="btn2-${o.id}" class="flex-1 bg-gray-100 text-[11px] font-black py-2 rounded-lg">Toggle</button>
+        <button onclick="saveReceipt(${o.id})" class="flex-1 bg-green-600 text-white text-[11px] font-black py-2 rounded-lg">📥 Save Receipt + QR as Image</button>
       </div>
       <div class="text-xs text-gray-400 mt-2">${new Date(o.created_at).toLocaleString()}</div>
     </div>`;
@@ -610,15 +637,18 @@ function renderOrdersList(){
 function toggleCustDetails(id){
   const el = document.getElementById('cust-details-'+id);
   const btn = document.getElementById('btn-'+id);
+  const btn2 = document.getElementById('btn2-'+id);
   const isHidden = el.classList.contains('hidden');
   if(isHidden){
     el.classList.remove('hidden');
     openOrderDetails.add(id);
     if(btn) btn.innerText = '▲ Hide Details';
+    if(btn2) btn2.innerText = '▲ Hide Details';
   } else {
     el.classList.add('hidden');
     openOrderDetails.delete(id);
     if(btn) btn.innerText = '▼ Show Items & Vendors';
+    if(btn2) btn2.innerText = '▼ Show Items & Vendors';
   }
   isUserInteracting = true;
   setTimeout(()=>{ isUserInteracting = false; }, 2000);
@@ -651,6 +681,21 @@ async function submitRating(id){
   const { error } = await supabaseClient.from('orders').update({ customer_rating: rating, customer_review: review }).eq('id', id);
   if(error) alert(error.message);
   else { delete tempRating[id]; alert('Thank you for your feedback! 🙏'); loadOrders(); }
+}
+async function saveReceipt(orderId){
+  const el = document.getElementById(`receipt-${orderId}`);
+  if(!el){ alert('Receipt not found'); return; }
+  const details = document.getElementById(`cust-details-${orderId}`);
+  const wasHidden = details.classList.contains('hidden');
+  if(wasHidden) details.classList.remove('hidden');
+  try{
+    const canvas = await html2canvas(el, {scale:2, useCORS:true, allowTaint:true, backgroundColor:'#ffffff'});
+    const link = document.createElement('a');
+    link.download = `LGM-Receipt-${orderId}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }catch(e){ alert('Failed to save receipt: '+e.message); }
+  if(wasHidden) details.classList.add('hidden');
 }
 setInterval(()=>{
   document.querySelectorAll('.customer-timer').forEach(el=>{
