@@ -6,7 +6,11 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.paystack.co/v1/inline.js"></script>
-<style>body{font-family:system-ui;background:#f8fafc}</style>
+<style>
+body{font-family:system-ui;background:#f8fafc}
+/* FIX FOR PHONE CUT */
+footer{padding-bottom: max(40px, env(safe-area-inset-bottom));}
+</style>
 </head>
 <body>
 <div style="background:#facc15;text-align:center;padding:7px;font-size:12px;font-weight:900">⏰ OPEN: Mon-Sat 8AM-6PM • Sunday CLOSED</div>
@@ -66,35 +70,60 @@
 <div class="px-4 pb-10"><div id="productsGrid" class="grid grid-cols-2 gap-3"><div class="col-span-2 text-center text-sm text-gray-400 py-10">Loading...</div></div></div>
 </div>
 
-<footer class="bg-[#0f172a] text-slate-400 mt-10">
-  <div class="max-w-6xl mx-auto px-6 py-10">
-    <div class="flex items-center gap-3 mb-4">
-      <div class="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-        <img src="logo.png" alt="LGM" class="w-10 h-10 object-contain">
+<!-- FIXED FOOTER - NO MORE CUT -->
+<footer class="bg-[#0f172a] text-slate-400 mt-10 pb-10">
+  <div class="max-w-6xl mx-auto px-6 pt-10 pb-16">
+    <div class="grid md:grid-cols-3 gap-8">
+      <!-- Col 1 -->
+      <div>
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+            <img src="logo.png" alt="LGM" class="w-10 h-10 object-contain">
+          </div>
+          <h2 class="text-white font-bold text-[20px]">Lokoja Grocery Mall</h2>
+        </div>
+        <p class="text-[14px] leading-6 max-w-xl">Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State. Fresh produce, meat, foodstuff and more — delivered to your door.</p>
       </div>
-      <h2 class="text-white font-bold text-[20px]">Lokoja Grocery Mall</h2>
+      <!-- Col 2 -->
+      <div>
+        <h3 class="text-white font-black text-[15px] mb-4">Quick Links</h3>
+        <div class="space-y-2 text-[14px]">
+          <a href="browse.html" class="block hover:text-white">🛍️ Browse Products</a>
+          <a href="signup.html" class="block hover:text-white">➕ Become a Vendor</a>
+          <a href="#" onclick="showDeliveryLogin()" class="block hover:text-white">🔐 Login</a>
+        </div>
+      </div>
+      <!-- Col 3 -->
+      <div>
+        <h3 class="text-white font-black text-[15px] mb-4">Contact</h3>
+        <div class="space-y-2 text-[14px]">
+          <p>📍 Lokoja, Kogi State, Nigeria</p>
+          <p>⏰ Mon-Sat: 8AM - 6PM</p>
+          <p>🚫 Sunday: CLOSED</p>
+          <p>📞 Support: Coming Soon</p>
+        </div>
+      </div>
     </div>
-    <p class="text-[15px] leading-6 max-w-xl mb-8">Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State. Fresh produce, meat, foodstuff and more — delivered to your door.</p>
+    <div class="border-t border-slate-800 mt-8 pt-6 text-center text-[12px]">
+      <p>© 2026 Lokoja Grocery Mall. All rights reserved.</p>
+      <p class="mt-1 opacity-70">Fresh groceries, delivered fast 🛒</p>
+    </div>
   </div>
 </footer>
 
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
-const PAYSTACK_PUBLIC_KEY="pk_test_72ae8a9acfe344ba6d2b5a59bc11ba4f5df0b3d6"; // <-- CHANGE TO YOUR REAL pk_test or pk_live
+const PAYSTACK_PUBLIC_KEY="pk_test_72ae8a9acfe344ba6d2b5a59bc11ba4f5df0b3d6";
 const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let delivery=5000;const MIN_ORDER=20000;
-
 (function(){if(localStorage.getItem('cart'))localStorage.removeItem('cart');if(localStorage.getItem('lgm_cart')&&localStorage.getItem('lgm_cart').includes('"quantity"'))localStorage.removeItem('lgm_cart');})();
-
 function doSearch(){const q=document.getElementById('searchInput').value.trim();if(q)location.href='browse.html?q='+encodeURIComponent(q);}
 function goCat(c){location.href='browse.html?cat='+encodeURIComponent(c);}
 function updateCart(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let count=cart.reduce((s,i)=>s+(Number(i.qty)||0),0);let badge=document.getElementById('cartCount');badge.innerText=count;if(count>0){badge.classList.remove('hidden');badge.classList.add('flex');}else{badge.classList.add('hidden');badge.classList.remove('flex');}}
 function clearCartNow(){if(!confirm('Clear cart?'))return;localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');updateCart();showCart();}
 function showCheckout(){document.getElementById('homeSection').classList.add('hidden');document.getElementById('checkoutSection').classList.remove('hidden');showCart();window.scrollTo(0,0);}
 function showCart(){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let alertBox=document.getElementById('minOrderAlert');let payBtn=document.getElementById('payBtn');if(cart.length===0){document.getElementById('cartSummary').innerHTML="<p class='text-center text-gray-400 py-4'>Cart empty</p>";if(alertBox)alertBox.classList.add('hidden');if(payBtn){payBtn.disabled=true;payBtn.style.opacity='0.5';}return;}let h='';let total=0;cart.forEach(item=>{total+=item.price*item.qty;h+=`<div class="flex justify-between text-sm mb-1"><span>${item.name} x${item.qty}</span><span>₦${(item.price*item.qty).toLocaleString()}</span></div>`;});h+=`<hr class="my-2"><div class="flex justify-between text-sm">Delivery: <span>₦${delivery.toLocaleString()}</span></div><div class="flex justify-between font-black mt-1">Total: <span>₦${(total+delivery).toLocaleString()}</span></div><div class="text-[11px] text-gray-500 mt-1">Items: ₦${total.toLocaleString()} ${total<MIN_ORDER?'(Min ₦20k)':'✓'}</div>`;document.getElementById('cartSummary').innerHTML=h;if(total<MIN_ORDER){let need=MIN_ORDER-total;if(alertBox){alertBox.classList.remove('hidden');alertBox.className="mb-3 p-3 rounded-xl text-[13px] font-black text-center bg-red-100 text-red-700 border border-red-200";alertBox.innerHTML=`❌ Min ₦20k - Add ₦${need.toLocaleString()} more`;}if(payBtn){payBtn.disabled=true;payBtn.style.opacity='0.5';payBtn.innerText=`Add ₦${need.toLocaleString()} More`;}}else{if(alertBox){alertBox.classList.remove('hidden');alertBox.className="mb-3 p-3 rounded-xl text-[13px] font-black text-center bg-green-100 text-green-700 border border-green-200";alertBox.innerHTML=`✅ Eligible!`;}if(payBtn){payBtn.disabled=false;payBtn.style.opacity='1';payBtn.innerText=`Pay Now With Paystack - ₦${(total+delivery).toLocaleString()}`;}}}
-
-// ===== NEW PAYSTACK FLOW - UNLIMITED VENDORS + CONCURRENT CUSTOMERS =====
 async function payWithPaystack(){
   const curUser=JSON.parse(localStorage.getItem('lgm_user'));
   if(!curUser){alert('Login first');showDeliveryLogin();return;}
@@ -119,22 +148,18 @@ async function payWithPaystack(){
   });
   handler.openIframe();
 }
-
 async function saveOrder(tx_ref,name,phone,address,grandTotal){
   const curUser=JSON.parse(localStorage.getItem('lgm_user'));
   const cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
   let sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
   if(sub<MIN_ORDER){alert(`Blocked - Less than ₦${MIN_ORDER}`);return;}
   try{
-    // 1. Save order - unique per customer, no hang for concurrent users
     const{data:order,error}=await supabaseClient.from('orders').insert({
       tx_ref:tx_ref,customer_id:curUser.id,customer_name:name,customer_email:curUser.email,
       customer_phone:phone,customer_address:address,items:cart,subtotal:sub,
       delivery_fee:delivery,total:grandTotal,payment_status:true,status:'paid'
     }).select().single();
     if(error)throw error;
-
-    // 2. Fetch vendor bank details for instant payout
     const vendorEmails=[...new Set(cart.map(i=>i.vendor_email).filter(Boolean))];
     let enrichedCart=cart;
     try{
@@ -145,12 +170,9 @@ async function saveOrder(tx_ref,name,phone,address,grandTotal){
         return {...i, vendor_name: v.full_name||i.vendor_name||i.vendor_email, account_number: v.account_number||i.account_number, bank_name: v.bank_name||i.bank_name, bank_code: v.bank_code||i.bank_code };
       });
     }catch(e){ console.log('vendor enrich skip', e); }
-
-    // 3. Call Edge Function to pay 90% instantly - handles unlimited vendors & unlimited customers at same time
     try{
       await supabaseClient.functions.invoke('process-payouts', { body: { order_id: order.id, items: enrichedCart } });
     }catch(payErr){ console.log('payout trigger', payErr); }
-
     localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');updateCart();
     try{await supabaseClient.from('carts').delete().eq('customer_id',curUser.id);}catch(e){}
     try{await supabaseClient.from('vendor_orders').insert({order_id:order.id,vendor_id:cart[0]?.vendor_id||null,vendor_email:cart[0]?.vendor_email||null,items:cart,subtotal:sub,status:'new'});}catch(vErr){}
@@ -163,7 +185,6 @@ async function saveOrder(tx_ref,name,phone,address,grandTotal){
     alert('Payment ok but save issue: '+err.message);window.location.replace('customer.html');
   }
 }
-
 async function loadProducts(){
   try{
     const {data: activeVendors, error: vError} = await supabaseClient.from('users').select('email').eq('role','vendor').eq('is_approved', true);
