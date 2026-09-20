@@ -253,7 +253,6 @@ function buildRatingUI(o){
 async function loadProducts(){
   const {data} = await supabaseClient.from('products').select('*').eq('is_approved', true);
   allProducts = data||[];
-  // FETCH VENDOR BUSINESS NAMES - NEW UPDATE
   try{
     const emails = [...new Set(allProducts.map(p=>p.vendor_email).filter(Boolean))];
     if(emails.length){
@@ -427,6 +426,18 @@ async function payWithPaystack(e){
   const checkoutWhatsApp = document.getElementById('checkoutWhatsApp').value.trim();
   const checkoutPhone = document.getElementById('checkoutPhone').value.trim();
   if(!finalLocation ||!checkoutAddress ||!checkoutLandmark ||!checkoutWhatsApp ||!checkoutPhone) return alert('Fill all delivery details');
+
+  // 🧪 TEST MODE FAST BYPASS - Fixes 4 mins hanging
+  if(PAYSTACK_PUBLIC_KEY.startsWith('pk_test')){
+    if(confirm('🧪 TEST MODE: Skip Paystack and simulate success?\n\nOK = Simulate Payment (2 sec)\nCancel = Open Real Paystack Popup')){
+      const subtotal = cart.reduce((s,i)=> s + cleanPrice(i.price)*(Number(i.qty)||1),0);
+      const delivery = Math.round(subtotal * 0.05);
+      const total = subtotal + delivery;
+      saveOrderAfterPayment("TEST_"+Date.now(), finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total);
+      return;
+    }
+  }
+
   const subtotal = cart.reduce((s,i)=> s + cleanPrice(i.price)*(Number(i.qty)||1),0);
   const delivery = Math.round(subtotal * 0.05);
   const total = subtotal + delivery;
@@ -462,6 +473,7 @@ async function payWithPaystack(e){
       }
     });
     handler.openIframe();
+    setTimeout(()=>{ if(isSubmitting){ alert("⚠️ Bank slow? If it says 'Waiting for issuer' >2mins, tap Cancel > Change Payment Method > Use 4084 0840 8408 4081 test card"); } }, 90000);
   }catch(err){
     alert('Paystack error: '+err.message);
     isSubmitting=false;
@@ -559,7 +571,7 @@ function renderOrdersList(){
     if(o.items && Array.isArray(o.items) && o.items.length>0){
       itemsBreakdown = `<div class="mt-2 bg-white border rounded-lg p-2"><b class="text-[11px] text-green-700">📦 Ordered Items & Vendors:</b><div class="mt-1 space-y-1">` +
         o.items.map(it=>{
-          const vName = it.vendor_business_name || vendorMap[(it.vendor_email||'').toLowerCase()] || it.business_name || 'LGM Vendor';
+          const vName = it.vendor_business_name || vendorMap[(it.vendor_email||'').toLowerCase()] || 'LGM Vendor';
           const itemTotal = (Number(it.price)||0) * (Number(it.qty||it.quantity)||1);
           return `<div class="flex justify-between text-[11px] border-b border-dashed py-1">
             <span class="flex-1"><b>${it.name||it.product_name||'Item'}</b> x${it.qty||it.quantity||1} <span class="text-gray-500">@ ₦${Number(it.price||0).toLocaleString()}</span><br><span class="text-[10px] text-green-700 font-bold">🏪 ${vName}</span></span>
