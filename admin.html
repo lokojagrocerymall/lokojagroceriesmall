@@ -376,6 +376,8 @@ function render(){
         <div class="text-xs truncate">Customer: ${o.customer_name || o.customer_email} - ${o.customer_phone||''}</div>
         <div class="text-xs text-gray-500 truncate">${o.customer_address||''}</div>
 
+        ${timerHTML}
+
         <button onclick="toggleAdminDetails(${o.id})" id="admin-btn-${o.id}" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-[11px] font-black py-2 rounded-lg">
           ▼ Show Items & Vendors
         </button>
@@ -383,7 +385,6 @@ function render(){
         <div id="admin-details-${o.id}" class="hidden">
           ${agentInfo}
           ${itemsBreakdown}
-          ${timerHTML}
           <div class="text-[10px] text-gray-400 mt-1 flex justify-between"><span>${new Date(o.created_at).toLocaleString()}</span><span>Tx: ${o.tx_ref||'N/A'}</span></div>
         </div>
       </div>`;
