@@ -192,36 +192,32 @@ async function loadProducts(){
     if(vError) throw vError;
     const activeEmails = (activeVendors||[]).map(u=> String(u.email).toLowerCase().trim());
     if(activeEmails.length===0){document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No active vendors</div>';return;}
-    const {data,error}=await supabaseClient.from('products').select('*').eq('is_approved',true).order('created_at',{ascending:false}).limit(100);
+    // HIDE OUT OF STOCK: gt stock 0
+    const {data,error}=await supabaseClient.from('products').select('*').eq('is_approved',true).gt('stock',0).order('created_at',{ascending:false}).limit(100);
     if(error) throw error;
-    if(!data||data.length===0){document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products</div>';return;}
-    const filtered = data.filter(p=>{if(!p.vendor_email) return false;return activeEmails.includes(String(p.vendor_email).toLowerCase().trim());});
-    if(filtered.length===0){document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products from active vendors</div>';return;}
+    if(!data||data.length===0){document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products in stock</div>';return;}
+    let filtered = data.filter(p=>{if(!p.vendor_email) return false;return activeEmails.includes(String(p.vendor_email).toLowerCase().trim());});
+    // Extra safety: hide 0 stock even if old cache
+    filtered = filtered.filter(p=> Number(p.stock||0) > 0);
+    if(filtered.length===0){document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No products from active vendors in stock</div>';return;}
     let html='';
     filtered.forEach(p=>{
       const img=p.image||p.image_url||'';
       const imgTag=img?`<img src="${img}" class="h-full w-full object-cover rounded-xl">`:'🛒';
       const safeName=(p.name||'').replace(/'/g,"").replace(/"/g,'');
       const vId=p.vendor_id||'';const vEmail=p.vendor_email||'';
-      const stockNum = Number(p.stock?? 50);
+      const stockNum = Number(p.stock||0);
       let stockLabel = '';
       let btnHTML = '';
-      let cardExtra = '';
-      let imgWrapExtra = '';
-      if(stockNum <= 0){
-        stockLabel = `<span class="stock-out">❌ Out of Stock</span>`;
-        btnHTML = `<button disabled class="bg-gray-300 text-gray-500 px-3 py-1 rounded-full text-[11px] font-bold">Out</button>`;
-        cardExtra = ' out-card';
-        imgWrapExtra = `<div class="out-badge">OUT</div>`;
-      } else if(stockNum <= 10){
+      if(stockNum <= 10){
         stockLabel = `<span class="stock-low">⚠️ Only ${stockNum} left!</span>`;
         btnHTML = `<button onclick="addToCart(${p.id},'${safeName}',${p.price},'${img}','${vId}','${vEmail}')" class="bg-orange-500 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button>`;
       } else {
         stockLabel = `<span class="stock-ok">✅ ${stockNum} in stock</span>`;
         btnHTML = `<button onclick="addToCart(${p.id},'${safeName}',${p.price},'${img}','${vId}','${vEmail}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button>`;
       }
-      html+=`<div class="bg-white rounded-2xl p-3 shadow-sm${cardExtra} relative">
-        <div class="bg-gray-100 rounded-xl h-28 flex items-center justify-center text-3xl mb-2 overflow-hidden relative">${imgTag}${imgWrapExtra}</div>
+      html+=`<div class="bg-white rounded-2xl p-3 shadow-sm relative">
+        <div class="bg-gray-100 rounded-xl h-28 flex items-center justify-center text-3xl mb-2 overflow-hidden relative">${imgTag}</div>
         <div class="font-bold text-[13px] truncate">${p.name}</div>
         <div class="text-[11px] text-gray-500 truncate">${p.category||''}</div>
         <div class="mt-1">${stockLabel}</div>
