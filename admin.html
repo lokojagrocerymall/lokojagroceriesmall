@@ -71,15 +71,15 @@
 
   <div class="bg-white rounded-xl shadow">
     <div id="mainTabs" class="tabs-scroll flex border-b overflow-x-auto text-[11px] sticky top-[56px] bg-white z-10">
-      <button onclick="showTab('pending')" id="btnP" class="flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap">Pending (<span id="cP">0</span>)</button>
+      <button onclick="showTab('pending')" id="btnP" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Pending (<span id="cP">0</span>)</button>
       <button onclick="showTab('vendors')" id="btnV" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Active V (<span id="cV">0</span>)</button>
       <button onclick="showTab('suspended')" id="btnS" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Suspended (<span id="cS">0</span>)</button>
       <button onclick="showTab('agents')" id="btnA" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Agents (<span id="cA">0</span>)</button>
-      <button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Orders (<span id="cO">0</span>)</button>
+      <button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap">Orders (<span id="cO">0</span>)</button>
       <button onclick="showTab('finance')" id="btnF" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">💰 Finance</button>
     </div>
 
-    <div id="orderFilters" class="hidden flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b">
+    <div id="orderFilters" class="flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b">
       <button onclick="filterOrders('all')" id="fAll" class="px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap">All (<span id="fcAll">0</span>)</button>
       <button onclick="filterOrders('paid')" id="fPaid" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">🆕 New (<span id="fcPaid">0</span>)</button>
       <button onclick="filterOrders('onway')" id="fOnway" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">🚚 On Way (<span id="fcOnway">0</span>)</button>
@@ -106,7 +106,7 @@ const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let users=[], orders=[], tab='pending', orderSubTab='all', lastSeenOrderCount=0;
+let users=[], orders=[], tab='orders', orderSubTab='all', lastSeenOrderCount=0;
 let returnsChart = null;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const DELIVERY_RATE = 0.05;
