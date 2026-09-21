@@ -8,8 +8,13 @@
 <script src="https://js.paystack.co/v1/inline.js"></script>
 <style>
 body{font-family:system-ui;background:#f8fafc}
-/* FIX FOR PHONE CUT */
 footer{padding-bottom: max(40px, env(safe-area-inset-bottom));}
+@keyframes pulse-red{0%,100%{background:#fee2e2}50%{background:#fecaca}}
+.stock-ok{color:#16a34a;font-weight:800;font-size:10px;background:#f0fdf4;padding:2px 6px;border-radius:999px;border:1px solid #bbf7d0}
+.stock-low{color:#d97706;font-weight:900;font-size:10px;background:#fffbeb;padding:2px 6px;border-radius:999px;border:1px solid #fde68a;animation:pulse-red 1.5s infinite}
+.stock-out{color:#dc2626;font-weight:900;font-size:10px;background:#fee2e2;padding:2px 6px;border-radius:999px;border:1px solid #fecaca}
+.out-card{opacity:0.6;filter:grayscale(0.3);pointer-events:none}
+.out-badge{position:absolute;top:6px;left:6px;background:#dc2626;color:#fff;font-size:9px;font-weight:900;padding:3px 7px;border-radius:999px}
 </style>
 </head>
 <body>
@@ -70,11 +75,9 @@ footer{padding-bottom: max(40px, env(safe-area-inset-bottom));}
 <div class="px-4 pb-10"><div id="productsGrid" class="grid grid-cols-2 gap-3"><div class="col-span-2 text-center text-sm text-gray-400 py-10">Loading...</div></div></div>
 </div>
 
-<!-- FIXED FOOTER - NO MORE CUT -->
 <footer class="bg-[#0f172a] text-slate-400 mt-10 pb-10">
   <div class="max-w-6xl mx-auto px-6 pt-10 pb-16">
     <div class="grid md:grid-cols-3 gap-8">
-      <!-- Col 1 -->
       <div>
         <div class="flex items-center gap-3 mb-4">
           <div class="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
@@ -84,7 +87,6 @@ footer{padding-bottom: max(40px, env(safe-area-inset-bottom));}
         </div>
         <p class="text-[14px] leading-6 max-w-xl">Your trusted multi-vendor grocery marketplace in Lokoja, Kogi State. Fresh produce, meat, foodstuff and more — delivered to your door.</p>
       </div>
-      <!-- Col 2 -->
       <div>
         <h3 class="text-white font-black text-[15px] mb-4">Quick Links</h3>
         <div class="space-y-2 text-[14px]">
@@ -93,7 +95,6 @@ footer{padding-bottom: max(40px, env(safe-area-inset-bottom));}
           <a href="#" onclick="showDeliveryLogin()" class="block hover:text-white">🔐 Login</a>
         </div>
       </div>
-      <!-- Col 3 -->
       <div>
         <h3 class="text-white font-black text-[15px] mb-4">Contact</h3>
         <div class="space-y-2 text-[14px]">
@@ -202,12 +203,40 @@ async function loadProducts(){
       const imgTag=img?`<img src="${img}" class="h-full w-full object-cover rounded-xl">`:'🛒';
       const safeName=(p.name||'').replace(/'/g,"").replace(/"/g,'');
       const vId=p.vendor_id||'';const vEmail=p.vendor_email||'';
-      html+=`<div class="bg-white rounded-2xl p-3 shadow-sm"><div class="bg-gray-100 rounded-xl h-28 flex items-center justify-center text-3xl mb-2 overflow-hidden">${imgTag}</div><div class="font-bold text-[13px] truncate">${p.name}</div><div class="text-[11px] text-gray-500 truncate">${p.category||''}</div><div class="flex justify-between items-center mt-2"><b class="text-red-600 text-[14px] font-black">₦${Number(p.price).toLocaleString()}</b><button onclick="addToCart(${p.id},'${safeName}',${p.price},'${img}','${vId}','${vEmail}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button></div></div>`;
+      const stockNum = Number(p.stock?? 50);
+      let stockLabel = '';
+      let btnHTML = '';
+      let cardExtra = '';
+      let imgWrapExtra = '';
+      if(stockNum <= 0){
+        stockLabel = `<span class="stock-out">❌ Out of Stock</span>`;
+        btnHTML = `<button disabled class="bg-gray-300 text-gray-500 px-3 py-1 rounded-full text-[11px] font-bold">Out</button>`;
+        cardExtra = ' out-card';
+        imgWrapExtra = `<div class="out-badge">OUT</div>`;
+      } else if(stockNum <= 10){
+        stockLabel = `<span class="stock-low">⚠️ Only ${stockNum} left!</span>`;
+        btnHTML = `<button onclick="addToCart(${p.id},'${safeName}',${p.price},'${img}','${vId}','${vEmail}')" class="bg-orange-500 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button>`;
+      } else {
+        stockLabel = `<span class="stock-ok">✅ ${stockNum} in stock</span>`;
+        btnHTML = `<button onclick="addToCart(${p.id},'${safeName}',${p.price},'${img}','${vId}','${vEmail}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-[11px] font-bold">Add</button>`;
+      }
+      html+=`<div class="bg-white rounded-2xl p-3 shadow-sm${cardExtra} relative">
+        <div class="bg-gray-100 rounded-xl h-28 flex items-center justify-center text-3xl mb-2 overflow-hidden relative">${imgTag}${imgWrapExtra}</div>
+        <div class="font-bold text-[13px] truncate">${p.name}</div>
+        <div class="text-[11px] text-gray-500 truncate">${p.category||''}</div>
+        <div class="mt-1">${stockLabel}</div>
+        <div class="flex justify-between items-center mt-2"><b class="text-red-600 text-[14px] font-black">₦${Number(p.price).toLocaleString()}</b>${btnHTML}</div>
+      </div>`;
     });
     document.getElementById('productsGrid').innerHTML=html;
   }catch(err){document.getElementById('productsGrid').innerHTML=`<div class="col-span-2 text-center text-sm text-red-400 py-10">Error: ${err.message}</div>`;}
 }
-function addToCart(id,name,price,image,vendor_id,vendor_email){let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let f=cart.find(i=>i.id===id);if(f){f.qty++;}else{cart.push({id,name,price,image:image||'',vendor_id:vendor_id||null,vendor_email:vendor_email||null,qty:1});}localStorage.setItem('lgm_cart',JSON.stringify(cart));updateCart();alert(name+' added!');}
+function addToCart(id,name,price,image,vendor_id,vendor_email){
+  let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
+  let f=cart.find(i=>i.id===id);
+  if(f){f.qty++;}else{cart.push({id,name,price,image:image||'',vendor_id:vendor_id||null,vendor_email:vendor_email||null,qty:1});}
+  localStorage.setItem('lgm_cart',JSON.stringify(cart));updateCart();alert(name+' added!');
+}
 updateCart();loadProducts();if(window.location.hash==='#checkout')showCheckout();
 </script>
 
