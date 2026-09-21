@@ -89,8 +89,28 @@
     <div id="ordersList" class="space-y-3">Loading orders...</div>
   </div>
 </div>
-<!-- TAP TO VIEW MODAL -->
-<div id="detailModal" class="hidden fixed inset-0 bg-black/70 z-[80] flex items-end md:items-center justify-center p-0 md:p-4" onclick="if(event.target==this) closeDetail()"><div class="bg-white w-full md:max-w-md rounded-t-[28px] md:rounded-[24px] p-5 max-h-[92vh] overflow-y-auto"><img id="dImage" class="w-full h-56 object-cover rounded-2xl bg-gray-100 mb-3"><p id="dName" class="font-black text-[18px]"></p><p id="dCategory" class="text-xs text-gray-400 mt-1"></p><div id="dStock" class="mt-2"></div><p id="dVendor" class="text-[12px] text-green-700 font-bold mt-1"></p><p id="dDesc" class="text-[13px] text-gray-600 mt-3 bg-gray-50 p-3 rounded-xl"></p><p id="dPrice" class="font-black text-green-700 text-[22px] mt-3"></p><button id="dAddBtn" class="w-full bg-orange-500 text-white py-4 rounded-xl font-black mt-4">Add to Cart 🛒</button><button onclick="closeDetail()" class="w-full bg-gray-100 py-3 rounded-xl font-bold text-sm mt-2">Close</button></div></div>
+<!-- TAP TO VIEW MODAL - BEAUTIFUL VENDOR STYLE -->
+<div id="detailModal" class="hidden fixed inset-0 bg-black/70 z-[80] flex items-end md:items-center justify-center p-0 md:p-4" onclick="if(event.target==this) closeDetail()">
+  <div class="bg-white w-full md:max-w-md rounded-t-[28px] md:rounded-[24px] p-5 max-h-[92vh] overflow-y-auto" style="animation:slideUp 0.3s ease">
+    <img id="dImage" class="w-full h-56 object-cover rounded-2xl bg-gray-100 mb-3">
+    <div class="flex justify-between items-start gap-2">
+      <p id="dName" class="font-black text-[18px] leading-tight flex-1"></p>
+      <span id="dStockBadge" class="text-[10px] font-black px-2 py-1 rounded-full whitespace-nowrap"></span>
+    </div>
+    <p id="dCategory" class="text-xs text-gray-400 mt-1"></p>
+    <p id="dVendor" class="text-[12px] text-green-700 font-bold mt-1"></p>
+    <div id="dStock" class="mt-2"></div>
+    <p id="dPrice" class="font-black text-green-700 text-[24px] mt-3"></p>
+    <div class="bg-gray-50 p-3 rounded-xl mt-3">
+      <div class="text-[10px] font-black text-gray-400 tracking-widest">FULL DESCRIPTION</div>
+      <p id="dDesc" class="text-[13px] text-gray-700 mt-1 leading-relaxed whitespace-pre-wrap break-words"></p>
+    </div>
+    <button id="dAddBtn" class="w-full bg-orange-500 text-white py-4 rounded-xl font-black mt-4">Add to Cart 🛒</button>
+    <button onclick="closeDetail()" class="w-full bg-gray-100 py-3 rounded-xl font-bold text-sm mt-2">Close</button>
+  </div>
+</div>
+<style>@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}</style>
+
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
@@ -187,9 +207,26 @@ function toggleCustomLocation(){
     customInput.value = '';
   }
 }
-function openDetail(id){const p=allProducts.find(x=>x.id===id);if(!p)return;document.getElementById('dImage').src=p.image_url||p.image||'';document.getElementById('dName').innerText=p.name;document.getElementById('dCategory').innerText=(p.category||'')+' • '+(p.location||'Lokoja');document.getElementById('dVendor').innerText='🏪 '+(vendorMap[(p.vendor_email||'').toLowerCase()]||'LGM Vendor');document.getElementById('dDesc').innerText=p.description||p.name+' - Full: '+p.name;document.getElementById('dPrice').innerText='₦'+Number(p.price).toLocaleString();const s=Number(p.stock||0);document.getElementById('dStock').innerHTML=s<=10?`<span class="stock-low">⚠️ Only ${s} left!</span>`:`<span class="stock-ok">✅ ${s} in stock</span>`;document.getElementById('dAddBtn').onclick=()=>{closeDetail();addToCart(id);};document.getElementById('detailModal').classList.remove('hidden');}
+function openDetail(id){
+  const p=allProducts.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('dImage').src=p.image_url||p.image||'';
+  document.getElementById('dName').innerText=p.name;
+  document.getElementById('dCategory').innerText=(p.category||'Foodstuff')+' • '+(p.location||'Lokoja');
+  document.getElementById('dVendor').innerText='🏪 '+(vendorMap[(p.vendor_email||'').toLowerCase()]||'LGM Vendor');
+  document.getElementById('dDesc').innerText=p.description||p.name;
+  document.getElementById('dPrice').innerText='₦'+Number(p.price).toLocaleString();
+  const s=Number(p.stock||0);
+  const badge=document.getElementById('dStockBadge');
+  if(s<=5){ badge.innerText='⚠️ LOW: '+s; badge.style.background='#fffbeb'; badge.style.color='#d97706'; }
+  else if(s<=10){ badge.innerText='⚠️ Only '+s+' left'; badge.style.background='#fffbeb'; badge.style.color='#d97706'; }
+  else { badge.innerText='✅ '+s+' in stock'; badge.style.background='#dcfce7'; badge.style.color='#16a34a'; }
+  document.getElementById('dStock').innerHTML=s<=10?`<span class="stock-low">⚠️ Only ${s} left!</span>`:`<span class="stock-ok">✅ ${s} in stock</span>`;
+  document.getElementById('dAddBtn').onclick=()=>{closeDetail();addToCart(id);};
+  document.getElementById('detailModal').classList.remove('hidden');
+}
 function closeDetail(){document.getElementById('detailModal').classList.add('hidden');}
-  
+
 function showTab(t){
   document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
   document.querySelectorAll('[id^=tab]').forEach(b=>{b.classList.remove('text-green-600','border-b-2','border-green-600'); b.classList.add('text-gray-400')});
@@ -261,7 +298,6 @@ function buildRatingUI(o){
 }
 
 async function loadProducts(){
-  // HIDE OUT OF STOCK: gt stock 0
   const {data} = await supabaseClient.from('products').select('*').eq('is_approved', true).gt('stock',0);
   allProducts = (data||[]).filter(p=> Number(p.stock||0) > 0);
   try{
@@ -281,18 +317,18 @@ async function loadProducts(){
     let btnHTML = '';
     if(stockNum <= 10){
       stockLabel = `<span class="stock-low">⚠️ Only ${stockNum} left!</span>`;
-      btnHTML = `<button onclick="addToCart(${p.id})" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-1.5 rounded-full text-xs mt-2 font-bold">Add to Cart - ${stockNum} left</button>`;
+      btnHTML = `<button onclick="event.stopPropagation(); addToCart(${p.id})" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-1.5 rounded-full text-xs mt-2 font-bold">Add to Cart - ${stockNum} left</button>`;
     } else {
       stockLabel = `<span class="stock-ok">✅ ${stockNum} in stock</span>`;
-      btnHTML = `<button onclick="addToCart(${p.id})" class="w-full bg-orange-500 text-white py-1.5 rounded-full text-xs mt-2">Add to Cart</button>`;
+      btnHTML = `<button onclick="event.stopPropagation(); addToCart(${p.id})" class="w-full bg-orange-500 text-white py-1.5 rounded-full text-xs mt-2">Add to Cart</button>`;
     }
-    html += `<div class="bg-white p-3 rounded-2xl shadow relative">
+    html += `<div class="bg-white p-3 rounded-2xl shadow relative cursor-pointer" onclick="openDetail(${p.id})" style="transition:transform 0.1s">
       <div class="relative">
         <img src="${p.image_url || p.image || 'https://placehold.co/200x200/e5e7eb/6b7280?text=No+Img'}" class="w-full h-32 object-cover rounded-lg mb-2">
       </div>
       <b class="text-sm block truncate">${p.name}</b>
       <div class="text-xs text-green-700 font-bold">🏪 ${businessName}</div>
-      <div class="mt-1">${stockLabel}</div>
+      <div class="mt-1 flex items-center gap-1 flex-wrap">${stockLabel} <span class="text-[9px] text-green-600 font-black">👁️ Tap to view full</span></div>
       <div class="font-bold text-green-600 mt-1">₦${Number(p.price).toLocaleString()}</div>
       ${btnHTML}
     </div>`;
