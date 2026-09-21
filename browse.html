@@ -10,36 +10,70 @@
 <div class="flex justify-between items-center mb-3"><span id="count" class="text-xs text-gray-500">0 products</span><select id="sortSelect" onchange="sortProducts()" class="border p-2 rounded-xl text-xs"><option value="newest">Newest</option><option value="low">Price Low-High</option><option value="high">Price High-Low</option></select></div>
 <div id="filterPanel" class="filter-panel bg-white rounded-2xl shadow p-4 mb-4"><div class="flex justify-between mb-3"><h4 class="font-black text-sm">Filters</h4><span onclick="clearFilters()" class="text-green-600 text-xs cursor-pointer font-bold">Clear all</span></div><h5 class="text-[11px] font-black mb-2">PRICE RANGE</h5><div class="flex gap-2 mb-4"><input id="minPrice" type="number" placeholder="Min ₦" class="flex-1 p-2.5 border-2 rounded-xl text-xs"><span class="py-2">—</span><input id="maxPrice" type="number" placeholder="Max ₦" class="flex-1 p-2.5 border-2 rounded-xl text-xs"><button onclick="applyPrice()" class="bg-green-600 text-white px-4 rounded-xl text-xs font-bold">Go</button></div><h5 class="text-[11px] font-black mb-2">LOCATION IN LOKOJA</h5><div class="location-list" id="locList"><label><input type="checkbox" value="Ganaja"> Ganaja</label><label><input type="checkbox" value="Adankolo"> Adankolo</label><label><input type="checkbox" value="Felele"> Felele</label><label><input type="checkbox" value="Phase 2"> Phase 2</label><label><input type="checkbox" value="Phase 1"> Phase 1</label><label><input type="checkbox" value="Old Market"> Old Market</label><label><input type="checkbox" value="Kpata"> Kpata Market</label><label><input type="checkbox" value="FUL"> FUL</label><label><input type="checkbox" value="Zone 8"> Zone 8</label><label><input type="checkbox" value="Nataco"> Nataco</label></div></div>
 <div id="grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"><p class="col-span-full text-center text-xs text-gray-400 py-10">Loading products...</p></div></div>
+
+<!-- CART MODAL -->
 <div id="cartModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-end justify-center"><div class="bg-white w-full md:max-w-sm rounded-t-[24px] p-5"><div class="flex gap-3 mb-4"><img id="mImage" class="w-20 h-20 object-cover rounded-xl bg-gray-100"><div><p id="mName" class="font-black text-sm"></p><p id="mCategory" class="text-xs text-gray-400"></p><p id="mPrice" class="font-black text-green-700 mt-1"></p><p class="text-[9px] text-gray-400">+5% delivery at checkout</p></div></div><div class="bg-gray-50 rounded-xl p-3 flex justify-between items-center mb-2"><span class="text-sm font-bold">Qty</span><div class="flex items-center gap-3"><button onclick="changeQty(-1)" class="w-9 h-9 bg-white border-2 rounded-full font-black">-</button><span id="mQty" class="font-black w-6 text-center">1</span><button onclick="changeQty(1)" class="w-9 h-9 bg-green-600 text-white rounded-full font-black">+</button></div></div><div id="minAlertModal" class="hidden mb-2 p-2 rounded-xl text-[11px] font-black text-center"></div><div class="bg-green-50 p-3 rounded-xl text-xs mb-4"><div class="flex justify-between"><span>Total</span><span id="mTotal" class="font-bold"></span></div><div class="flex justify-between"><span>Delivery 5%</span><span id="mDel"></span></div><div class="flex justify-between font-black border-t mt-1 pt-1"><span>You Pay</span><span id="mGrand" class="text-green-700"></span></div></div><button onclick="confirmAddToCart()" class="w-full bg-green-600 text-white py-3.5 rounded-xl font-black mb-2">Add • <span id="mTotalBtn">₦0</span></button><button onclick="closeModal()" class="w-full bg-gray-100 py-3 rounded-xl font-bold text-sm">Continue</button></div></div>
+
+<!-- DETAIL MODAL - TAP TO VIEW FULL -->
+<div id="detailModal" class="hidden fixed inset-0 bg-black/70 z-[70] flex items-end md:items-center justify-center p-0 md:p-4" onclick="if(event.target==this) closeDetail()">
+<div class="bg-white w-full md:max-w-md rounded-t-[28px] md:rounded-[24px] p-5 max-h-[92vh] overflow-y-auto">
+<div class="w-10 h-1.5 bg-gray-200 rounded-full mx-auto mb-4 md:hidden"></div>
+<img id="dImage" class="w-full h-56 object-cover rounded-2xl bg-gray-100 mb-3">
+<p id="dName" class="font-black text-[18px] leading-tight"></p>
+<p id="dCategory" class="text-xs text-gray-400 mt-1"></p>
+<div id="dStock" class="mt-2"></div>
+<p id="dDesc" class="text-[13px] text-gray-600 mt-3 leading-relaxed bg-gray-50 p-3 rounded-xl"></p>
+<div class="flex justify-between items-center mt-4"><p id="dPrice" class="font-black text-green-700 text-[22px]"></p><p class="text-[10px] text-gray-400">+5% delivery</p></div>
+<button id="dAddBtn" class="w-full bg-green-600 text-white py-4 rounded-xl font-black mt-4 text-[15px]">Add to Cart 🛒</button>
+<button onclick="closeDetail()" class="w-full bg-gray-100 py-3 rounded-xl font-bold text-sm mt-2">Close</button>
+<p class="text-center text-[10px] text-gray-400 mt-3">Tap outside to close • Full details visible</p>
+</div>
+</div>
+
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let all=[];let filtered=[];let selectedProduct=null;let currentQty=1;const MIN_ORDER=20000;
 function toggleFilters(){document.getElementById('filterPanel').classList.toggle('active')}function clearFilters(){document.querySelectorAll('#locList input').forEach(i=>i.checked=false);document.getElementById('minPrice').value='';document.getElementById('maxPrice').value='';filtered=[...all];render(filtered);}
 async function load(){try{
-  // HIDE OUT OF STOCK - gt stock 0
   const{data,error}=await supabaseClient.from('products').select('*').eq('is_approved',true).gt('stock',0).order('created_at',{ascending:false});
   if(error)throw error;
-  // Extra safety filter
   all=(data||[]).filter(p=> Number(p.stock||0) > 0);
   filtered=[...all];
   document.getElementById('count').innerText=all.length+' products in stock';
   render(filtered);
 }catch(e){document.getElementById('grid').innerHTML='<p class="text-xs text-red-500">Error: '+e.message+'</p>';}}
+
 function render(list){const g=document.getElementById('grid');g.innerHTML='';if(list.length===0){g.innerHTML='<div class="col-span-full text-center py-20 text-gray-400"><div class="text-5xl mb-2">✅</div><p class="text-sm font-bold">All items in stock shown</p><p class="text-xs">Out of stock items hidden</p></div>';return;}list.forEach(p=>{
   const imgUrl=p.image||p.image_url||'';const imgSrc=imgUrl||'https://via.placeholder.com/200?text=No+Image';
   const stockNum = Number(p.stock||0);
-  let stockBadge = '';
-  if(stockNum <=10){ stockBadge = `<span class="stock-low">⚠️ Only ${stockNum} left!</span>`; }
-  else { stockBadge = `<span class="stock-ok">✅ ${stockNum} in stock</span>`; }
+  let stockBadge = stockNum <=10? `<span class="stock-low">⚠️ Only ${stockNum} left!</span>` : `<span class="stock-ok">✅ ${stockNum} in stock</span>`;
   const d=document.createElement('div');d.className='bg-white rounded-2xl shadow p-2';
-  d.innerHTML=`<img src="${imgSrc}" class="w-full h-28 object-cover rounded-xl mb-2 bg-gray-100" onerror="this.src='https://via.placeholder.com/200'">
+  d.innerHTML=`<div onclick="openDetail(${p.id})" class="cursor-pointer">
+  <img src="${imgSrc}" class="w-full h-28 object-cover rounded-xl mb-2 bg-gray-100" onerror="this.src='https://via.placeholder.com/200'">
   <p class="font-bold text-xs truncate">${p.name}</p>
-  <p class="text-[10px] text-gray-400">${p.category||'Others'}</p>
+  <p class="text-[10px] text-gray-400">${p.category||'Others'} • Tap to view</p>
   <div class="mt-1">${stockBadge}</div>
   <p class="font-black text-green-700 text-sm mt-1">₦${Number(p.price).toLocaleString()}</p>
+  </div>
   <button onclick="openModal(${p.id})" class="w-full ${stockNum<=10?'bg-orange-500':'bg-green-600'} text-white text-xs py-2.5 rounded-xl mt-1 font-bold">${stockNum<=10?'Add - '+stockNum+' left':'Add to Cart 🛒'}</button>`;
   g.appendChild(d);
 });}
+
+function openDetail(id){
+  const p = all.find(x=>x.id===id); if(!p) return;
+  const imgUrl=p.image||p.image_url||'https://via.placeholder.com/400';
+  document.getElementById('dImage').src=imgUrl;
+  document.getElementById('dName').innerText=p.name;
+  document.getElementById('dCategory').innerText=(p.category||'Others')+' • '+(p.location||'Lokoja')+' • Tap image to view full';
+  document.getElementById('dDesc').innerText=p.description||p.name+' - Fresh from Lokoja market. Full details: '+p.name+'. Category: '+(p.category||'Others')+'. Location: '+(p.location||'Lokoja')+'.';
+  document.getElementById('dPrice').innerText='₦'+Number(p.price).toLocaleString();
+  const stockNum=Number(p.stock||0);
+  document.getElementById('dStock').innerHTML = stockNum<=10? `<span class="stock-low">⚠️ Only ${stockNum} left!</span>` : `<span class="stock-ok">✅ ${stockNum} in stock</span>`;
+  document.getElementById('dAddBtn').onclick=()=>{closeDetail(); openModal(id);};
+  document.getElementById('detailModal').classList.remove('hidden');
+}
+function closeDetail(){document.getElementById('detailModal').classList.add('hidden');}
+
 function openModal(id){
   selectedProduct=all.find(p=>p.id===id);
   if(!selectedProduct)return;
