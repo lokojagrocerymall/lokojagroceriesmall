@@ -9,6 +9,11 @@
 .alert-tab{animation:pulse-red 1s infinite;border:2px solid #ef4444!important;border-radius:8px}
 .badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900}
 .receipt-footer{border-top:2px dashed #16a34a;margin-top:12px;padding-top:12px;text-align:center;background:#f0fdf4;border-radius:0 0 12px 12px}
+.stock-ok{color:#16a34a;font-weight:800;font-size:10px;background:#f0fdf4;padding:2px 6px;border-radius:999px;border:1px solid #bbf7d0}
+.stock-low{color:#d97706;font-weight:900;font-size:10px;background:#fffbeb;padding:2px 6px;border-radius:999px;border:1px solid #fde68a}
+.stock-out{color:#dc2626;font-weight:900;font-size:10px;background:#fee2e2;padding:2px 6px;border-radius:999px;border:1px solid #fecaca}
+.out-card{opacity:0.55;filter:grayscale(0.4)}
+.out-badge{position:absolute;top:6px;left:6px;background:#dc2626;color:#fff;font-size:9px;font-weight:900;padding:3px 7px;border-radius:999px}
 </style>
 </head>
 <body class="bg-gray-100">
@@ -267,12 +272,33 @@ async function loadProducts(){
   let html = '';
   allProducts.forEach(p=>{
     const businessName = vendorMap[(p.vendor_email||'').toLowerCase()] || p.business_name || p.store_name || 'LGM Vendor';
-    html += `<div class="bg-white p-3 rounded-2xl shadow">
-      <img src="${p.image_url || p.image || 'https://placehold.co/200x200/e5e7eb/6b7280?text=No+Img'}" class="w-full h-32 object-cover rounded-lg mb-2">
-      <b class="text-sm">${p.name}</b>
+    const stockNum = Number(p.stock?? 50);
+    let stockLabel = '';
+    let btnHTML = '';
+    let cardExtra = '';
+    let badgeHTML = '';
+    if(stockNum <= 0){
+      stockLabel = `<span class="stock-out">❌ Out of Stock</span>`;
+      btnHTML = `<button disabled class="w-full bg-gray-300 text-gray-500 py-1.5 rounded-full text-xs mt-2 font-bold cursor-not-allowed">Out of Stock</button>`;
+      cardExtra = ' out-card';
+      badgeHTML = `<div class="out-badge">OUT</div>`;
+    } else if(stockNum <= 10){
+      stockLabel = `<span class="stock-low">⚠️ Only ${stockNum} left!</span>`;
+      btnHTML = `<button onclick="addToCart(${p.id})" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-1.5 rounded-full text-xs mt-2 font-bold">Add to Cart - ${stockNum} left</button>`;
+    } else {
+      stockLabel = `<span class="stock-ok">✅ ${stockNum} in stock</span>`;
+      btnHTML = `<button onclick="addToCart(${p.id})" class="w-full bg-orange-500 text-white py-1.5 rounded-full text-xs mt-2">Add to Cart</button>`;
+    }
+    html += `<div class="bg-white p-3 rounded-2xl shadow relative${cardExtra}">
+      <div class="relative">
+        <img src="${p.image_url || p.image || 'https://placehold.co/200x200/e5e7eb/6b7280?text=No+Img'}" class="w-full h-32 object-cover rounded-lg mb-2">
+        ${badgeHTML}
+      </div>
+      <b class="text-sm block truncate">${p.name}</b>
       <div class="text-xs text-green-700 font-bold">🏪 ${businessName}</div>
-      <div class="font-bold text-green-600">₦${Number(p.price).toLocaleString()}</div>
-      <button onclick="addToCart(${p.id})" class="w-full bg-orange-500 text-white py-1.5 rounded-full text-xs mt-2">Add to Cart</button>
+      <div class="mt-1">${stockLabel}</div>
+      <div class="font-bold text-green-600 mt-1">₦${Number(p.price).toLocaleString()}</div>
+      ${btnHTML}
     </div>`;
   });
   document.getElementById('productGrid').innerHTML = html || 'No products yet';
@@ -281,9 +307,16 @@ async function loadProducts(){
 async function addToCart(id){
   const product = allProducts.find(p=>p.id===id);
   if(!product) return;
+  const stockNum = Number(product.stock?? 50);
+  if(stockNum <= 0){ alert('❌ Out of Stock - ' + product.name); return; }
   const existing = cart.find(i=>i.id===id);
+  const currentQty = existing? Number(existing.qty)||0 : 0;
+  if(currentQty + 1 > stockNum){
+    alert(`⚠️ Only ${stockNum} left for ${product.name}! You already have ${currentQty} in cart.`);
+    return;
+  }
   if(existing) existing.qty++;
-  else cart.push({...product, qty:1});
+  else cart.push({...product, qty:1, stock: stockNum});
   saveCart(true);
   try{
     const u = JSON.parse(localStorage.getItem('lgm_user')||'{}');
@@ -300,7 +333,7 @@ async function addToCart(id){
       }, {onConflict: 'customer_id,product_id'});
     }
   }catch(e){ console.log("cart db save error", e.message); }
-  alert(product.name + ' added!');
+  alert(product.name + ' added! ' + (stockNum - currentQty -1) + ' left');
 }
 
 function saveCart(syncCount = true){
@@ -311,7 +344,14 @@ function saveCart(syncCount = true){
 async function updateQty(id, change){
   const item = cart.find(i=>i.id===id);
   if(!item) return;
-  item.qty = (Number(item.qty)||1) + change;
+  const product = allProducts.find(p=>p.id===id);
+  const stockNum = Number(product?.stock?? item.stock?? 50);
+  const newQty = (Number(item.qty)||1) + change;
+  if(change > 0 && newQty > stockNum){
+    alert(`⚠️ Only ${stockNum} in stock for ${item.name}`);
+    return;
+  }
+  item.qty = newQty;
   if(item.qty <= 0) cart = cart.filter(i=>i.id!==id);
   saveCart();
   renderCart();
@@ -353,14 +393,21 @@ function renderCart(){
     return;
   }
   let html=''; let subtotal=0;
+  let hasOutOfStock = false;
   cart.forEach(i=>{
     const unit = cleanPrice(i.price);
     const qty = Number(i.qty) || 1;
     subtotal += unit * qty;
+    const prod = allProducts.find(p=>p.id===i.id);
+    const stockNum = Number(prod?.stock?? 50);
+    let stockWarn = '';
+    if(stockNum <=0 || qty > stockNum){ hasOutOfStock = true; stockWarn = `<div class="text-[10px] text-red-600 font-black">❌ Only ${stockNum} left! Reduce qty</div>`; }
+    else if(stockNum <=10){ stockWarn = `<div class="text-[10px] text-orange-600 font-bold">⚠️ Only ${stockNum} left in stock</div>`; }
     html += `<div class="flex items-center justify-between py-3 border-b">
       <div class="flex-1">
         <div class="font-semibold text-sm">${i.name}</div>
         <div class="text-green-600 font-bold">₦${unit.toLocaleString()} x ${qty}</div>
+        ${stockWarn}
       </div>
       <div class="flex items-center gap-2">
         <button type="button" onclick="updateQty(${i.id}, -1)" class="bg-gray-200 w-8 h-8 rounded-full font-bold">-</button>
@@ -383,6 +430,16 @@ function renderCart(){
   if(payAmountEl) payAmountEl.innerText='₦'+total.toLocaleString();
   document.getElementById('deliveryForm').classList.remove('hidden');
   document.getElementById('placeOrderBtn').classList.remove('hidden');
+
+  if(hasOutOfStock){
+    if(alertBox){
+      alertBox.classList.remove('hidden');
+      alertBox.className = "mt-3 p-3 rounded-xl text-[13px] font-black text-center bg-red-100 text-red-700 border border-red-200";
+      alertBox.innerHTML = `❌ Some items exceed stock! Please reduce quantity`;
+    }
+    if(payBtn){ payBtn.disabled = true; payBtn.style.opacity='0.5'; payBtn.innerHTML = `❌ Fix stock qty first`; }
+    return;
+  }
 
   if(subtotal < MIN_ORDER){
     const need = MIN_ORDER - subtotal;
@@ -419,6 +476,13 @@ async function payWithPaystack(e){
     const need = MIN_ORDER - subtotalCheck;
     alert(`❌ Minimum ₦${MIN_ORDER.toLocaleString()} - Add ₦${need.toLocaleString()} more`);
     renderCart(); return;
+  }
+  for(let it of cart){
+    const prod = allProducts.find(p=>p.id===it.id);
+    if(prod && Number(it.qty) > Number(prod.stock?? 50)){
+      alert(`❌ ${it.name} only ${prod.stock} left! You have ${it.qty} in cart. Reduce qty.`);
+      return;
+    }
   }
   const locationSelect = document.getElementById('checkoutLocation').value;
   const customLocation = document.getElementById('customLocation').value;
