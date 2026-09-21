@@ -160,7 +160,7 @@ async function syncCartFromSupabase(){
       for(let item of cart){
         await supabaseClient.from('carts').upsert({
           customer_id: userData.id,
-          product_id: item.id,
+          product_id: item.product_id,
           product_name: item.name,
           product_price: cleanPrice(item.price),
           product_image: item.image_url || item.image || '',
@@ -258,8 +258,9 @@ function buildRatingUI(o){
 }
 
 async function loadProducts(){
-  const {data} = await supabaseClient.from('products').select('*').eq('is_approved', true);
-  allProducts = data||[];
+  // HIDE OUT OF STOCK: gt stock 0
+  const {data} = await supabaseClient.from('products').select('*').eq('is_approved', true).gt('stock',0);
+  allProducts = (data||[]).filter(p=> Number(p.stock||0) > 0);
   try{
     const emails = [...new Set(allProducts.map(p=>p.vendor_email).filter(Boolean))];
     if(emails.length){
@@ -272,27 +273,19 @@ async function loadProducts(){
   let html = '';
   allProducts.forEach(p=>{
     const businessName = vendorMap[(p.vendor_email||'').toLowerCase()] || p.business_name || p.store_name || 'LGM Vendor';
-    const stockNum = Number(p.stock?? 50);
+    const stockNum = Number(p.stock||0);
     let stockLabel = '';
     let btnHTML = '';
-    let cardExtra = '';
-    let badgeHTML = '';
-    if(stockNum <= 0){
-      stockLabel = `<span class="stock-out">❌ Out of Stock</span>`;
-      btnHTML = `<button disabled class="w-full bg-gray-300 text-gray-500 py-1.5 rounded-full text-xs mt-2 font-bold cursor-not-allowed">Out of Stock</button>`;
-      cardExtra = ' out-card';
-      badgeHTML = `<div class="out-badge">OUT</div>`;
-    } else if(stockNum <= 10){
+    if(stockNum <= 10){
       stockLabel = `<span class="stock-low">⚠️ Only ${stockNum} left!</span>`;
       btnHTML = `<button onclick="addToCart(${p.id})" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-1.5 rounded-full text-xs mt-2 font-bold">Add to Cart - ${stockNum} left</button>`;
     } else {
       stockLabel = `<span class="stock-ok">✅ ${stockNum} in stock</span>`;
       btnHTML = `<button onclick="addToCart(${p.id})" class="w-full bg-orange-500 text-white py-1.5 rounded-full text-xs mt-2">Add to Cart</button>`;
     }
-    html += `<div class="bg-white p-3 rounded-2xl shadow relative${cardExtra}">
+    html += `<div class="bg-white p-3 rounded-2xl shadow relative">
       <div class="relative">
         <img src="${p.image_url || p.image || 'https://placehold.co/200x200/e5e7eb/6b7280?text=No+Img'}" class="w-full h-32 object-cover rounded-lg mb-2">
-        ${badgeHTML}
       </div>
       <b class="text-sm block truncate">${p.name}</b>
       <div class="text-xs text-green-700 font-bold">🏪 ${businessName}</div>
@@ -301,13 +294,13 @@ async function loadProducts(){
       ${btnHTML}
     </div>`;
   });
-  document.getElementById('productGrid').innerHTML = html || 'No products yet';
+  document.getElementById('productGrid').innerHTML = html || 'No products in stock';
 }
 
 async function addToCart(id){
   const product = allProducts.find(p=>p.id===id);
   if(!product) return;
-  const stockNum = Number(product.stock?? 50);
+  const stockNum = Number(product.stock||0);
   if(stockNum <= 0){ alert('❌ Out of Stock - ' + product.name); return; }
   const existing = cart.find(i=>i.id===id);
   const currentQty = existing? Number(existing.qty)||0 : 0;
@@ -479,7 +472,7 @@ async function payWithPaystack(e){
   }
   for(let it of cart){
     const prod = allProducts.find(p=>p.id===it.id);
-    if(prod && Number(it.qty) > Number(prod.stock?? 50)){
+    if(prod && Number(it.qty) > Number(prod.stock||0)){
       alert(`❌ ${it.name} only ${prod.stock} left! You have ${it.qty} in cart. Reduce qty.`);
       return;
     }
