@@ -89,7 +89,8 @@
     <div id="ordersList" class="space-y-3">Loading orders...</div>
   </div>
 </div>
-
+<!-- TAP TO VIEW MODAL -->
+<div id="detailModal" class="hidden fixed inset-0 bg-black/70 z-[80] flex items-end md:items-center justify-center p-0 md:p-4" onclick="if(event.target==this) closeDetail()"><div class="bg-white w-full md:max-w-md rounded-t-[28px] md:rounded-[24px] p-5 max-h-[92vh] overflow-y-auto"><img id="dImage" class="w-full h-56 object-cover rounded-2xl bg-gray-100 mb-3"><p id="dName" class="font-black text-[18px]"></p><p id="dCategory" class="text-xs text-gray-400 mt-1"></p><div id="dStock" class="mt-2"></div><p id="dVendor" class="text-[12px] text-green-700 font-bold mt-1"></p><p id="dDesc" class="text-[13px] text-gray-600 mt-3 bg-gray-50 p-3 rounded-xl"></p><p id="dPrice" class="font-black text-green-700 text-[22px] mt-3"></p><button id="dAddBtn" class="w-full bg-orange-500 text-white py-4 rounded-xl font-black mt-4">Add to Cart 🛒</button><button onclick="closeDetail()" class="w-full bg-gray-100 py-3 rounded-xl font-bold text-sm mt-2">Close</button></div></div>
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
@@ -186,7 +187,9 @@ function toggleCustomLocation(){
     customInput.value = '';
   }
 }
-
+function openDetail(id){const p=allProducts.find(x=>x.id===id);if(!p)return;document.getElementById('dImage').src=p.image_url||p.image||'';document.getElementById('dName').innerText=p.name;document.getElementById('dCategory').innerText=(p.category||'')+' • '+(p.location||'Lokoja');document.getElementById('dVendor').innerText='🏪 '+(vendorMap[(p.vendor_email||'').toLowerCase()]||'LGM Vendor');document.getElementById('dDesc').innerText=p.description||p.name+' - Full: '+p.name;document.getElementById('dPrice').innerText='₦'+Number(p.price).toLocaleString();const s=Number(p.stock||0);document.getElementById('dStock').innerHTML=s<=10?`<span class="stock-low">⚠️ Only ${s} left!</span>`:`<span class="stock-ok">✅ ${s} in stock</span>`;document.getElementById('dAddBtn').onclick=()=>{closeDetail();addToCart(id);};document.getElementById('detailModal').classList.remove('hidden');}
+function closeDetail(){document.getElementById('detailModal').classList.add('hidden');}
+  
 function showTab(t){
   document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
   document.querySelectorAll('[id^=tab]').forEach(b=>{b.classList.remove('text-green-600','border-b-2','border-green-600'); b.classList.add('text-gray-400')});
