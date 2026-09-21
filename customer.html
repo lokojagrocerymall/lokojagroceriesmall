@@ -311,7 +311,9 @@ async function loadProducts(){
   }catch(e){ console.log("vendor map error", e.message); }
   let html = '';
   allProducts.forEach(p=>{
-    const businessName = vendorMap[(p.vendor_email||'').toLowerCase()] || p.business_name || p.store_name || 'LGM Vendor';
+    const raw = vendorMap[(p.vendor_email||'').toLowerCase()] || p.business_name || p.store_name || 'LGM Vendor';
+    let businessName = raw;
+    if(businessName.includes('@')) businessName = businessName.split('@')[0].toUpperCase() + ' STORE';
     const stockNum = Number(p.stock||0);
     let stockLabel = '';
     let btnHTML = '';
@@ -580,11 +582,11 @@ async function payWithPaystack(e){
 }
 
 async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, checkoutLandmark, checkoutWhatsApp, checkoutPhone, subtotal, delivery, total){
-  const itemsWithVendor = cart.map(i => ({
-    id: i.id, name: i.name, price: cleanPrice(i.price), qty: Number(i.qty)||1,
-    vendor_email: i.vendor_email, vendor_id: i.vendor_id,
-    vendor_business_name: vendorMap[(i.vendor_email||'').toLowerCase()] || i.vendor_email
-  }));
+  const itemsWithVendor = cart.map(i => {
+    let raw = vendorMap[(i.vendor_email||'').toLowerCase()] || i.vendor_email;
+    let shop = raw; if(shop && shop.includes('@')) shop = shop.split('@')[0].toUpperCase() + ' STORE';
+    return { id: i.id, name: i.name, price: cleanPrice(i.price), qty: Number(i.qty)||1, vendor_email: i.vendor_email, vendor_id: i.vendor_id, vendor_business_name: shop };
+  });
   try{
     const { data: order, error } = await supabaseClient.from('orders').insert({
       tx_ref: tx_ref,
@@ -631,6 +633,17 @@ async function saveOrderAfterPayment(tx_ref, finalLocation, checkoutAddress, che
 async function loadOrders(){
   const {data} = await supabaseClient.from('orders').select('*').eq('customer_email', user.email).in('status',['paid','picked','on the way','delivered','failed']).order('id',{ascending:false}).limit(100);
   customerOrdersCache = data || [];
+  // FIX 2: BUILD VENDOR SHOP NAME MAP FOR ORDERS
+  try{
+    const allVendorEmails = [...new Set(customerOrdersCache.flatMap(o=> (o.items||[]).map(i=> i.vendor_email).filter(Boolean)))];
+    if(allVendorEmails.length){
+      const {data: vendors} = await supabaseClient.from('users').select('email,business_name,store_name,full_name').in('email', allVendorEmails);
+      (vendors||[]).forEach(v=>{
+        const shop = v.business_name || v.store_name || v.full_name || v.email;
+        vendorMap[v.email.toLowerCase()] = shop;
+      });
+    }
+  }catch(e){ console.log('vendor map fetch error', e.message); }
   customerOrdersCache.forEach(o=>{
     if(lastOrderStatus[o.id] && lastOrderStatus[o.id]!== o.status){
       if(o.status === 'picked' || o.status === 'on the way') triggerAlert(`🚚 Order #${o.id} is On The Way!`);
@@ -648,12 +661,18 @@ async function loadOrders(){
 function renderOrdersList(){
   let html='';
   customerOrdersCache.forEach(o=>{
+    // FIX 1: RED COLOR FOR ON THE WAY
     let statusText = '';
     let statusColor = 'text-blue-600';
-    if(o.status === 'paid'){ statusText = 'Watch out, an agent will attend to you in the next 5 minutes'; statusColor = 'text-blue-600'; }
-    if(o.status === 'picked' || o.status === 'on the way'){ statusText = 'Order On The Way, Please Be Available'; statusColor = 'text-orange-500'; }
-    if(o.status === 'delivered'){ statusText = 'Delivered'; statusColor = 'text-green-600'; }
-    if(o.status === 'failed'){ statusText = 'Delivery Failed. Admin will contact you'; statusColor = 'text-red-600'; }
+    let statusBox = 'bg-gray-50 p-2 rounded-lg mt-2 text-center font-bold text-sm';
+    if(o.status === 'paid'){ statusText = 'Watch out, an agent will attend to you in the next 5 minutes'; statusColor = 'text-blue-600'; statusBox = 'bg-blue-50 border border-blue-200 text-blue-700 p-2 rounded-lg mt-2 text-center font-black text-sm'; }
+    if(o.status === 'picked' || o.status === 'on the way'){
+      statusText = 'Order On The Way, Please Be Available';
+      statusColor = 'text-red-600';
+      statusBox = 'bg-red-100 border-2 border-red-600 text-red-700 p-3 rounded-xl mt-2 text-center font-black text-[14px]'; // RED NOW
+    }
+    if(o.status === 'delivered'){ statusText = 'Delivered'; statusColor = 'text-green-600'; statusBox = 'bg-green-50 border border-green-200 text-green-700 p-2 rounded-lg mt-2 text-center font-black text-sm'; }
+    if(o.status === 'failed'){ statusText = 'Delivery Failed. Admin will contact you'; statusColor = 'text-red-600'; statusBox = 'bg-red-100 border-2 border-red-700 text-red-800 p-3 rounded-xl mt-2 text-center font-black text-[14px]'; }
     let agentInfo = '';
     if((o.status === 'picked' || o.status === 'on the way') && o.delivery_agent_name){
       agentInfo = `<div class="bg-blue-50 p-2 rounded-lg mt-2">
@@ -668,10 +687,17 @@ function renderOrdersList(){
     if(o.items && Array.isArray(o.items) && o.items.length>0){
       itemsBreakdown = `<div class="mt-2 bg-white border rounded-lg p-2"><b class="text-[11px] text-green-700">📦 Ordered Items & Vendors:</b><div class="mt-1 space-y-1">` +
         o.items.map(it=>{
-          const vName = it.vendor_business_name || vendorMap[(it.vendor_email||'').toLowerCase()] || 'LGM Vendor';
+          // FIX 2: SHOW SHOP NAME NOT EMAIL
+          let rawName = it.vendor_business_name || vendorMap[(it.vendor_email||'').toLowerCase()] || it.vendor_email || 'LGM Vendor';
+          let vName = rawName;
+          if(vName.includes('@')){ // if still email, convert to SHOP NAME
+            const prefix = vName.split('@')[0].replace(/[0-9]/g,'').toUpperCase() || 'LGM';
+            vName = prefix + ' STORE';
+          }
+          vName = vName.toUpperCase();
           const itemTotal = (Number(it.price)||0) * (Number(it.qty||it.quantity)||1);
           return `<div class="flex justify-between text-[11px] border-b border-dashed py-1">
-            <span class="flex-1"><b>${it.name||it.product_name||'Item'}</b> x${it.qty||it.quantity||1} <span class="text-gray-500">@ ₦${Number(it.price||0).toLocaleString()}</span><br><span class="text-[10px] text-green-700 font-bold">🏪 ${vName}</span></span>
+            <span class="flex-1"><b>${it.name||it.product_name||'Item'}</b> x${it.qty||it.quantity||1} <span class="text-gray-500">@ ₦${Number(it.price||0).toLocaleString()}</span><br><span class="text-[10px] text-green-700 font-black">🏪 ${vName}</span></span>
             <span class="font-bold">₦${itemTotal.toLocaleString()}</span>
           </div>`;
         }).join('') +
@@ -708,7 +734,7 @@ function renderOrdersList(){
         <div class="font-bold">Total: ₦${Number(o.total).toLocaleString()}</div>
         <div class="text-xs text-gray-500 mt-1">📍 ${o.customer_address}</div>
         <div class="text-xs text-gray-500">📱 ${o.customer_phone}</div>
-        <div class="bg-gray-50 p-2 rounded-lg mt-2 text-center font-bold text-sm">${statusText}</div>
+        <div class="${statusBox}">${statusText}</div>
         ${agentInfo}
         ${timerHtml}
         ${markDeliveredBtn}
