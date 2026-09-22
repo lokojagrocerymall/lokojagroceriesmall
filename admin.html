@@ -491,24 +491,5 @@ setInterval(()=>{ document.querySelectorAll('.admin-timer').forEach(el=>{ const 
 setInterval(load, 80000);
 load();
 </script>
-<!-- TEST ALERT BUTTON - remove after testing -->
-<button onclick="testOrderAlert()" style="position:fixed;bottom:10px;right:10px;background:black;color:white;padding:10px 15px;border-radius:20px;z-index:9999;font-size:12px;">🔔 Test Order Alert</button>
-
-<script>
-function testOrderAlert(){
-  // play sound
-  let audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-  audio.play();
-  // blink orders tab
-  let el = document.getElementById('orders-tab');
-  if(el){ el.classList.add('pulse-red'); el.innerText = 'Orders (1) 🔴'; }
-  // show popup
-  alert('GBIM! New Order: ₦2,500 - Test FUL Student - Indomie + Rice');
-  if(Notification && Notification.permission !== 'granted'){ Notification.requestPermission(); }
-  if(Notification.permission === 'granted'){
-    new Notification('LGM New Order! 🔔', {body: '₦2,500 - Test Order'});
-  }
-}
-</script>
 </body>
 </html>
