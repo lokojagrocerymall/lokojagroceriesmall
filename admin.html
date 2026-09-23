@@ -37,6 +37,14 @@
     </div>
   </div>
 
+  <!-- NEW: STOCK OVERVIEW WIDGET -->
+  <div id="stockOverview" class="bg-gradient-to-r from-gray-900 to-green-800 text-white p-3 rounded-xl shadow mb-3 flex justify-between text-[11px] font-bold">
+    <div class="text-center"><div class="text-[9px] opacity-70">TOTAL PRODUCTS</div><div id="stTotal" class="text-[14px]">0</div></div>
+    <div class="text-center"><div class="text-[9px] opacity-70">LOW STOCK ≤5</div><div id="stLow" class="text-[14px] text-yellow-300">0</div></div>
+    <div class="text-center"><div class="text-[9px] opacity-70">OUT OF STOCK</div><div id="stOut" class="text-[14px] text-red-300">0</div></div>
+    <button onclick="showAllLowStock()" class="bg-yellow-400 text-black px-3 rounded-full text-[10px]">View All</button>
+  </div>
+
   <div class="grid grid-cols-3 gap-2 mb-3">
     <div class="bg-white p-2 rounded-xl shadow min-w-0">
       <div class="text-[10px] font-bold text-gray-500 text-center mb-1">TODAY</div>
@@ -101,12 +109,23 @@
   </div>
 </div>
 
+<!-- NEW: CATALOG MODAL -->
+<div id="catalogModal" class="fixed inset-0 bg-black/70 z-[1000] hidden flex items-center justify-center p-3">
+  <div class="bg-white rounded-2xl max-w-[600px] w-full max-h-[92vh] overflow-y-auto shadow-2xl">
+    <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center rounded-t-2xl">
+      <b id="catalogTitle" class="text-green-700 text-sm">📦 Vendor Catalog</b>
+      <button onclick="closeCatalogModal()" class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">✕ Close</button>
+    </div>
+    <div id="catalogBody" class="p-3 text-[12px]"></div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let users=[], orders=[], tab='orders', orderSubTab='all', lastSeenOrderCount=0;
+let users=[], orders=[], allProducts=[], tab='orders', orderSubTab='all', lastSeenOrderCount=0;
 let returnsChart = null;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const DELIVERY_RATE = 0.05;
@@ -136,6 +155,10 @@ async function load(){
     users = u||[];
     const {data:o} = await supabaseClient.from('orders').select('*').in('status',['paid','picked','on the way','delivered','failed']).order('id',{ascending:false}).limit(200);
     orders = o||[];
+    // NEW: Load all products for catalog access
+    const {data:p} = await supabaseClient.from('products').select('*').limit(1000);
+    allProducts = p||[];
+
     orders.sort((a,b)=>{ const priority = {paid:0, picked:1, 'on the way':1, delivered:2, failed:3}; const pa = priority[a.status]?? 4; const pb = priority[b.status]?? 4; if(pa!==pb) return pa - pb; return b.id - a.id; });
     const paidOrders = orders.filter(x=>x.status==='paid');
     if(paidOrders.length > lastSeenOrderCount && lastSeenOrderCount!== 0){ triggerNewOrderAlert(); }
@@ -153,7 +176,7 @@ async function load(){
     document.getElementById('cA').innerText = agents.length;
     document.getElementById('cO').innerText = orders.length;
     document.getElementById('pendingCount').innerText = pendingV.length + pendingA.length;
-    calcSales(); drawReturnsChart();
+    calcSales(); drawReturnsChart(); updateStockOverview();
     document.getElementById('fcAll').innerText = orders.length;
     document.getElementById('fcPaid').innerText = orders.filter(x=>x.status==='paid').length;
     document.getElementById('fcOnway').innerText = orders.filter(x=>x.status==='picked' || x.status==='on the way').length;
@@ -162,6 +185,22 @@ async function load(){
     updateOrdersTabAlert(); render();
     setTimeout(()=>{ const tabsEl = document.getElementById('mainTabs'); if(tabsEl) tabsEl.scrollLeft = tabsEl.scrollWidth; }, 300);
   }catch(e){ document.getElementById('list').innerHTML = `<div class="text-red-500">ERROR: ${e.message}</div>`; }
+}
+
+// NEW: Stock overview calculator
+function updateStockOverview(){
+  let total = allProducts.length;
+  let low = allProducts.filter(pr=>{ let s = Number(pr.stock?? pr.stock_quantity?? pr.quantity?? 0); return s>0 && s<=5; }).length;
+  let out = allProducts.filter(pr=>{ let s = Number(pr.stock?? pr.stock_quantity?? pr.quantity?? 0); return s<=0; }).length;
+  document.getElementById('stTotal').innerText = total;
+  document.getElementById('stLow').innerText = low;
+  document.getElementById('stOut').innerText = out;
+}
+function getProductStock(pr){
+  return Number(pr.stock?? pr.stock_quantity?? pr.quantity?? pr.qty?? 0);
+}
+function getVendorProducts(email, id){
+  return allProducts.filter(p=> (p.vendor_email && p.vendor_email===email) || (p.vendor_id && p.vendor_id===id) || (p.user_id && p.user_id===id));
 }
 
 function calcSales(){
@@ -255,6 +294,76 @@ function openAgentDetail(email){
 }
 function closeModal(){ document.getElementById('detailModal').classList.add('hidden'); }
 
+// NEW: CATALOG FUNCTIONS
+function openCatalogModal(email){
+  const u = users.find(x=>x.email===email);
+  if(!u) return;
+  const vProducts = getVendorProducts(email, u.id).sort((a,b)=> getProductStock(a)-getProductStock(b));
+  document.getElementById('catalogTitle').innerText = `📦 ${u.full_name || email} — Catalog (${vProducts.length})`;
+  if(vProducts.length===0){
+    document.getElementById('catalogBody').innerHTML = `<div class="text-center py-10 text-gray-400">No products yet for this vendor</div>`;
+  } else {
+    let lowList = vProducts.filter(p=> getProductStock(p)<=5).map(p=> `${p.name||p.product_name||p.title} (${getProductStock(p)} left)`).join(', ');
+    let html = `
+      <div class="flex gap-2 mb-3">
+        <button onclick="alertAllLowStock('${email}')" class="flex-1 bg-yellow-500 text-black font-black py-2 rounded-xl text-[11px]">⚠️ Alert All Low (${vProducts.filter(p=>getProductStock(p)<=5).length}) via WhatsApp</button>
+      </div>
+      <div class="space-y-2">
+      ${vProducts.map(p=>{
+        let stock = getProductStock(p);
+        let stockColor = stock<=0? 'bg-red-100 border-red-500 text-red-700' : stock<=5? 'bg-yellow-100 border-yellow-500 text-yellow-800' : 'bg-green-50 border-green-200 text-green-700';
+        let img = p.image_url || p.image || p.photo || '';
+        return `<div class="border ${stockColor} p-2 rounded-xl flex gap-2 items-center">
+          ${img? `<img src="${img}" class="w-12 h-12 rounded-lg object-cover border">` : `<div class="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center text-[10px]">No Img</div>`}
+          <div class="flex-1 min-w-0">
+            <div class="font-bold truncate text-[12px]">${p.name||p.product_name||p.title||'No name'}</div>
+            <div class="text-[11px]">₦${Number(p.price||0).toLocaleString()} • Stock: <b>${stock}</b> ${stock<=0? '❌ OUT' : stock<=5? '⚠️ LOW' : '✅'}</div>
+          </div>
+          <button onclick="alertSingleStock('${email}', ${p.id})" class="bg-green-600 text-white px-2 py-1 rounded-full text-[10px] font-bold shrink-0">Alert</button>
+        </div>`;
+      }).join('')}
+      </div>`;
+    document.getElementById('catalogBody').innerHTML = html;
+  }
+  document.getElementById('catalogModal').classList.remove('hidden');
+}
+function closeCatalogModal(){ document.getElementById('catalogModal').classList.add('hidden'); }
+function alertSingleStock(vendorEmail, productId){
+  const u = users.find(x=>x.email===vendorEmail);
+  const p = allProducts.find(x=>x.id===productId);
+  if(!u||!p) return;
+  let stock = getProductStock(p);
+  let name = p.name||p.product_name||p.title||'your product';
+  let phone = (u.phone||u.whatsapp||'').replace(/\D/g,'').replace(/^0/,'234');
+  let msg = `Good afternoon ${u.full_name||'Vendor'}, your product *${name}* is remaining *${stock} left* on Lokoja Grocery Mall. Please restock today so you don't miss orders. - Admin, Mary Plaza, Ganaja`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+function alertAllLowStock(vendorEmail){
+  const u = users.find(x=>x.email===vendorEmail);
+  const vProducts = getVendorProducts(vendorEmail, u.id).filter(p=> getProductStock(p)<=5);
+  if(vProducts.length===0){ alert('No low stock for this vendor'); return; }
+  let list = vProducts.map(p=> `• ${p.name||p.product_name} - ${getProductStock(p)} left`).join('\n');
+  let phone = (u.phone||u.whatsapp||'').replace(/\D/g,'').replace(/^0/,'234');
+  let msg = `Good afternoon ${u.full_name||'Vendor'}, these products are going out of stock on Lokoja Grocery Mall:\n\n${list}\n\nPlease restock today. - Admin, Mary Plaza`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+function showAllLowStock(){
+  let lowProducts = allProducts.filter(p=> getProductStock(p)<=5).sort((a,b)=> getProductStock(a)-getProductStock(b));
+  if(lowProducts.length===0){ alert('✅ No low stock! All vendors stocked.'); return; }
+  document.getElementById('catalogTitle').innerText = `⚠️ All Low Stock Products (${lowProducts.length})`;
+  let html = `<div class="space-y-2">${lowProducts.map(p=>{
+    let vendor = users.find(u=> u.email===p.vendor_email || u.id===p.vendor_id);
+    let stock = getProductStock(p);
+    return `<div class="border p-2 rounded-xl ${stock<=0?'bg-red-50 border-red-300':'bg-yellow-50 border-yellow-300'}">
+      <div class="font-bold text-[11px]">${p.name||p.product_name} — ${stock} left ${stock<=0?'❌ OUT':'⚠️ LOW'}</div>
+      <div class="text-[10px] text-gray-500">Vendor: ${vendor?.full_name||p.vendor_email||'N/A'} • ₦${Number(p.price||0).toLocaleString()}</div>
+      <button onclick="alertSingleStock('${p.vendor_email||vendor?.email}', ${p.id})" class="mt-1 bg-green-600 text-white px-2 py-1 rounded-full text-[10px] font-bold">Alert Vendor</button>
+    </div>`;
+  }).join('')}</div>`;
+  document.getElementById('catalogBody').innerHTML = html;
+  document.getElementById('catalogModal').classList.remove('hidden');
+}
+
 function toggleAdminDetails(id){
   const el = document.getElementById('admin-details-'+id);
   const btn = document.getElementById('admin-btn-'+id);
@@ -334,11 +443,15 @@ function render(){
   let html='';
   if(tab==='pending' || tab==='vendors' || tab==='suspended' || tab==='agents'){
     data.forEach(u=>{
+      let vProds = getVendorProducts(u.email, u.id);
+      let lowCount = vProds.filter(p=> getProductStock(p)>0 && getProductStock(p)<=5).length;
+      let outCount = vProds.filter(p=> getProductStock(p)<=0).length;
+      let catalogBtn = tab==='vendors'? `<button onclick="openCatalogModal('${u.email}')" class="mt-2 ml-1 bg-black text-white px-4 py-1 rounded-full text-xs font-bold">📦 Catalog (${vProds.length}) ${lowCount>0? `<span class="bg-yellow-400 text-black px-1.5 rounded-full ml-1">${lowCount} Low</span>`:''} ${outCount>0? `<span class="bg-red-500 text-white px-1.5 rounded-full ml-1">${outCount} OUT</span>`:''}</button>` : '';
       let roleBadge = String(u.role).toLowerCase().trim()==='delivery_agent'? `<span class="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px]">AGENT</span>` : `<span class="bg-green-500 text-white px-2 py-0.5 rounded text-[10px]">VENDOR</span>`;
       let actionBtn = (tab==='pending' || tab==='suspended')? `<button id="btn-${u.email}" onclick="updateStatus('${u.email}', true)" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve / Reactivate</button>` : `<button onclick="updateStatus('${u.email}', false)" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>`;
       let viewBtn = `<button onclick="openAgentDetail('${u.email}')" class="mt-2 ml-1 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">👁️ View Full Info</button>`;
       let subInfo = u.paystack_subaccount_code? `<div class="text-[10px] text-green-600 font-bold mt-1">✅ ${u.paystack_subaccount_code}</div>` : '';
-      html += `<div class="border rounded-lg p-3 mb-2"><div class="font-bold">${u.full_name || 'null'} ${roleBadge}</div><div class="text-xs text-gray-500">${u.email} • ${u.phone||u.whatsapp||''} • ${u.location||''}</div><div class="text-xs mt-1">Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended'}</b> ${u.account_number? `• Acct: ${u.account_number} (${u.bank_name||'Opay'})`:''}</div>${subInfo}${actionBtn} ${viewBtn}</div>`;
+      html += `<div class="border rounded-lg p-3 mb-2"><div class="font-bold">${u.full_name || 'null'} ${roleBadge}</div><div class="text-xs text-gray-500">${u.email} • ${u.phone||u.whatsapp||''} • ${u.location||''}</div><div class="text-xs mt-1">Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended'}</b> ${u.account_number? `• Acct: ${u.account_number} (${u.bank_name||''})`:''}</div>${subInfo}${actionBtn} ${viewBtn} ${catalogBtn}</div>`;
     });
   }
   if(tab==='orders'){
