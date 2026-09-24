@@ -252,13 +252,7 @@ function updateOrdersTabAlert(){
   if(newPaidOrders > 0){ ordersTab.classList.add('alert-tab'); ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>) <span class="badge">${newPaidOrders}</span>`; } else { ordersTab.classList.remove('alert-tab'); ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>)`; }
 }
 function triggerNewOrderAlert(){ new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate([200,100,200]); if(Notification.permission === "granted"){ new Notification("🔔 New Order!", { body: `You have ${orders.filter(o=>o.status==='paid').length} pending order(s)` }); } else if(Notification.permission!== "denied"){ Notification.requestPermission(); } }
-function filterOrders(type){
-  orderSubTab = type;
-  document.querySelectorAll('#orderFilters button').forEach(b=> b.className = 'px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap');
-  const activeMap = {all:'fAll', paid:'fPaid', onway:'fOnway', delivered:'fDel', failed:'fFail'};
-  document.getElementById(activeMap[type]).className = 'px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap';
-  render();
-}
+function filterOrders(type){orderSubTab=type;document.querySelectorAll('#orderFilters button').forEach(b=>b.className='px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap');const m={all:'fAll',paid:'fPaid',onway:'fOnway',delivered:'fDel',failed:'fFail'};document.getElementById(m[type]).className='px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap';const adv=document.getElementById('deliveredAdvanced');if(type==='delivered'){adv.classList.remove('hidden');}else{adv.classList.add('hidden');deliveredPeriodFilter='all';deliveredDateFilter='';}render();}
 
 function openAgentDetail(email){
   const u = users.find(x=>x.email===email);
