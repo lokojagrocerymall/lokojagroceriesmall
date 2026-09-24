@@ -14,7 +14,7 @@
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .stat{background:#fff;padding:12px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);min-width:0;overflow:hidden}
 .stat b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
-.wallet{background:#16a34a;color:#fff}
+.wallet{background:#16a34a;color:#fff;overflow:visible!important}
 .tabs{display:flex;gap:18px;border-bottom:1px solid #e5e7eb;margin:14px 0;font-weight:700;font-size:14px;overflow-x:auto}
 .tab{padding-bottom:8px;color:#9ca3af;cursor:pointer;white-space:nowrap}.active{color:#16a34a;border-bottom:3px solid #16a34a}
 @keyframes pulse-red {0%,100%{background-color:#fee2e2;border-color:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,0.4)}50%{background-color:#fecaca;border-color:#dc2626;box-shadow:0 0 0 6px rgba(239,68,68,0)}}
@@ -55,7 +55,7 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 <div class="stats">
 <div class="stat"><div class="small">Products</div><h2 id="pCount" style="margin:0">0</h2><div class="small" id="catalogWorth">Worth: ₦0</div></div>
 <div class="stat"><div class="small">Orders</div><h2 id="oCount" style="margin:0;color:#2563eb">0</h2></div>
-<div class="stat wallet"><div class="small">Earned (90%)</div><h2 id="wallet" style="margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:18px">₦0</h2><div class="small" style="color:#dcfce7">Auto-paid via Paystack</div></div>
+<div class="stat wallet"><div style="color:#ffffff;font-weight:900;font-size:12px;letter-spacing:0.5px;text-transform:uppercase;">Earned (90%)</div><h2 id="wallet" style="margin:3px 0;color:#ffffff;font-weight:900;font-size:18px;line-height:1.1;white-space:normal;word-break:break-word;">₦0</h2><div style="color:#dcfce7;font-weight:800;font-size:11px;line-height:1.2;">Auto-paid via Paystack</div></div>
 </div>
 <div class="tabs">
 <span class="tab active" id="tab-products" onclick="setTab('products')">Products</span>
