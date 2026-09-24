@@ -40,7 +40,7 @@ if(!curUser ||!curUser.email || String(curUser.role).toLowerCase().trim()!=='del
   location.href='index.html';
 }
 
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const TWO_HOURS_MS = 3 * 60 * 60 * 1000;
 let isCalling = false;
 let ordersCache = [];
 let lastAvailableCount = 0;
@@ -171,7 +171,7 @@ function renderOrders(){
           <p class="text-xs">📞 ${o.customer_phone}</p>
           <p class="text-xs">🏠 ${addr}</p>
         </div>
-        <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">🚚 Pick Up Order - Start 3HR Timer</button>
+        <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">🚚 Pick Up Order - Start 2HR Timer</button>
       </div>`;
     }
     else {
