@@ -94,6 +94,18 @@
       <button onclick="filterOrders('delivered')" id="fDel" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">✅ Delivered (<span id="fcDel">0</span>)</button>
       <button onclick="filterOrders('failed')" id="fFail" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">❌ Failed (<span id="fcFail">0</span>)</button>
     </div>
+    <div id="deliveredAdvanced" class="hidden bg-white border-b p-2 flex flex-wrap gap-2 items-center">
+<select id="deliveredPeriod" onchange="applyDeliveredAdvanced()" class="px-3 py-2 rounded-full border bg-gray-900 text-white font-black text-[11px]">
+<option value="all">All Delivered</option>
+<option value="D">D - Today</option>
+<option value="W">W - This Week</option>
+<option value="M">M - This Month</option>
+</select>
+<input type="date" id="deliveryDateSearch" class="px-3 py-2 rounded-full border text-[11px] font-bold">
+<button onclick="applyDeliveredAdvanced()" class="px-4 py-2 rounded-full bg-green-600 text-white font-black text-[11px]">🔎 Search</button>
+<button onclick="clearDeliveredAdvanced()" class="px-3 py-2 rounded-full bg-gray-200 font-bold text-[11px]">Clear</button>
+<span id="deliveredCount" class="text-[11px] font-black text-green-700"></span>
+</div>
 
     <div id="list" class="p-3 text-sm">Loading...</div>
   </div>
@@ -130,7 +142,10 @@ let returnsChart = null;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const DELIVERY_RATE = 0.05;
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
-if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='/'; }
+let deliveredPeriodFilter='all';let deliveredDateFilter='';
+function applyDeliveredAdvanced(){deliveredPeriodFilter=document.getElementById('deliveredPeriod').value;deliveredDateFilter=document.getElementById('deliveryDateSearch').value;render();}
+function clearDeliveredAdvanced(){deliveredPeriodFilter='all';deliveredDateFilter='';document.getElementById('deliveredPeriod').value='all';document.getElementById('deliveryDateSearch').value='';render();}
+  if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='/'; }
 
 function formatAdminCountdown(startTime){
   if(!startTime) return `<div style="background:#fff7ed;border:2px dashed #f97316;padding:8px;border-radius:10px;margin-top:8px;text-align:center;font-weight:900;color:#c2410c;font-size:11px">⏰ Rider picked - timer starting...</div>`;
@@ -439,6 +454,23 @@ function render(){
     if(orderSubTab==='failed') data = orders.filter(o=>o.status==='failed');
   }
   document.getElementById('orderFilters').className = tab==='orders'? 'flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b' : 'hidden';
+
+  const adv=document.getElementById('deliveredAdvanced');
+if(tab==='orders'&&orderSubTab==='delivered'){adv.classList.remove('hidden');}else{adv.classList.add('hidden');}
+if(tab==='orders'&&orderSubTab==='delivered'){
+let filtered=data;
+if(deliveredDateFilter){
+filtered=filtered.filter(o=>{let d=new Date(o.delivered_at||o.updated_at||o.created_at);let sel=new Date(deliveredDateFilter);return d.toDateString()===sel.toDateString();});
+}else if(deliveredPeriodFilter==='D'){
+let t=new Date().toDateString();filtered=filtered.filter(o=>new Date(o.delivered_at||o.updated_at||o.created_at).toDateString()===t);
+}else if(deliveredPeriodFilter==='W'){
+let now=new Date();let s=new Date(now);s.setDate(now.getDate()-now.getDay()+1);s.setHours(0,0,0,0);let e=new Date(s);e.setDate(s.getDate()+6);e.setHours(23,59,59,999);filtered=filtered.filter(o=>{let d=new Date(o.delivered_at||o.updated_at||o.created_at);return d>=s&&d<=e;});
+}else if(deliveredPeriodFilter==='M'){
+let now=new Date();filtered=filtered.filter(o=>{let d=new Date(o.delivered_at||o.updated_at||o.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+}
+data=filtered;
+document.getElementById('deliveredCount').innerText=data.length+' found';
+}
   if(data.length===0){ document.getElementById('list').innerHTML = `<div class="text-center text-gray-400 py-10">No ${orderSubTab==='all'?'':orderSubTab} ${tab} yet</div>`; return; }
   let html='';
   if(tab==='pending' || tab==='vendors' || tab==='suspended' || tab==='agents'){
