@@ -57,15 +57,14 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 <div class="stat wallet" style="background:linear-gradient(135deg,#16a34a,#15803d);overflow:visible!important;display:flex;flex-direction:column;justify-content:center;"><div style="color:#ffffff;font-weight:900;font-size:13px;letter-spacing:0.8px;">EARNED (90%)</div><h2 id="wallet" style="margin:4px 0;color:#fef08a;font-weight:900;font-size:19px;line-height:1;white-space:nowrap;letter-spacing:0.2px;">₦0</h2><div style="color:#dcfce7;font-weight:700;font-size:11px;line-height:1.1;">Auto-paid via Paystack</div></div>
 </div>
 <div class="tabs">
-<span class="tab active" id="tab-products" onclick="setTab('products')">Products</span>
-<span class="tab" id="tab-orders" onclick="setTab('orders')">Orders</span>
+<span class="tab" id="tab-products" onclick="setTab('products')">Products</span>
+<span class="tab active" id="tab-orders" onclick="setTab('orders')">Orders</span>
 <span class="tab" id="tab-wallet" onclick="setTab('wallet')">Wallet</span>
 <span class="tab" id="tab-profile" onclick="setTab('profile')">Profile</span>
 </div>
 
-<div id="view-products" class="view active-view">
+<div id="view-products" class="view">
 <div id="lowStockAlert"></div>
-
 <div class="card">
 <h3>Add New Product</h3>
 <input id="pName" placeholder="Product Name e.g. White Garri 4L">
@@ -85,7 +84,7 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 <div class="card"><h3>My Products</h3><div class="small">Total catalog value: <b id="catalogTotal">₦0</b> • Tap any product to view full name</div><div id="productList" style="margin-top:10px"></div></div>
 </div>
 
-<div id="view-orders" class="view">
+<div id="view-orders" class="view active-view">
 <div class="sales-grid">
 <div class="stat"><div class="small">Today Sales</div><b id="salesToday">₦0</b></div>
 <div class="stat"><div class="small">This Week</div><b id="salesWeek">₦0</b></div>
@@ -166,9 +165,8 @@ function setTab(name){
   document.getElementById('tab-'+name).classList.add('active');
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active-view'));
   document.getElementById('view-'+name).classList.add('active-view');
+  // REMOVED auto-clear of alert - pulse stays until delivered
   if(name==='orders'){
-    const ot = document.getElementById('tab-orders');
-    ot.classList.remove('alert-tab');
     loadOrders();
   }
   if(name==='products') loadProducts();
@@ -232,7 +230,10 @@ async function init(){
   document.getElementById('vBadge').innerText=curUser.is_approved? "✅ Approved Vendor • 90% Auto-paid via Paystack" : "⏳ Pending Approval";
   document.getElementById('profName').value=curUser.full_name || curUser.name;
   document.getElementById('profEmail').value=curUser.email;
-  loadProducts(); loadOrders(); loadWallet();
+  loadProducts(); 
+  loadOrders();
+  loadWallet();
+  setTab('orders'); // FORCE OPEN TO ORDERS ON LOGIN/REFRESH
 }
 init();
 
@@ -363,24 +364,27 @@ async function loadOrders(){
   ).map(o => ({...o, items: o.items.filter(i => i.vendor_email === curUser.email)}));
 
   const newPaidCount = allOrders.filter(o=>o.status==='paid').length;
+  const onWayCount = allOrders.filter(o=>o.status==='picked' || o.status==='on the way').length;
+  const pendingCount = newPaidCount + onWayCount; // NOT DELIVERED YET
   const tabOrders = document.getElementById('tab-orders');
 
-  if(newPaidCount > 0){
+  // NEW LOGIC: Pulse RED until ALL orders are delivered (customer marks delivered)
+  if(pendingCount > 0){
     tabOrders.classList.add('alert-tab');
-    tabOrders.innerHTML = `Orders <span class="badge">${newPaidCount}</span>`;
-    if(newPaidCount > lastOrderCount){
+    tabOrders.innerHTML = `Orders <span class="badge">${pendingCount}</span>`;
+    if(pendingCount > lastOrderCount){
       triggerAlert();
     }
   } else {
+    // Only remove pulse when EVERY order is delivered
     tabOrders.classList.remove('alert-tab');
     tabOrders.innerHTML = `Orders`;
   }
-  lastOrderCount = newPaidCount;
+  lastOrderCount = pendingCount;
 
-  document.getElementById('oCount') && (document.getElementById('oCount').innerText=allOrders.length);
   document.getElementById('vfcAll').innerText = allOrders.length;
   document.getElementById('vfcPaid').innerText = newPaidCount;
-  document.getElementById('vfcOnway').innerText = allOrders.filter(o=>o.status==='picked' || o.status==='on the way').length;
+  document.getElementById('vfcOnway').innerText = onWayCount;
   document.getElementById('vfcDel').innerText = allOrders.filter(o=>o.status==='delivered').length;
   document.getElementById('vfcFail').innerText = allOrders.filter(o=>o.status==='failed').length;
 
