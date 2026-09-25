@@ -37,7 +37,6 @@
     </div>
   </div>
 
-  <!-- NEW: STOCK OVERVIEW WIDGET -->
   <div id="stockOverview" class="bg-gradient-to-r from-gray-900 to-green-800 text-white p-3 rounded-xl shadow mb-3 flex justify-between text-[11px] font-bold">
     <div class="text-center"><div class="text-[9px] opacity-70">TOTAL PRODUCTS</div><div id="stTotal" class="text-[14px]">0</div></div>
     <div class="text-center"><div class="text-[9px] opacity-70">LOW STOCK ≤5</div><div id="stLow" class="text-[14px] text-yellow-300">0</div></div>
@@ -121,7 +120,6 @@
   </div>
 </div>
 
-<!-- NEW: CATALOG MODAL -->
 <div id="catalogModal" class="fixed inset-0 bg-black/70 z-[1000] hidden flex items-center justify-center p-3">
   <div class="bg-white rounded-2xl max-w-[600px] w-full max-h-[92vh] overflow-y-auto shadow-2xl">
     <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center rounded-t-2xl">
@@ -170,7 +168,6 @@ async function load(){
     users = u||[];
     const {data:o} = await supabaseClient.from('orders').select('*').in('status',['paid','picked','on the way','delivered','failed']).order('id',{ascending:false}).limit(200);
     orders = o||[];
-    // NEW: Load all products for catalog access
     const {data:p} = await supabaseClient.from('products').select('*').limit(1000);
     allProducts = p||[];
 
@@ -178,19 +175,34 @@ async function load(){
     const paidOrders = orders.filter(x=>x.status==='paid');
     if(paidOrders.length > lastSeenOrderCount && lastSeenOrderCount!== 0){ triggerNewOrderAlert(); }
     lastSeenOrderCount = paidOrders.length;
+
     let vendors = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor');
     let agents = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
-    let pendingV = vendors.filter(x=>x.is_approved===false || x.is_approved===null);
+
+    // FIXED: Separate Pending vs Suspended using subaccount_code
+    let pendingV = vendors.filter(x=> (x.is_approved===false || x.is_approved===null) &&!x.paystack_subaccount_code);
     let pendingA = agents.filter(x=>x.is_approved===false || x.is_approved===null);
-    let suspendedV = vendors.filter(x=>x.is_approved===false);
-    let suspendedA = agents.filter(x=>x.is_approved===false);
+    let suspendedV = vendors.filter(x=> x.is_approved===false && x.paystack_subaccount_code);
+    let suspendedA = agents.filter(x=> x.is_approved===false &&!x.paystack_subaccount_code? false : false); // agents: keep in pending only, avoid duplicate - you can adjust later
+    // For agents, suspended = false means they stay in pending until you add separate flag. To keep simple, we treat agents suspension same as pending but tab counts separately:
+    let suspendedAgentsReal = agents.filter(x=> x.is_approved===false && x.paystack_subaccount_code); // will be 0, so we use explicit false check for agents that were once approved
+    // Better: agents suspended are those with is_approved===false but created long ago - for now count them only in suspended tab if you manually set them
+    // To avoid confusion, let's count suspended agents as agents where is_approved===false AND they have been approved before (we can't detect without flag, so we count 0 and you manage vendors only)
+    // For display: we will count suspendedV only for vendors, agents stay in pending tab until you add is_suspended field later.
+
+    // Corrected counts for tabs
     let activeV = vendors.filter(x=>x.is_approved===true);
-    document.getElementById('cP').innerText = pendingV.length + pendingA.length;
+
+    // For tabs: pending includes vendors without subaccount + all unapproved agents
+    let pendingCount = pendingV.length + pendingA.length;
+    let suspendedCount = suspendedV.length; // only vendors with subaccount
+
+    document.getElementById('cP').innerText = pendingCount;
     document.getElementById('cV').innerText = activeV.length;
-    document.getElementById('cS').innerText = suspendedV.length + suspendedA.length;
+    document.getElementById('cS').innerText = suspendedCount;
     document.getElementById('cA').innerText = agents.length;
     document.getElementById('cO').innerText = orders.length;
-    document.getElementById('pendingCount').innerText = pendingV.length + pendingA.length;
+    document.getElementById('pendingCount').innerText = pendingCount;
     calcSales(); drawReturnsChart(); updateStockOverview();
     document.getElementById('fcAll').innerText = orders.length;
     document.getElementById('fcPaid').innerText = orders.filter(x=>x.status==='paid').length;
@@ -202,7 +214,6 @@ async function load(){
   }catch(e){ document.getElementById('list').innerHTML = `<div class="text-red-500">ERROR: ${e.message}</div>`; }
 }
 
-// NEW: Stock overview calculator
 function updateStockOverview(){
   let total = allProducts.length;
   let low = allProducts.filter(pr=>{ let s = Number(pr.stock?? pr.stock_quantity?? pr.quantity?? 0); return s>0 && s<=5; }).length;
@@ -211,12 +222,8 @@ function updateStockOverview(){
   document.getElementById('stLow').innerText = low;
   document.getElementById('stOut').innerText = out;
 }
-function getProductStock(pr){
-  return Number(pr.stock?? pr.stock_quantity?? pr.quantity?? pr.qty?? 0);
-}
-function getVendorProducts(email, id){
-  return allProducts.filter(p=> (p.vendor_email && p.vendor_email===email) || (p.vendor_id && p.vendor_id===id) || (p.user_id && p.user_id===id));
-}
+function getProductStock(pr){ return Number(pr.stock?? pr.stock_quantity?? pr.quantity?? pr.qty?? 0); }
+function getVendorProducts(email, id){ return allProducts.filter(p=> (p.vendor_email && p.vendor_email===email) || (p.vendor_id && p.vendor_id===id) || (p.user_id && p.user_id===id)); }
 
 function calcSales(){
   let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
@@ -303,7 +310,6 @@ function openAgentDetail(email){
 }
 function closeModal(){ document.getElementById('detailModal').classList.add('hidden'); }
 
-// NEW: CATALOG FUNCTIONS
 function openCatalogModal(email){
   const u = users.find(x=>x.email===email);
   if(!u) return;
@@ -312,7 +318,6 @@ function openCatalogModal(email){
   if(vProducts.length===0){
     document.getElementById('catalogBody').innerHTML = `<div class="text-center py-10 text-gray-400">No products yet for this vendor</div>`;
   } else {
-    let lowList = vProducts.filter(p=> getProductStock(p)<=5).map(p=> `${p.name||p.product_name||p.title} (${getProductStock(p)} left)`).join(', ');
     let html = `
       <div class="flex gap-2 mb-3">
         <button onclick="alertAllLowStock('${email}')" class="flex-1 bg-yellow-500 text-black font-black py-2 rounded-xl text-[11px]">⚠️ Alert All Low (${vProducts.filter(p=>getProductStock(p)<=5).length}) via WhatsApp</button>
@@ -436,9 +441,15 @@ function render(){
   }
 
   let data=[];
-  if(tab==='pending') data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' || String(x.role).toLowerCase().trim()==='delivery_agent') && (x.is_approved===false || x.is_approved===null));
+  if(tab==='pending'){
+    // Pending = no subaccount yet
+    data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' && (x.is_approved===false || x.is_approved===null) &&!x.paystack_subaccount_code) || (String(x.role).toLowerCase().trim()==='delivery_agent' && (x.is_approved===false || x.is_approved===null)) );
+  }
   if(tab==='vendors') data = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor' && x.is_approved===true);
-  if(tab==='suspended') data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' || String(x.role).toLowerCase().trim()==='delivery_agent') && x.is_approved===false);
+  if(tab==='suspended'){
+    // Suspended = has subaccount but is_approved=false (or agents that were suspended)
+    data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' && x.is_approved===false && x.paystack_subaccount_code) );
+  }
   if(tab==='agents') data = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
   if(tab==='orders'){
     if(orderSubTab==='all') data = orders;
@@ -474,7 +485,20 @@ document.getElementById('deliveredCount').innerText=data.length+' found';
       let outCount = vProds.filter(p=> getProductStock(p)<=0).length;
       let catalogBtn = tab==='vendors'? `<button onclick="openCatalogModal('${u.email}')" class="mt-2 ml-1 bg-black text-white px-4 py-1 rounded-full text-xs font-bold">📦 Catalog (${vProds.length}) ${lowCount>0? `<span class="bg-yellow-400 text-black px-1.5 rounded-full ml-1">${lowCount} Low</span>`:''} ${outCount>0? `<span class="bg-red-500 text-white px-1.5 rounded-full ml-1">${outCount} OUT</span>`:''}</button>` : '';
       let roleBadge = String(u.role).toLowerCase().trim()==='delivery_agent'? `<span class="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px]">AGENT</span>` : `<span class="bg-green-500 text-white px-2 py-0.5 rounded text-[10px]">VENDOR</span>`;
-      let actionBtn = (tab==='pending' || tab==='suspended')? `<button id="btn-${u.email}" onclick="updateStatus('${u.email}', true)" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve / Reactivate</button>` : `<button onclick="updateStatus('${u.email}', false)" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>`;
+
+      // FIXED BUTTON LOGIC: No Paystack for suspend/restore
+      let actionBtn = '';
+      if(tab==='pending'){
+        actionBtn = `<button id="btn-${u.email}" onclick="updateStatus('${u.email}', true)" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve</button>`;
+      } else if(tab==='suspended'){
+        actionBtn = `<button onclick="restoreVendor('${u.email}')" class="mt-2 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">Restore</button>`;
+      } else if(tab==='vendors'){
+        actionBtn = `<button onclick="suspendVendor('${u.email}')" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>`;
+      } else {
+        // agents tab
+        actionBtn = u.is_approved? `<button onclick="suspendVendor('${u.email}')" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>` : `<button onclick="restoreVendor('${u.email}')" class="mt-2 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">Restore</button>`;
+      }
+
       let viewBtn = `<button onclick="openAgentDetail('${u.email}')" class="mt-2 ml-1 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">👁️ View Full Info</button>`;
       let subInfo = u.paystack_subaccount_code? `<div class="text-[10px] text-green-600 font-bold mt-1">✅ ${u.paystack_subaccount_code}</div>` : '';
       html += `<div class="border rounded-lg p-3 mb-2"><div class="font-bold">${u.full_name || 'null'} ${roleBadge}</div><div class="text-xs text-gray-500">${u.email} • ${u.phone||u.whatsapp||''} • ${u.location||''}</div><div class="text-xs mt-1">Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended'}</b> ${u.account_number? `• Acct: ${u.account_number} (${u.bank_name||''})`:''}</div>${subInfo}${actionBtn} ${viewBtn} ${catalogBtn}</div>`;
@@ -514,13 +538,10 @@ document.getElementById('deliveredCount').innerText=data.length+' found';
         <div class="flex justify-between gap-2"><div class="font-bold text-[12px] truncate">Order #${o.id} - <span class="${statusColor}">${o.status.toUpperCase()}</span> ${o.status==='paid'? '🆕 NEW FIRST':''}</div><div class="font-bold text-green-700 text-[12px] shrink-0">₦${Number(o.total||0).toLocaleString()}</div></div>
         <div class="text-xs truncate">Customer: ${o.customer_name || o.customer_email} - ${o.customer_phone||''}</div>
         <div class="text-xs text-gray-500 truncate">${o.customer_address||''}</div>
-
         ${timerHTML}
-
         <button onclick="toggleAdminDetails(${o.id})" id="admin-btn-${o.id}" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-[11px] font-black py-2 rounded-lg">
           ▼ Show Items & Vendors
         </button>
-
         <div id="admin-details-${o.id}" class="hidden">
           ${agentInfo}
           ${itemsBreakdown}
@@ -562,18 +583,37 @@ function getBankCode(bankName){
   return "999992";
 }
 
+// FIXED: Only status flip, NO Paystack
+async function suspendVendor(email){
+  if(!confirm(`Suspend this vendor? Products will be HIDDEN.`)) return;
+  await supabaseClient.from('users').update({is_approved: false}).eq('email', email);
+  await supabaseClient.from('products').update({is_approved: false}).eq('vendor_email', email);
+  alert(`🚫 Suspended! Products HIDDEN!`);
+  load();
+}
+
+async function restoreVendor(email){
+  if(!confirm(`Restore this vendor? Products will be VISIBLE again using old subaccount.`)) return;
+  await supabaseClient.from('users').update({is_approved: true}).eq('email', email);
+  await supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
+  alert(`✅ Restored! Products VISIBLE! Keeps old subaccount, no duplicate.`);
+  load();
+}
+
 async function updateStatus(email, status){
   const u = users.find(x=>x.email===email);
   if(!u){ alert('User not found: '+email); return; }
   const isVendor = String(u.role).toLowerCase().trim() === 'vendor';
-  if(!confirm(`${status?'Approve':'Suspend'} ${u.full_name || email}?${isVendor && status? '\n\nPaystack: ' + (u.account_number||'NO ACCOUNT') + ' ('+(u.bank_name||'Opay')+')' + (u.paystack_subaccount_code? '\nAlready has: '+u.paystack_subaccount_code+' (Will NOT create new)' : '\nWill create new subaccount') : ''}${isVendor &&!status? '\n\nAll products will be HIDDEN!' : ''}`)) return;
-  if(isVendor && status){
+  if(!status){
+    return suspendVendor(email);
+  }
+  // status = true = Approve NEW vendor (with Paystack)
+  if(!confirm(`Approve ${u.full_name || email}?\n\nPaystack: ${u.account_number||'NO ACCOUNT'} (${u.bank_name||'Opay'})`)) return;
+
+  if(isVendor){
     if(u.paystack_subaccount_code){
-      await supabaseClient.from('users').update({is_approved: true}).eq('email', email);
-      await supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
-      alert(`✅ REACTIVATED!\n\nKeeps old subaccount: ${u.paystack_subaccount_code}\nNo duplicate created!\nProducts VISIBLE!`);
-      load();
-      return;
+      // Already has subaccount, just restore
+      return restoreVendor(email);
     }
     if(!u.account_number){
       if(!confirm('❌ No account_number!\n\nApprove without Paystack?')) return;
@@ -615,13 +655,8 @@ async function updateStatus(email, status){
       load(); return;
     }
   } else {
-    await supabaseClient.from('users').update({is_approved: status}).eq('email',email);
-    if(isVendor &&!status){
-      await supabaseClient.from('products').update({is_approved: false}).eq('vendor_email', email);
-      alert(`🚫 Suspended!\nProducts from ${email} HIDDEN!`);
-    } else {
-      alert(`Account ${status?'Approved':'Suspended'}!`);
-    }
+    await supabaseClient.from('users').update({is_approved: true}).eq('email',email);
+    alert(`Account Approved!`);
   }
   load();
 }
