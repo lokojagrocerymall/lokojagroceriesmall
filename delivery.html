@@ -200,24 +200,25 @@ function renderOrders(){
 
 async function loadCompleted(){
   try{
-    const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const { data:completed } = await supabaseClient.from('orders')
-     .select('*')
-     .eq('status','delivered')
-     .eq('delivery_agent_email', curUser.email)
-     .order('updated_at',{ascending:false})
-     .limit(100);
-    let filtered = (completed||[]).filter(o=>{
-      const d = o.delivered_at || o.updated_at || o.created_at;
-      return new Date(d) >= sevenDaysAgo;
-    });
-    if(!filtered || filtered.length===0){
-      document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>';
-    } else {
-      document.getElementById('completed').innerHTML = filtered.map(o=>{
-        const deliveredDate = new Date(o.delivered_at || o.updated_at || o.created_at).toLocaleString();
+.select('*')
+.eq('status','delivered')
+.eq('delivery_agent_email', curUser.email)
+.gte('delivered_at', sevenDaysAgo.toISOString())
+.order('delivered_at',{ascending:false});
+    if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }
+    else {
+      document.getElementById('completed').innerHTML = completed.map(o=>{
+        const deliveredDate = new Date(o.delivered_at).toLocaleString();
         const stars = o.customer_rating? '⭐'.repeat(o.customer_rating) : 'No rating yet';
-        return `<div class="bg-white p-3 rounded-xl shadow mb-2"><div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div><p class="text-xs"><b>Customer:</b> ${o.customer_name}</p><p class="text-xs text-gray-500"><b>Delivered:</b> ${deliveredDate}</p><p class="text-xs text-yellow-600 font-bold mt-1">${stars}</p></div>`;
+        return `<div class="bg-white p-3 rounded-xl shadow mb-2 border-gray-200 opacity-90">
+          <div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div>
+          <p class="text-xs"><b>Customer:</b> ${o.customer_name}</p>
+          <p class="text-xs text-gray-500"><b>Delivered:</b> ${deliveredDate}</p>
+          <p class="text-xs text-yellow-600 font-bold mt-1">${stars}</p>
+        </div>`;
       }).join('');
     }
   }catch(e){ console.log(e) }
