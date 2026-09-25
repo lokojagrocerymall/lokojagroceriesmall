@@ -27,7 +27,7 @@ let displayName=user.name||user.full_name||user.email.split('@')[0];displayName=
 document.getElementById('name').innerText=displayName;document.getElementById('email').innerText=user.email;document.getElementById('role').innerText=user.role;
 let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let allProducts=[];let tempRating={};let isUserInteracting=false;let isSubmitting=false;let lastOrderStatus={};let customerOrdersCache=[];let openOrderDetails=new Set();let vendorMap={};let vendorMapById={};
 const TWO_HOURS_MS=2*60*60*1000;const MIN_ORDER=20000;
-const LOKOJA_AREAS=["200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs","Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC","FUL Adankolo","FUL Felele","Fentolu","Felele","Gadumo","Ganaja","Ganaja Junction","Government Day","Government House","GRA","Hydro Junction","Jimgbe","Kabawa","Kabba Junction","Karaworo","Kporoka","Kpata Market","Maigeri Palace","NATACO","NUJ","NTA","New Market","New Stadium","Old Market","Old Poly Qtrs","Otokiti","Phase 1","Phase 2","Police Clinic","Poly","Post Office","Shetima","Zenith Bank","Zango","Zone 8","Other"];
+const LOKOJA_AREAS=["200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs","Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC","FUL Adankolo","FUL Felele","Fentolu","Felele","Gadumo","Ganaja","Ganaja Junction","Government Day","Government House","GRA","Hydro Junction","Jimgbe","Kabawa","Kabba Junction","Karaworo","Kporoka","Kpata Market","MAIGERI","NATACO","NUJ","NTA","New Market","New Stadium","Old Market","Old Poly Qtrs","Otokiti","Phase 1","Phase 2","Police Clinic","Poly","Post Office","Shetima","Zenith Bank","Zango","Zone 8","Other"];
 function cleanPrice(p){return Number(String(p).replace(/[^0-9]/g,''))||0;}
 function cleanShopName(raw){if(!raw) return null;let n=String(raw).trim();if(!n) return null;if(n.includes('@')){let pre=n.split('@')[0].replace(/[0-9._-]/g,'').trim();if(pre.length<3) return null;return pre.toUpperCase()+' STORE';}if(n.toLowerCase()==='lgm vendor') return null;return n.toUpperCase();}
 function getShopName(p){let a=cleanShopName(p.business_name||p.store_name||p.vendor_business_name||p.vendor_name||p.shop_name);if(a) return a;let b=cleanShopName(vendorMap[(p.vendor_email||'').toLowerCase()]);if(b) return b;let c=cleanShopName(vendorMapById[p.vendor_id]);if(c) return c;let d=cleanShopName(p.vendor_email);if(d) return d;return 'SOKOATO STORE';}
@@ -64,7 +64,20 @@ attachStarEvents();
 if(window.justDeliveredId){ setTimeout(()=>{ const el=document.getElementById('cust-details-'+window.justDeliveredId); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); } window.justDeliveredId=null; },600); }
 }
 function toggleCustDetails(id){const el=document.getElementById('cust-details-'+id);const h=el.classList.contains('hidden');if(h){el.classList.remove('hidden');openOrderDetails.add(id);}else{el.classList.add('hidden');openOrderDetails.delete(id);}}
-async function markDelivered(id){if(!confirm('Confirm received?')) return; window.justDeliveredId=id; openOrderDetails.add(id); await supabaseClient.from('orders').update({status:'delivered'}).eq('id',id); loadOrders();}
+
+// FIXED: NOW SAVES delivered_at FOR DELIVERY AGENT DASHBOARD
+async function markDelivered(id){
+  if(!confirm('Confirm received?')) return;
+  window.justDeliveredId=id;
+  openOrderDetails.add(id);
+  await supabaseClient.from('orders').update({
+    status:'delivered',
+    delivered_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }).eq('id',id);
+  loadOrders();
+}
+
 function attachStarEvents(){document.querySelectorAll('[id^=stars-]').forEach(box=>{box.onclick=(e)=>{if(e.target.tagName!=='SPAN') return;const id=box.id.split('-')[1];const r=parseInt(e.target.dataset.rate);tempRating[id]=r;[...box.children].forEach((s,i)=>{s.innerText=i<r?'★':'☆';s.className=i<r?'cursor-pointer text-yellow-500':'cursor-pointer text-gray-300';});}});}
 async function submitRating(id){const r=tempRating[id];const rev=document.getElementById(`review-${id}`).value;if(!r){alert('Tap stars');return;}await supabaseClient.from('orders').update({customer_rating:r,customer_review:rev}).eq('id',id);delete tempRating[id];alert('Thanks for rating! ⭐');loadOrders();}
 async function saveReceipt(orderId){const order=customerOrdersCache.find(o=>o.id===orderId);if(!order || (order.status!=='delivered' && order.status!=='failed')){alert('🔒 Receipt available only after Delivered or Failed');return;}const el=document.getElementById(`receipt-${orderId}`);if(!el) return;const d=document.getElementById(`cust-details-${orderId}`);const was=d.classList.contains('hidden');if(was) d.classList.remove('hidden');try{const c=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:'#ffffff'});const a=document.createElement('a');a.download=`LGM-${orderId}.png`;a.href=c.toDataURL('image/png');a.click();}catch(e){alert(e.message);}if(was) d.classList.add('hidden');}
