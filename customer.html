@@ -5,7 +5,7 @@ const user=JSON.parse(localStorage.getItem('lgm_user')||'{}');if(!user.email||us
 let displayName=user.name||user.full_name||user.email.split('@')[0];displayName=displayName.charAt(0).toUpperCase()+displayName.slice(1);
 document.getElementById('name').innerText=displayName;document.getElementById('email').innerText=user.email;document.getElementById('role').innerText=user.role;
 let cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');let allProducts=[];let tempRating={};let isUserInteracting=false;let isSubmitting=false;let lastOrderStatus={};let customerOrdersCache=[];let openOrderDetails=new Set();let vendorMap={};let vendorMapById={};
-const TWO_HOURS_MS=2*60*60*1000;const MIN_ORDER=20000;
+const TWO_HOURS_MS=2*60*60*1000;const MIN_ORDER=100;
 const LOKOJA_AREAS=["200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs","Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC","FUL Adankolo","FUL Felele","Fentolu","Felele","Gadumo","Ganaja","Ganaja Junction","Government Day","Government House","GRA","Hydro Junction","Jimgbe","Kabawa","Kabba Junction","Karaworo","Kporoka","Kpata Market","MAIGERI","NATACO","NUJ","NTA","New Market","New Stadium","Old Market","Old Poly Qtrs","Otokiti","Phase 1","Phase 2","Police Clinic","Poly","Post Office","Shetima","Zenith Bank","Zango","Zone 8","Other"];
 function cleanPrice(p){return Number(String(p).replace(/[^0-9]/g,''))||0;}
 function cleanShopName(raw){if(!raw) return null;let n=String(raw).trim();if(!n) return null;if(n.includes('@')){let pre=n.split('@')[0].replace(/[0-9._-]/g,'').trim();if(pre.length<3) return null;return pre.toUpperCase()+' STORE';}if(n.toLowerCase()==='lgm vendor') return null;return n.toUpperCase();}
