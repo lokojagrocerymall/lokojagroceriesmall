@@ -112,7 +112,6 @@ footer{padding-bottom: max(40px, env(safe-area-inset-bottom));}
   </div>
 </footer>
 
-<!-- TAP TO VIEW DETAIL MODAL -->
 <div id="detailModal" class="hidden fixed inset-0 bg-black/70 z-[70] flex items-end md:items-center justify-center p-0 md:p-4" onclick="if(event.target==this) closeDetail()">
 <div class="bg-white w-full md:max-w-md rounded-t-[28px] md:rounded-[24px] p-5 max-h-[92vh] overflow-y-auto">
 <div class="w-10 h-1.5 bg-gray-200 rounded-full mx-auto mb-4 md:hidden"></div>
@@ -173,18 +172,48 @@ async function payWithPaystack(){
   let sub=0; cart.forEach(i=>sub+=i.price*i.qty);
   if(sub<MIN_ORDER){alert(`Min ₦${MIN_ORDER} - add ₦${(MIN_ORDER-sub).toLocaleString()}`);return;}
   const grandTotal = sub + delivery;
-  const handler = PaystackPop.setup({
-    key: PAYSTACK_PUBLIC_KEY,
-    email: curUser.email,
-    amount: grandTotal * 100,
-    currency: "NGN",
-    ref: "LGM_"+Date.now()+"_"+Math.random().toString(36).slice(2,7),
-    metadata: { custom_fields: [{display_name: "Customer", variable_name:"customer", value:name}] },
-    callback: function(res){ saveOrder(res.reference, name, phone, address, grandTotal); },
-    onClose: function(){ console.log('closed'); }
+
+  const vendorMap = {};
+  cart.forEach(item => {
+    const key = (item.vendor_email||'').toLowerCase().trim();
+    if(!key) return;
+    if(!vendorMap[key]) vendorMap[key] = { vendor_email: key, vendor_id: item.vendor_id, amount: 0 };
+    vendorMap[key].amount += (item.price * item.qty);
   });
-  handler.openIframe();
+  const vendors = Object.values(vendorMap);
+  if(vendors.length===0){ alert('No vendor attached'); return; }
+
+  const payBtn=document.getElementById('payBtn');
+  payBtn.innerText = `Processing ${vendors.length} vendor${vendors.length>1?'s':''}...`;
+  payBtn.disabled = true;
+
+  try{
+    const { data, error } = await supabaseClient.functions.invoke('init-multivendor-pay', {
+      body: { email: curUser.email, amount: grandTotal, vendors: vendors, delivery_fee: delivery, customer_name: name }
+    });
+    if(error) throw error;
+    if(!data ||!data.access_code) throw new Error(data?.error || 'No access code - check Edge Function');
+
+    const handler = PaystackPop.setup({
+      key: PAYSTACK_PUBLIC_KEY,
+      email: curUser.email,
+      amount: grandTotal * 100,
+      access_code: data.access_code,
+      callback: function(res){ saveOrder(res.reference, name, phone, address, grandTotal); },
+      onClose: function(){
+        payBtn.disabled=false;
+        payBtn.innerText=`Pay Now With Paystack - ₦${grandTotal.toLocaleString()}`;
+      }
+    });
+    handler.openIframe();
+  }catch(err){
+    console.error(err);
+    alert('Init failed: '+err.message+'\n\nDid you create the Edge Function init-multivendor-pay? I will give you its code next.');
+    payBtn.disabled=false;
+    payBtn.innerText=`Pay Now With Paystack - ₦${grandTotal.toLocaleString()}`;
+  }
 }
+
 async function saveOrder(tx_ref,name,phone,address,grandTotal){
   const curUser=JSON.parse(localStorage.getItem('lgm_user'));
   const cart=JSON.parse(localStorage.getItem('lgm_cart')||'[]');
@@ -207,14 +236,11 @@ async function saveOrder(tx_ref,name,phone,address,grandTotal){
         return {...i, vendor_name: v.full_name||i.vendor_name||i.vendor_email, account_number: v.account_number||i.account_number, bank_name: v.bank_name||i.bank_name, bank_code: v.bank_code||i.bank_code };
       });
     }catch(e){ console.log('vendor enrich skip', e); }
-    try{
-      await supabaseClient.functions.invoke('process-payouts', { body: { order_id: order.id, items: enrichedCart } });
-    }catch(payErr){ console.log('payout trigger', payErr); }
     localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');updateCart();
     try{await supabaseClient.from('carts').delete().eq('customer_id',curUser.id);}catch(e){}
     try{await supabaseClient.from('vendor_orders').insert({order_id:order.id,vendor_id:cart[0]?.vendor_id||null,vendor_email:cart[0]?.vendor_email||null,items:cart,subtotal:sub,status:'new'});}catch(vErr){}
     try{await supabaseClient.from('delivery_assignments').insert({order_id:order.id,status:'pending_pickup',customer_id:curUser.id,customer_address:address,customer_phone:phone,items_summary:cart.map(i=>`${i.name}x${i.qty}`).join(', ')});}catch(dErr){}
-    alert('✅ Payment Successful! Order #'+order.id+' - Vendors paid 90% instantly!');
+    alert('✅ Payment Successful! Order #'+order.id+' - '+[...new Set(cart.map(i=>i.vendor_email))].length+' vendors paid 90% via Split!');
     window.location.replace('customer.html');
   }catch(err){
     console.error(err);
