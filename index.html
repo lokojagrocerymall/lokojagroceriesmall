@@ -136,7 +136,7 @@ const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const PAYSTACK_PUBLIC_KEY="pk_live_cd1a703e3c95096d29fc46c1ef662f2b4740dfec";
 const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let delivery=5000;const MIN_ORDER=20000;
+let delivery=5000;const MIN_ORDER=100;
 let allProducts=[];
 (function(){if(localStorage.getItem('cart'))localStorage.removeItem('cart');if(localStorage.getItem('lgm_cart')&&localStorage.getItem('lgm_cart').includes('"quantity"'))localStorage.removeItem('lgm_cart');})();
 function doSearch(){const q=document.getElementById('searchInput').value.trim();if(q)location.href='browse.html?q='+encodeURIComponent(q);}
