@@ -600,67 +600,7 @@ async function restoreVendor(email){
   load();
 }
 
-async function updateStatus(email, status){
-  const u = users.find(x=>x.email===email);
-  if(!u){ alert('User not found: '+email); return; }
-  const isVendor = String(u.role).toLowerCase().trim() === 'vendor';
-  if(!status){
-    return suspendVendor(email);
-  }
-  // status = true = Approve NEW vendor (with Paystack)
-  if(!confirm(`Approve ${u.full_name || email}?\n\nPaystack: ${u.account_number||'NO ACCOUNT'} (${u.bank_name||'Opay'})`)) return;
-
-  if(isVendor){
-    if(u.paystack_subaccount_code){
-      // Already has subaccount, just restore
-      return restoreVendor(email);
-    }
-    if(!u.account_number){
-      if(!confirm('❌ No account_number!\n\nApprove without Paystack?')) return;
-      await supabaseClient.from('users').update({is_approved: true}).eq('email',email);
-      await supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
-      alert('Approved without Paystack + Products VISIBLE');
-      load(); return;
-    }
-    const btn = document.getElementById(`btn-${email}`);
-    if(btn){ btn.innerText = '⏳ Creating...'; btn.disabled = true; }
-    try{
-      document.getElementById('list').innerHTML = `<div class="text-center py-12"><div class="text-green-600 font-black">⏳ Creating Paystack subaccount...</div><div class="text-xs mt-2">${u.full_name} - ${u.account_number} - ${u.bank_name||'Opay'}</div></div>`;
-      const bankCode = u.bank_code || getBankCode(u.bank_name);
-      const { data, error } = await supabaseClient.functions.invoke('create-vendor-subaccount', {
-        body: {
-          account_number: String(u.account_number).trim(),
-          bank_code: String(bankCode).trim(),
-          vendor_name: u.full_name || u.business_name || 'Vendor',
-          vendor_email: u.email,
-          vendor_phone: u.phone || u.whatsapp || '08000000000'
-        }
-      });
-      if(error) throw new Error(error.message || JSON.stringify(error));
-      if(!data?.data?.subaccount_code) throw new Error('No subaccount_code: ' + JSON.stringify(data));
-      const subCode = data.data.subaccount_code;
-      const { error: updErr } = await supabaseClient.from('users').update({
-        is_approved: true,
-        paystack_subaccount_code: subCode,
-        paystack_bank: data.data.settlement_bank || u.bank_name || 'Opay',
-        account_name_resolved: data.data.account_name || '',
-        bank_code: bankCode
-      }).eq('email', email);
-      if(updErr){ await supabaseClient.from('users').update({is_approved: true}).eq('email', email); }
-      await supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
-      alert(`✅ APPROVED & LINKED!\n\nName: ${data.data.account_name}\nBank: ${data.data.settlement_bank}\nSub: ${subCode}\nYou 10% / Vendor 90%!\nProducts VISIBLE!`);
-    }catch(err){
-      console.error(err);
-      alert('❌ Paystack Failed: ' + err.message);
-      load(); return;
-    }
-  } else {
-    await supabaseClient.from('users').update({is_approved: true}).eq('email',email);
-    alert(`Account Approved!`);
-  }
-  load();
-}
-
+async function updateStatus(email,status){const u=users.find(x=>x.email===email);if(!u)return;if(!status)return suspendVendor(email);if(!confirm("Approve "+(u.full_name||email)+"?"))return;if(String(u.role).trim()==="vendor"){if(u.paystack_subaccount_code){return restoreVendor(email)}try{document.getElementById('list').innerHTML="<div class=text-center py-12>Creating...</div>";const{data,error}=await supabaseClient.functions.invoke('create-vendor-subaccount',{body:{vendor:u}});if(error)throw new Error(error.message);if(!data?.success)throw new Error(JSON.stringify(data));if(data.subaccount_code){await supabaseClient.from('users').update({is_approved:true,paystack_subaccount_code:data.subaccount_code}).eq('email',email);}else{await supabaseClient.from('users').update({is_approved:true}).eq('email',email);}await supabaseClient.from('products').update({is_approved:true}).eq('vendor_email',email);alert("APPROVED! Sub: "+(data.subaccount_code||"Kept")+" Email: "+(data.email_sent?"Sent":"Check"));}catch(e){alert("Failed: "+e.message);load();return;}}else{await supabaseClient.from('users').update({is_approved:true}).eq('email',email);alert("Approved!");}load();}
 setInterval(()=>{ document.querySelectorAll('.admin-timer').forEach(el=>{ const start = el.getAttribute('data-start'); if(start && start!=='null' && start!=='undefined'){ el.innerHTML = formatAdminCountdown(start); } }); },1000);
 setInterval(load, 80000);
 load();
