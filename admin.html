@@ -600,7 +600,43 @@ async function restoreVendor(email){
   load();
 }
 
-async function updateStatus(email,status){const u=users.find(x=>x.email===email);if(!u)return;if(!status)return suspendVendor(email);if(!confirm("Approve "+(u.full_name||email)+"?"))return;if(String(u.role).trim()==="vendor"){if(u.paystack_subaccount_code){return restoreVendor(email)}try{document.getElementById('list').innerHTML="<div class=text-center py-12>Creating...</div>";const{data,error}=await supabaseClient.functions.invoke('create-vendor-subaccount',{body:{vendor:u}});if(error)throw new Error(error.message);if(data.subaccount_code){await supabaseClient.from('users').update({is_approved:true,paystack_subaccount_code:data.subaccount_code}).eq('email',email);}else{await supabaseClient.from('users').update({is_approved:true}).eq('email',email);}await supabaseClient.from('products').update({is_approved:true}).eq('vendor_email',email);alert("APPROVED! Sub: "+(data.subaccount_code||"Kept")+" Email: "+(data.email_sent?"Sent":"Check"));}catch(e){alert("Failed: "+e.message);load();return;}}else{await supabaseClient.from('users').update({is_approved:true}).eq('email',email);alert("Approved!");}load();}setInterval(()=>{ document.querySelectorAll('.admin-timer').forEach(el=>{ const start = el.getAttribute('data-start'); if(start && start!=='null' && start!=='undefined'){ el.innerHTML = formatAdminCountdown(start); } }); },1000);
+async function updateStatus(email,status){
+  const u=users.find(x=>x.email===email);
+  if(!u) return;
+  if(!status) return suspendVendor(email);
+  if(!confirm("Approve "+(u.full_name||email)+"?")) return;
+  
+  if(String(u.role).trim()==="vendor"){
+    try{
+      // FETCH FRESH DATA FROM SUPABASE - THIS FIXES DUPLICATE BUG
+      const {data: freshUser} = await supabaseClient.from('users').select('*').eq('email',email).single();
+      const checkUser = freshUser || u;
+      
+      if(checkUser.paystack_subaccount_code){
+        return restoreVendor(email);
+      }
+      
+      document.getElementById('list').innerHTML="<div class=text-center py-12>Creating Paystack subaccount...</div>";
+      const {data,error}=await supabaseClient.functions.invoke('create-vendor-subaccount',{body:{vendor:checkUser}});
+      if(error) throw new Error(error.message);
+      if(data.subaccount_code){
+        await supabaseClient.from('users').update({is_approved:true,paystack_subaccount_code:data.subaccount_code}).eq('email',email);
+      }else{
+        await supabaseClient.from('users').update({is_approved:true}).eq('email',email);
+      }
+      await supabaseClient.from('products').update({is_approved:true}).eq('vendor_email',email);
+      alert("APPROVED! Sub: "+(data.subaccount_code||"Kept")+" Email: "+(data.email_sent?"Sent":"Check"));
+    }catch(e){
+      alert("Failed: "+e.message);
+      load();
+      return;
+    }
+  }else{
+    await supabaseClient.from('users').update({is_approved:true}).eq('email',email);
+    alert("Approved!");
+  }
+    load();
+}
 setInterval(load, 80000);
 load();
 </script>
