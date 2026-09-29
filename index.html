@@ -151,7 +151,7 @@ function openDetail(id){
   document.getElementById('dImage').src=imgUrl;
   document.getElementById('dName').innerText=p.name;
   document.getElementById('dCategory').innerText=(p.category||'Others')+' • '+(p.location||'Lokoja')+' • Tap image to view full';
-  document.getElementById('dDesc').innerText=p.description||p.name+' - Fresh from Lokoja market. Full details: '+p.name+'. Category: '+(p.category||'Others')+'. Location: '+(p.location||'Lokoja')+'. Price includes quality check. Delivery available.';
+  document.getElementById('dDesc').innerText=p.description||p.name+' - Fresh from Lokoja market. Full details: '+p.name+'. Category: '+(p.category||'Others')+'. Location: '+(p.location||'Lokoja')+'. Price includes quality check.';
   document.getElementById('dPrice').innerText='₦'+Number(p.price).toLocaleString();
   const stockNum=Number(p.stock||0);
   document.getElementById('dStock').innerHTML = stockNum<=10? `<span class="stock-low">⚠️ Only ${stockNum} left!</span>` : `<span class="stock-ok">✅ ${stockNum} in stock</span>`;
