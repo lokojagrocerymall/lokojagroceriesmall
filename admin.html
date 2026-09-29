@@ -1,644 +1,110 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Lokoja Grocery Mall</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-  @keyframes pulse-red {0%,100%{background-color:#fee2e2;border-color:#ef4444;}50%{background-color:#fecaca;border-color:#dc2626;}}
-  @keyframes timer-pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
-.alert-tab{animation:pulse-red 1s infinite;border:2px solid #ef4444!important;border-radius:8px;}
-.badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900;}
-.tabs-scroll::-webkit-scrollbar{display:none}
-.tabs-scroll{ -ms-overflow-style:none; scrollbar-width:none; scroll-behavior:smooth }
-</style>
-</head>
-<body class="bg-gray-100">
-<header class="bg-white p-4 flex justify-between items-center shadow sticky top-0 z-20">
-  <b class="text-green-700">Admin Dashboard</b>
-  <button onclick="localStorage.removeItem('lgm_user'); location.href='/';" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Logout</button>
-</header>
-
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Admin - Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/@supabase/supabase-js@2"></script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><style>@keyframes pulse-red{0%,100%{background:#fee2e2;border-color:#ef4444}50%{background:#fecaca;border-color:#dc2626}}@keyframes timer-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}.alert-tab{animation:pulse-red 1s infinite;border:2px solid #ef4444!important;border-radius:8px}.badge{background:#ef4444;color:#fff;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900}.tabs-scroll::-webkit-scrollbar{display:none}.tabs-scroll{-ms-overflow-style:none;scrollbar-width:none;scroll-behavior:smooth}</style></head><body class="bg-gray-100">
+<header class="bg-white p-4 flex justify-between items-center shadow sticky top-0 z-20"><b class="text-green-700">Admin Dashboard</b><button onclick="localStorage.removeItem('lgm_user');location.href='/';" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Logout</button></header>
 <div class="p-3 max-w-5xl mx-auto">
-  <div class="grid grid-cols-3 gap-2 mb-3">
-    <div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden">
-      <div class="text-[10px] text-gray-400 leading-tight">Gross Sales</div>
-      <div class="text-[13px] sm:text-base font-black truncate" id="sales" title="₦0">₦0</div>
-    </div>
-    <div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden">
-      <div class="text-[10px] text-gray-400 leading-tight">Platform Income (10% + 5% delivery)</div>
-      <div class="text-[13px] sm:text-base font-black text-green-600 truncate" id="income" title="₦0">₦0</div>
-    </div>
-    <div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden">
-      <div class="text-[10px] text-gray-400 leading-tight">Pending Approvals</div>
-      <div class="text-xl font-black text-orange-600" id="pendingCount">0</div>
-    </div>
-  </div>
-
-  <div id="stockOverview" class="bg-gradient-to-r from-gray-900 to-green-800 text-white p-3 rounded-xl shadow mb-3 flex justify-between text-[11px] font-bold">
-    <div class="text-center"><div class="text-[9px] opacity-70">TOTAL PRODUCTS</div><div id="stTotal" class="text-[14px]">0</div></div>
-    <div class="text-center"><div class="text-[9px] opacity-70">LOW STOCK ≤5</div><div id="stLow" class="text-[14px] text-yellow-300">0</div></div>
-    <div class="text-center"><div class="text-[9px] opacity-70">OUT OF STOCK</div><div id="stOut" class="text-[14px] text-red-300">0</div></div>
-    <button onclick="showAllLowStock()" class="bg-yellow-400 text-black px-3 rounded-full text-[10px]">View All</button>
-  </div>
-
-  <div class="grid grid-cols-3 gap-2 mb-3">
-    <div class="bg-white p-2 rounded-xl shadow min-w-0">
-      <div class="text-[10px] font-bold text-gray-500 text-center mb-1">TODAY</div>
-      <div class="text-[10px] text-gray-400">Sales</div>
-      <div class="text-[12px] font-black truncate" id="dSales">₦0</div>
-      <div class="text-[10px] text-gray-400 mt-1">Income</div>
-      <div class="text-[12px] font-bold text-green-600 truncate" id="dIncome">₦0</div>
-    </div>
-    <div class="bg-white p-2 rounded-xl shadow min-w-0">
-      <div class="text-[10px] font-bold text-gray-500 text-center mb-1">THIS WEEK</div>
-      <div class="text-[10px] text-gray-400">Sales</div>
-      <div class="text-[12px] font-black truncate" id="wSales">₦0</div>
-      <div class="text-[10px] text-gray-400 mt-1">Income</div>
-      <div class="text-[12px] font-bold text-green-600 truncate" id="wIncome">₦0</div>
-    </div>
-    <div class="bg-white p-2 rounded-xl shadow min-w-0">
-      <div class="text-[10px] font-bold text-gray-500 text-center mb-1">THIS MONTH</div>
-      <div class="text-[10px] text-gray-400">Sales</div>
-      <div class="text-[12px] font-black truncate" id="mSales">₦0</div>
-      <div class="text-[10px] text-gray-400 mt-1">Income</div>
-      <div class="text-[12px] font-bold text-green-600 truncate" id="mIncome">₦0</div>
-    </div>
-  </div>
-
-  <div class="bg-white p-3 rounded-xl shadow mb-3">
-    <div class="flex justify-between items-center mb-2">
-      <b class="text-[12px]">📊 Platform Returns (Mon - Sat)</b>
-      <span class="text-[10px] text-gray-400">Daily Sales vs Income</span>
-    </div>
-    <canvas id="returnsChart" height="180"></canvas>
-  </div>
-
-  <div class="bg-white rounded-xl shadow">
-    <div id="mainTabs" class="tabs-scroll flex border-b overflow-x-auto text-[11px] sticky top-[56px] bg-white z-10">
-      <button onclick="showTab('pending')" id="btnP" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Pending (<span id="cP">0</span>)</button>
-      <button onclick="showTab('vendors')" id="btnV" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Active V (<span id="cV">0</span>)</button>
-      <button onclick="showTab('suspended')" id="btnS" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Suspended (<span id="cS">0</span>)</button>
-      <button onclick="showTab('agents')" id="btnA" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Agents (<span id="cA">0</span>)</button>
-      <button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap">Orders (<span id="cO">0</span>)</button>
-      <button onclick="showTab('finance')" id="btnF" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">💰 Finance</button>
-    </div>
-
-    <div id="orderFilters" class="flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b">
-      <button onclick="filterOrders('all')" id="fAll" class="px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap">All (<span id="fcAll">0</span>)</button>
-      <button onclick="filterOrders('paid')" id="fPaid" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">🆕 New (<span id="fcPaid">0</span>)</button>
-      <button onclick="filterOrders('onway')" id="fOnway" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">🚚 On Way (<span id="fcOnway">0</span>)</button>
-      <button onclick="filterOrders('delivered')" id="fDel" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">✅ Delivered (<span id="fcDel">0</span>)</button>
-      <button onclick="filterOrders('failed')" id="fFail" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">❌ Failed (<span id="fcFail">0</span>)</button>
-    </div>
-    <div id="deliveredAdvanced" class="hidden bg-white border-b p-2 flex flex-wrap gap-2 items-center">
-<select id="deliveredPeriod" onchange="applyDeliveredAdvanced()" class="px-3 py-2 rounded-full border bg-gray-900 text-white font-black text-[11px]">
-<option value="all">All Delivered</option>
-<option value="D">D - Today</option>
-<option value="W">W - This Week</option>
-<option value="M">M - This Month</option>
-</select>
+<div class="grid grid-cols-3 gap-2 mb-3">
+<div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden"><div class="text-[10px] text-gray-400">Gross Sales</div><div class="text-[13px] sm:text-base font-black truncate" id="sales">₦0</div></div>
+<div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden"><div class="text-[10px] text-gray-400">Platform Income (10% + 5%)</div><div class="text-[13px] sm:text-base font-black text-green-600 truncate" id="income">₦0</div></div>
+<div class="bg-white p-2 rounded-xl shadow text-center min-w-0 overflow-hidden"><div class="text-[10px] text-gray-400">Pending Approvals</div><div class="text-xl font-black text-orange-600" id="pendingCount">0</div></div>
+</div>
+<div id="stockOverview" class="bg-gradient-to-r from-gray-900 to-green-800 text-white p-3 rounded-xl shadow mb-3 flex justify-between text-[11px] font-bold">
+<div class="text-center"><div class="text-[9px] opacity-70">TOTAL PRODUCTS</div><div id="stTotal" class="text-[14px]">0</div></div>
+<div class="text-center"><div class="text-[9px] opacity-70">LOW STOCK ≤5</div><div id="stLow" class="text-[14px] text-yellow-300">0</div></div>
+<div class="text-center"><div class="text-[9px] opacity-70">OUT OF STOCK</div><div id="stOut" class="text-[14px] text-red-300">0</div></div>
+<button onclick="showAllLowStock()" class="bg-yellow-400 text-black px-3 rounded-full text-[10px]">View All</button>
+</div>
+<div class="grid grid-cols-3 gap-2 mb-3">
+<div class="bg-white p-2 rounded-xl shadow min-w-0"><div class="text-[10px] font-bold text-gray-500 text-center mb-1">TODAY</div><div class="text-[10px] text-gray-400">Sales</div><div class="text-[12px] font-black truncate" id="dSales">₦0</div><div class="text-[10px] text-gray-400 mt-1">Income</div><div class="text-[12px] font-bold text-green-600 truncate" id="dIncome">₦0</div></div>
+<div class="bg-white p-2 rounded-xl shadow min-w-0"><div class="text-[10px] font-bold text-gray-500 text-center mb-1">THIS WEEK</div><div class="text-[10px] text-gray-400">Sales</div><div class="text-[12px] font-black truncate" id="wSales">₦0</div><div class="text-[10px] text-gray-400 mt-1">Income</div><div class="text-[12px] font-bold text-green-600 truncate" id="wIncome">₦0</div></div>
+<div class="bg-white p-2 rounded-xl shadow min-w-0"><div class="text-[10px] font-bold text-gray-500 text-center mb-1">THIS MONTH</div><div class="text-[10px] text-gray-400">Sales</div><div class="text-[12px] font-black truncate" id="mSales">₦0</div><div class="text-[10px] text-gray-400 mt-1">Income</div><div class="text-[12px] font-bold text-green-600 truncate" id="mIncome">₦0</div></div>
+</div>
+<div class="bg-white p-3 rounded-xl shadow mb-3"><div class="flex justify-between items-center mb-2"><b class="text-[12px]">📊 Platform Returns (Mon - Sat)</b><span class="text-[10px] text-gray-400">Daily Sales vs Income</span></div><canvas id="returnsChart" height="180"></canvas></div>
+<div class="bg-white rounded-xl shadow">
+<div id="mainTabs" class="tabs-scroll flex border-b overflow-x-auto text-[11px] sticky top-[56px] bg-white z-10">
+<button onclick="showTab('pending')" id="btnP" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Pending (<span id="cP">0</span>)</button>
+<button onclick="showTab('vendors')" id="btnV" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Active V (<span id="cV">0</span>)</button>
+<button onclick="showTab('suspended')" id="btnS" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Suspended (<span id="cS">0</span>)</button>
+<button onclick="showTab('agents')" id="btnA" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">Agents (<span id="cA">0</span>)</button>
+<button onclick="showTab('orders')" id="btnO" class="flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap">Orders (<span id="cO">0</span>)</button>
+<button onclick="showTab('delivery')" id="btnD" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap bg-gray-900 text-white">📦 Delivery</button>
+<button onclick="showTab('finance')" id="btnF" class="flex-1 p-3 font-bold text-gray-400 whitespace-nowrap">💰 Finance</button>
+</div>
+<div id="orderFilters" class="flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b">
+<button onclick="filterOrders('all')" id="fAll" class="px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap">All (<span id="fcAll">0</span>)</button>
+<button onclick="filterOrders('paid')" id="fPaid" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">🆕 New (<span id="fcPaid">0</span>)</button>
+<button onclick="filterOrders('onway')" id="fOnway" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">🚚 On Way (<span id="fcOnway">0</span>)</button>
+<button onclick="filterOrders('delivered')" id="fDel" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">✅ Delivered (<span id="fcDel">0</span>)</button>
+<button onclick="filterOrders('failed')" id="fFail" class="px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap">❌ Failed (<span id="fcFail">0</span>)</button>
+</div>
+<div id="deliveredAdvanced" class="hidden bg-white border-b p-2 flex flex-wrap gap-2 items-center">
+<select id="deliveredPeriod" onchange="applyDeliveredAdvanced()" class="px-3 py-2 rounded-full border bg-gray-900 text-white font-black text-[11px]"><option value="all">All Delivered</option><option value="D">D - Today</option><option value="W">W - This Week</option><option value="M">M - This Month</option></select>
 <input type="date" id="deliveryDateSearch" class="px-3 py-2 rounded-full border text-[11px] font-bold">
 <button onclick="applyDeliveredAdvanced()" class="px-4 py-2 rounded-full bg-green-600 text-white font-black text-[11px]">🔎 Search</button>
 <button onclick="clearDeliveredAdvanced()" class="px-3 py-2 rounded-full bg-gray-200 font-bold text-[11px]">Clear</button>
 <span id="deliveredCount" class="text-[11px] font-black text-green-700"></span>
 </div>
-
-    <div id="list" class="p-3 text-sm">Loading...</div>
-  </div>
+<!-- DELIVERY REPORT FILTERS -->
+<div id="deliveryFilters" class="hidden bg-gray-900 p-3 border-b">
+<div class="text-white font-black text-[10px] tracking-widest mb-2">📊 DELIVERY DISPUTE & AUDIT - MONTHLY PDF</div>
+<div class="flex gap-2 flex-wrap"><input type="month" id="reportMonth" class="p-2 rounded-lg text-[11px] font-bold flex-1"><input id="agentSearch" oninput="filterDA()" placeholder="🔍 Search agent..." class="p-2 rounded-lg text-[11px] flex-1"><button onclick="loadDR()" class="bg-green-600 text-white px-4 py-2 rounded-lg font-black text-[11px]">Load</button></div>
+<div class="flex gap-2 mt-2"><button onclick="loadDR(true)" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold text-[11px]">📚 ALL-TIME</button><button onclick="exportCombined()" class="flex-1 bg-yellow-400 text-black py-2 rounded-lg font-bold text-[11px]">📄 Export All PDF</button></div>
+<div id="deliverySummary" class="grid grid-cols-4 gap-2 mt-3"></div>
 </div>
-
-<div id="detailModal" class="fixed inset-0 bg-black/70 z-[999] hidden flex items-center justify-center p-3">
-  <div class="bg-white rounded-2xl max-w-[480px] w-full max-h-[92vh] overflow-y-auto shadow-2xl">
-    <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center rounded-t-2xl">
-      <b class="text-green-700 text-sm">📋 Full Signup Details</b>
-      <button onclick="closeModal()" class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">✕ Close</button>
-    </div>
-    <div id="modalBody" class="p-4 text-[12px] leading-6"></div>
-  </div>
+<div id="list" class="p-3 text-sm">Loading...</div>
 </div>
-
-<div id="catalogModal" class="fixed inset-0 bg-black/70 z-[1000] hidden flex items-center justify-center p-3">
-  <div class="bg-white rounded-2xl max-w-[600px] w-full max-h-[92vh] overflow-y-auto shadow-2xl">
-    <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center rounded-t-2xl">
-      <b id="catalogTitle" class="text-green-700 text-sm">📦 Vendor Catalog</b>
-      <button onclick="closeCatalogModal()" class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">✕ Close</button>
-    </div>
-    <div id="catalogBody" class="p-3 text-[12px]"></div>
-  </div>
 </div>
-
+<div id="detailModal" class="fixed inset-0 bg-black/70 z-[999] hidden flex items-center justify-center p-3"><div class="bg-white rounded-2xl max-w-[480px] w-full max-h-[92vh] overflow-y-auto shadow-2xl"><div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center rounded-t-2xl"><b class="text-green-700 text-sm">📋 Full Signup Details</b><button onclick="closeModal()" class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">✕</button></div><div id="modalBody" class="p-4 text-[12px] leading-6"></div></div></div>
+<div id="catalogModal" class="fixed inset-0 bg-black/70 z-[1000] hidden flex items-center justify-center p-3"><div class="bg-white rounded-2xl max-w-[600px] w-full max-h-[92vh] overflow-y-auto shadow-2xl"><div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center rounded-t-2xl"><b id="catalogTitle" class="text-green-700 text-sm">📦 Vendor Catalog</b><button onclick="closeCatalogModal()" class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">✕</button></div><div id="catalogBody" class="p-3 text-[12px]"></div></div></div>
+<div id="deliveryModal" class="fixed inset-0 bg-black/70 z-[1001] hidden flex items-center justify-center p-3"><div class="bg-white rounded-2xl max-w-[600px] w-full max-h-[92vh] overflow-y-auto shadow-2xl"><div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center rounded-t-2xl"><b id="dTitle" class="text-green-700 text-sm">📦 Delivery Orders</b><button onclick="closeDModal()" class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">✕</button></div><div class="p-2 bg-gray-100 flex gap-2"><input id="orderSearch" oninput="filterDOrders()" placeholder="🔍 Search Order ID..." class="flex-1 p-2 rounded border text-[11px]"><button onclick="exportSingle()" class="bg-gray-900 text-white px-3 rounded text-[10px] font-bold">PDF</button></div><div id="dBody" class="p-3 text-[12px]"></div></div></div>
 <script>
-const SUPABASE_URL = "https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-let users=[], orders=[], allProducts=[], tab='orders', orderSubTab='all', lastSeenOrderCount=0;
-let returnsChart = null;
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
-const DELIVERY_RATE = 0.05;
-let curUser = JSON.parse(localStorage.getItem('lgm_user')||'{}');
-let deliveredPeriodFilter='all';let deliveredDateFilter='';
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co",SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A",supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let users=[],orders=[],allProducts=[],tab='orders',orderSubTab='all',lastSeenOrderCount=0,returnsChart=null;const TWO_HOURS_MS=2*60*60*1000;
+let curUser=JSON.parse(localStorage.getItem('lgm_user')||'{}');let deliveredPeriodFilter='all',deliveredDateFilter='';
+let deliveryData=[],filteredDelivery=[],dOrders=[],curDemail="",curDname="",curMonth="",isAllTime=false;
 function applyDeliveredAdvanced(){deliveredPeriodFilter=document.getElementById('deliveredPeriod').value;deliveredDateFilter=document.getElementById('deliveryDateSearch').value;render();}
 function clearDeliveredAdvanced(){deliveredPeriodFilter='all';deliveredDateFilter='';document.getElementById('deliveredPeriod').value='all';document.getElementById('deliveryDateSearch').value='';render();}
-  if(!curUser.email || curUser.role!=='admin'){ alert('Login as admin first'); location.href='/'; }
-
-function formatAdminCountdown(startTime){
-  if(!startTime) return `<div style="background:#fff7ed;border:2px dashed #f97316;padding:8px;border-radius:10px;margin-top:8px;text-align:center;font-weight:900;color:#c2410c;font-size:11px">⏰ Rider picked - timer starting...</div>`;
-  const end = new Date(startTime).getTime() + TWO_HOURS_MS;
-  const diff = end - new Date().getTime();
-  if(diff <= 0) return `<div style="background:#fee2e2;border:3px solid #dc2626;color:#dc2626;padding:10px;border-radius:12px;margin-top:8px;text-align:center;font-weight:900;font-size:12px">❌ TIME UP - FAILED</div>`;
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
-  const pickedUpTime = new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
-  return `<div style="background:linear-gradient(135deg,#ffffff,#fef3c7);border:3px solid #f59e0b;padding:12px;border-radius:14px;margin-top:8px;text-align:center;box-shadow:0 4px 12px rgba(245,158,11,0.25)">
-    <div style="font-size:9px;font-weight:900;letter-spacing:1.5px;color:#92400e;background:#fde68a;display:inline-block;padding:2px 8px;border-radius:12px">⏰ DELIVERY COUNTDOWN</div>
-    <div style="font-size:26px;font-weight:900;color:#dc2626;margin:4px 0;letter-spacing:1px;line-height:1;animation:timer-pulse 1s infinite">${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s</div>
-    <div style="font-size:10px;font-weight:800;color:#78350f">Picked at: ${pickedUpTime} • Auto-fail 2hrs</div>
-  </div>`;
-}
-
-async function load(){
-  document.getElementById('list').innerHTML = 'Loading...';
-  try{
-    const {data:u} = await supabaseClient.from('users').select('*');
-    users = u||[];
-    const {data:o} = await supabaseClient.from('orders').select('*').in('status',['paid','picked','on the way','delivered','failed']).order('id',{ascending:false}).limit(200);
-    orders = o||[];
-    const {data:p} = await supabaseClient.from('products').select('*').limit(1000);
-    allProducts = p||[];
-
-    orders.sort((a,b)=>{ const priority = {paid:0, picked:1, 'on the way':1, delivered:2, failed:3}; const pa = priority[a.status]?? 4; const pb = priority[b.status]?? 4; if(pa!==pb) return pa - pb; return b.id - a.id; });
-    const paidOrders = orders.filter(x=>x.status==='paid');
-    if(paidOrders.length > lastSeenOrderCount && lastSeenOrderCount!== 0){ triggerNewOrderAlert(); }
-    lastSeenOrderCount = paidOrders.length;
-
-    let vendors = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor');
-    let agents = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
-
-    // FIXED: Separate Pending vs Suspended using subaccount_code
-    let pendingV = vendors.filter(x=> (x.is_approved===false || x.is_approved===null) &&!x.paystack_subaccount_code);
-    let pendingA = agents.filter(x=>x.is_approved===false || x.is_approved===null);
-    let suspendedV = vendors.filter(x=> x.is_approved===false && x.paystack_subaccount_code);
-    let suspendedA = agents.filter(x=> x.is_approved===false &&!x.paystack_subaccount_code? false : false); // agents: keep in pending only, avoid duplicate - you can adjust later
-    // For agents, suspended = false means they stay in pending until you add separate flag. To keep simple, we treat agents suspension same as pending but tab counts separately:
-    let suspendedAgentsReal = agents.filter(x=> x.is_approved===false && x.paystack_subaccount_code); // will be 0, so we use explicit false check for agents that were once approved
-    // Better: agents suspended are those with is_approved===false but created long ago - for now count them only in suspended tab if you manually set them
-    // To avoid confusion, let's count suspended agents as agents where is_approved===false AND they have been approved before (we can't detect without flag, so we count 0 and you manage vendors only)
-    // For display: we will count suspendedV only for vendors, agents stay in pending tab until you add is_suspended field later.
-
-    // Corrected counts for tabs
-    let activeV = vendors.filter(x=>x.is_approved===true);
-
-    // For tabs: pending includes vendors without subaccount + all unapproved agents
-    let pendingCount = pendingV.length + pendingA.length;
-    let suspendedCount = suspendedV.length; // only vendors with subaccount
-
-    document.getElementById('cP').innerText = pendingCount;
-    document.getElementById('cV').innerText = activeV.length;
-    document.getElementById('cS').innerText = suspendedCount;
-    document.getElementById('cA').innerText = agents.length;
-    document.getElementById('cO').innerText = orders.length;
-    document.getElementById('pendingCount').innerText = pendingCount;
-    calcSales(); drawReturnsChart(); updateStockOverview();
-    document.getElementById('fcAll').innerText = orders.length;
-    document.getElementById('fcPaid').innerText = orders.filter(x=>x.status==='paid').length;
-    document.getElementById('fcOnway').innerText = orders.filter(x=>x.status==='picked' || x.status==='on the way').length;
-    document.getElementById('fcDel').innerText = orders.filter(x=>x.status==='delivered').length;
-    document.getElementById('fcFail').innerText = orders.filter(x=>x.status==='failed').length;
-    updateOrdersTabAlert(); render();
-    setTimeout(()=>{ const tabsEl = document.getElementById('mainTabs'); if(tabsEl) tabsEl.scrollLeft = tabsEl.scrollWidth; }, 300);
-  }catch(e){ document.getElementById('list').innerHTML = `<div class="text-red-500">ERROR: ${e.message}</div>`; }
-}
-
-function updateStockOverview(){
-  let total = allProducts.length;
-  let low = allProducts.filter(pr=>{ let s = Number(pr.stock?? pr.stock_quantity?? pr.quantity?? 0); return s>0 && s<=5; }).length;
-  let out = allProducts.filter(pr=>{ let s = Number(pr.stock?? pr.stock_quantity?? pr.quantity?? 0); return s<=0; }).length;
-  document.getElementById('stTotal').innerText = total;
-  document.getElementById('stLow').innerText = low;
-  document.getElementById('stOut').innerText = out;
-}
-function getProductStock(pr){ return Number(pr.stock?? pr.stock_quantity?? pr.quantity?? pr.qty?? 0); }
-function getVendorProducts(email, id){ return allProducts.filter(p=> (p.vendor_email && p.vendor_email===email) || (p.vendor_id && p.vendor_id===id) || (p.user_id && p.user_id===id)); }
-
-function calcSales(){
-  let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
-  let subtotal = orders.reduce((s,x)=>s+Number(x.subtotal||0),0);
-  let deliveryTotal = orders.reduce((s,x)=>s+Number(x.delivery_fee||0),0);
-  let income = Math.round(subtotal*0.10 + deliveryTotal);
-  document.getElementById('sales').innerText = '₦'+Math.round(gross).toLocaleString();
-  document.getElementById('sales').title = '₦'+Math.round(gross).toLocaleString();
-  document.getElementById('income').innerText = '₦'+income.toLocaleString();
-  document.getElementById('income').title = '₦'+income.toLocaleString() + ' (10% + delivery)';
-  let now = new Date(); let todayStr = now.toDateString(); let weekAgo = new Date(); weekAgo.setDate(now.getDate()-7); let monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  let d = orders.filter(o=> new Date(o.created_at).toDateString()===todayStr); let w = orders.filter(o=> new Date(o.created_at) >= weekAgo); let m = orders.filter(o=> new Date(o.created_at) >= monthStart);
-  let dGross = d.reduce((s,x)=>s+Number(x.total||0),0); let wGross = w.reduce((s,x)=>s+Number(x.total||0),0); let mGross = m.reduce((s,x)=>s+Number(x.total||0),0);
-  let dSub = d.reduce((s,x)=>s+Number(x.subtotal||0),0); let wSub = w.reduce((s,x)=>s+Number(x.subtotal||0),0); let mSub = m.reduce((s,x)=>s+Number(x.subtotal||0),0);
-  let dDel = d.reduce((s,x)=>s+Number(x.delivery_fee||0),0); let wDel = w.reduce((s,x)=>s+Number(x.delivery_fee||0),0); let mDel = m.reduce((s,x)=>s+Number(x.delivery_fee||0),0);
-  document.getElementById('dSales').innerText = '₦'+Math.round(dGross).toLocaleString();
-  document.getElementById('dIncome').innerText = '₦'+Math.round(dSub*0.10 + dDel).toLocaleString();
-  document.getElementById('wSales').innerText = '₦'+Math.round(wGross).toLocaleString();
-  document.getElementById('wIncome').innerText = '₦'+Math.round(wSub*0.10 + wDel).toLocaleString();
-  document.getElementById('mSales').innerText = '₦'+Math.round(mGross).toLocaleString();
-  document.getElementById('mIncome').innerText = '₦'+Math.round(mSub*0.10 + mDel).toLocaleString();
-}
-function drawReturnsChart(){
-  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat'];
-  const now = new Date(); const day = now.getDay(); const diffToMonday = day===0? -6 : 1 - day; const monday = new Date(now); monday.setDate(now.getDate() + diffToMonday); monday.setHours(0,0,0,0);
-  let salesPerDay = [0,0,0,0,0,0]; let incomePerDay = [0,0,0,0,0,0];
-  for(let i=0;i<6;i++){ const dStart = new Date(monday); dStart.setDate(monday.getDate()+i); const dEnd = new Date(dStart); dEnd.setDate(dStart.getDate()+1); const dayOrders = orders.filter(o=>{ const cd = new Date(o.created_at); return cd >= dStart && cd < dEnd; }); const gross = dayOrders.reduce((s,x)=>s+Number(x.total||0),0); const sub = dayOrders.reduce((s,x)=>s+Number(x.subtotal||0),0); const del = dayOrders.reduce((s,x)=>s+Number(x.delivery_fee||0),0); salesPerDay[i]=Math.round(gross); incomePerDay[i]=Math.round(sub*0.10 + del); }
-  const ctx = document.getElementById('returnsChart').getContext('2d'); if(returnsChart) returnsChart.destroy();
-  returnsChart = new Chart(ctx, { type: 'bar', data: { labels: dayNames, datasets: [ { label:'Sales', data:salesPerDay, backgroundColor:'#16a34a', borderRadius:6 }, { label:'Income (10%+5%)', data:incomePerDay, backgroundColor:'#f59e0b', borderRadius:6 } ] }, options: { responsive:true, plugins:{ legend:{ display:true, position:'bottom', labels:{ font:{size:10}, boxWidth:12 } } }, scales:{ y:{ beginAtZero:true, ticks:{ font:{size:9}, callback:v=>'₦'+v } }, x:{ ticks:{ font:{size:10, weight:'bold'} } } } } });
-}
-function updateOrdersTabAlert(){
-  const ordersTab = document.getElementById('btnO'); const newPaidOrders = orders.filter(o => o.status === 'paid').length;
-  if(newPaidOrders > 0){ ordersTab.classList.add('alert-tab'); ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>) <span class="badge">${newPaidOrders}</span>`; } else { ordersTab.classList.remove('alert-tab'); ordersTab.innerHTML = `Orders (<span id="cO">${orders.length}</span>)`; }
-}
-function triggerNewOrderAlert(){ new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate([200,100,200]); if(Notification.permission === "granted"){ new Notification("🔔 New Order!", { body: `You have ${orders.filter(o=>o.status==='paid').length} pending order(s)` }); } else if(Notification.permission!== "denied"){ Notification.requestPermission(); } }
-function filterOrders(type){orderSubTab=type;document.querySelectorAll('#orderFilters button').forEach(b=>b.className='px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap');const m={all:'fAll',paid:'fPaid',onway:'fOnway',delivered:'fDel',failed:'fFail'};document.getElementById(m[type]).className='px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap';const adv=document.getElementById('deliveredAdvanced');if(type==='delivered'){adv.classList.remove('hidden');}else{adv.classList.add('hidden');deliveredPeriodFilter='all';deliveredDateFilter='';}render();}
-
-function openAgentDetail(email){
-  const u = users.find(x=>x.email===email);
-  if(!u){ alert('User not found: '+email); return; }
-  const passport = u.passport_url || u.passport || u.photo_url || u.profile_image || u.image_url || '';
-  const ninImg = u.nin_image || u.nin_url || u.nin_photo || u.id_card_url || '';
-  const guarantorImg = u.guarantor_image || u.guarantor_nin_url || u.guarantor_id_url || u.guarantor_photo || '';
-  const html = `
-    <div class="space-y-3">
-      <div class="text-center">
-        ${passport? `<img src="${passport}" class="w-28 h-28 rounded-full mx-auto border-4 border-green-500 object-cover shadow">` : `<div class="w-28 h-28 rounded-full mx-auto bg-gray-200 flex items-center justify-center text-4xl">👤</div>`}
-        <h2 class="font-black text-[15px] mt-2">${u.full_name || 'No Name'}</h2>
-        <p class="text-[11px] text-gray-500">${u.email}</p>
-        <span class="inline-block mt-1 px-3 py-0.5 rounded-full text-[10px] font-bold ${String(u.role).includes('delivery')? 'bg-blue-500 text-white':'bg-green-500 text-white'}">${u.role}</span>
-      </div>
-      <hr>
-      <div class="bg-green-50 p-3 rounded-xl border border-green-100">
-        <b class="text-green-700">📱 Personal Info</b><br>
-        Phone: <b>${u.phone || u.whatsapp || 'N/A'}</b><br>
-        WhatsApp: ${u.whatsapp || u.phone || 'N/A'}<br>
-        Location: ${u.location || u.address || 'N/A'}<br>
-        Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended/Pending'}</b><br>
-        Joined: ${u.created_at? new Date(u.created_at).toLocaleString() : 'N/A'}
-      </div>
-      <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
-        <b class="text-blue-700">🆔 NIN & Passport</b><br>
-        NIN No: <b>${u.nin || u.nin_number || u.nin_no || 'N/A'}</b><br>
-        <div class="flex gap-2 mt-2 flex-wrap">
-          ${passport? `<a href="${passport}" target="_blank" class="bg-green-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">🖼️ View Passport</a>` : '<span class="text-[11px] text-gray-400">No passport uploaded</span>'}
-          ${ninImg? `<a href="${ninImg}" target="_blank" class="bg-blue-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">📄 View NIN Card</a>` : '<span class="text-[11px] text-gray-400">No NIN image</span>'}
-        </div>
-      </div>
-      <div class="bg-yellow-50 p-3 rounded-xl border border-yellow-100">
-        <b class="text-yellow-700">👨‍👩‍👦 Guarantor Info</b><br>
-        Name: <b>${u.guarantor_name || u.guarantor_fullname || 'N/A'}</b><br>
-        Phone: <b>${u.guarantor_phone || u.guarantor_number || 'N/A'}</b><br>
-        Address: ${u.guarantor_address || 'N/A'}<br>
-        Relationship: ${u.guarantor_relationship || u.guarantor_relation || 'N/A'}<br>
-        <div class="mt-2">
-          ${guarantorImg? `<a href="${guarantorImg}" target="_blank" class="bg-yellow-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">📄 View Guarantor ID</a>` : '<span class="text-[11px] text-gray-400">No guarantor ID</span>'}
-        </div>
-      </div>
-      ${u.bank_name || u.account_number? `<div class="bg-purple-50 p-3 rounded-xl border border-purple-100"><b>🏦 Bank</b><br>Bank: ${u.bank_name||''}<br>Acct No: ${u.account_number||''}<br>Acct Name: ${u.account_name||''}<br>${u.paystack_subaccount_code? `Sub: <b>${u.paystack_subaccount_code}</b>`:''}</div>` : ''}
-    </div>
-  `;
-  document.getElementById('modalBody').innerHTML = html;
-  document.getElementById('detailModal').classList.remove('hidden');
-}
-function closeModal(){ document.getElementById('detailModal').classList.add('hidden'); }
-
-function openCatalogModal(email){
-  const u = users.find(x=>x.email===email);
-  if(!u) return;
-  const vProducts = getVendorProducts(email, u.id).sort((a,b)=> getProductStock(a)-getProductStock(b));
-  document.getElementById('catalogTitle').innerText = `📦 ${u.full_name || email} — Catalog (${vProducts.length})`;
-  if(vProducts.length===0){
-    document.getElementById('catalogBody').innerHTML = `<div class="text-center py-10 text-gray-400">No products yet for this vendor</div>`;
-  } else {
-    let html = `
-      <div class="flex gap-2 mb-3">
-        <button onclick="alertAllLowStock('${email}')" class="flex-1 bg-yellow-500 text-black font-black py-2 rounded-xl text-[11px]">⚠️ Alert All Low (${vProducts.filter(p=>getProductStock(p)<=5).length}) via WhatsApp</button>
-      </div>
-      <div class="space-y-2">
-      ${vProducts.map(p=>{
-        let stock = getProductStock(p);
-        let stockColor = stock<=0? 'bg-red-100 border-red-500 text-red-700' : stock<=5? 'bg-yellow-100 border-yellow-500 text-yellow-800' : 'bg-green-50 border-green-200 text-green-700';
-        let img = p.image_url || p.image || p.photo || '';
-        return `<div class="border ${stockColor} p-2 rounded-xl flex gap-2 items-center">
-          ${img? `<img src="${img}" class="w-12 h-12 rounded-lg object-cover border">` : `<div class="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center text-[10px]">No Img</div>`}
-          <div class="flex-1 min-w-0">
-            <div class="font-bold truncate text-[12px]">${p.name||p.product_name||p.title||'No name'}</div>
-            <div class="text-[11px]">₦${Number(p.price||0).toLocaleString()} • Stock: <b>${stock}</b> ${stock<=0? '❌ OUT' : stock<=5? '⚠️ LOW' : '✅'}</div>
-          </div>
-          <button onclick="alertSingleStock('${email}', ${p.id})" class="bg-green-600 text-white px-2 py-1 rounded-full text-[10px] font-bold shrink-0">Alert</button>
-        </div>`;
-      }).join('')}
-      </div>`;
-    document.getElementById('catalogBody').innerHTML = html;
-  }
-  document.getElementById('catalogModal').classList.remove('hidden');
-}
-function closeCatalogModal(){ document.getElementById('catalogModal').classList.add('hidden'); }
-function alertSingleStock(vendorEmail, productId){
-  const u = users.find(x=>x.email===vendorEmail);
-  const p = allProducts.find(x=>x.id===productId);
-  if(!u||!p) return;
-  let stock = getProductStock(p);
-  let name = p.name||p.product_name||p.title||'your product';
-  let phone = (u.phone||u.whatsapp||'').replace(/\D/g,'').replace(/^0/,'234');
-  let msg = `Good afternoon ${u.full_name||'Vendor'}, your product *${name}* is remaining *${stock} left* on Lokoja Grocery Mall. Please restock today so you don't miss orders. - Admin, Mary Plaza, Ganaja`;
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-}
-function alertAllLowStock(vendorEmail){
-  const u = users.find(x=>x.email===vendorEmail);
-  const vProducts = getVendorProducts(vendorEmail, u.id).filter(p=> getProductStock(p)<=5);
-  if(vProducts.length===0){ alert('No low stock for this vendor'); return; }
-  let list = vProducts.map(p=> `• ${p.name||p.product_name} - ${getProductStock(p)} left`).join('\n');
-  let phone = (u.phone||u.whatsapp||'').replace(/\D/g,'').replace(/^0/,'234');
-  let msg = `Good afternoon ${u.full_name||'Vendor'}, these products are going out of stock on Lokoja Grocery Mall:\n\n${list}\n\nPlease restock today. - Admin, Mary Plaza`;
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-}
-function showAllLowStock(){
-  let lowProducts = allProducts.filter(p=> getProductStock(p)<=5).sort((a,b)=> getProductStock(a)-getProductStock(b));
-  if(lowProducts.length===0){ alert('✅ No low stock! All vendors stocked.'); return; }
-  document.getElementById('catalogTitle').innerText = `⚠️ All Low Stock Products (${lowProducts.length})`;
-  let html = `<div class="space-y-2">${lowProducts.map(p=>{
-    let vendor = users.find(u=> u.email===p.vendor_email || u.id===p.vendor_id);
-    let stock = getProductStock(p);
-    return `<div class="border p-2 rounded-xl ${stock<=0?'bg-red-50 border-red-300':'bg-yellow-50 border-yellow-300'}">
-      <div class="font-bold text-[11px]">${p.name||p.product_name} — ${stock} left ${stock<=0?'❌ OUT':'⚠️ LOW'}</div>
-      <div class="text-[10px] text-gray-500">Vendor: ${vendor?.full_name||p.vendor_email||'N/A'} • ₦${Number(p.price||0).toLocaleString()}</div>
-      <button onclick="alertSingleStock('${p.vendor_email||vendor?.email}', ${p.id})" class="mt-1 bg-green-600 text-white px-2 py-1 rounded-full text-[10px] font-bold">Alert Vendor</button>
-    </div>`;
-  }).join('')}</div>`;
-  document.getElementById('catalogBody').innerHTML = html;
-  document.getElementById('catalogModal').classList.remove('hidden');
-}
-
-function toggleAdminDetails(id){
-  const el = document.getElementById('admin-details-'+id);
-  const btn = document.getElementById('admin-btn-'+id);
-  el.classList.toggle('hidden');
-  if(btn) btn.innerText = el.classList.contains('hidden')? '▼ Show Items & Vendors' : '▲ Hide Details';
-}
-
+if(!curUser.email||curUser.role!=='admin'){alert('Login as admin');location.href='/';}
+function formatAdminCountdown(s){if(!s)return`<div style="background:#fff7ed;border:2px dashed #f97316;padding:8px;border-radius:10px;margin-top:8px;text-align:center;font-weight:900;color:#c2410c;font-size:11px">⏰ Rider picked - timer starting...</div>`;const e=new Date(s).getTime()+TWO_HOURS_MS,d=e-new Date().getTime();if(d<=0)return`<div style="background:#fee2e2;border:3px solid #dc2626;color:#dc2626;padding:10px;border-radius:12px;margin-top:8px;text-align:center;font-weight:900;font-size:12px">❌ TIME UP - FAILED</div>`;const h=Math.floor(d/3600000),m=Math.floor(d%3600000/60000),sec=Math.floor(d%60000/1000),pt=new Date(s).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});return`<div style="background:linear-gradient(135deg,#fff,#fef3c7);border:3px solid #f59e0b;padding:12px;border-radius:14px;margin-top:8px;text-align:center"><div style="font-size:9px;font-weight:900;letter-spacing:1.5px;color:#92400e;background:#fde68a;display:inline-block;padding:2px 8px;border-radius:12px">⏰ DELIVERY COUNTDOWN</div><div style="font-size:26px;font-weight:900;color:#dc2626;margin:4px 0;animation:timer-pulse 1s infinite">${h}h ${String(m).padStart(2,'0')}m ${String(sec).padStart(2,'0')}s</div><div style="font-size:10px;font-weight:800;color:#78350f">Picked: ${pt} • Auto-fail 2hrs</div></div>`;}
+async function load(){document.getElementById('list').innerHTML='Loading...';try{const {data:u}=await supabaseClient.from('users').select('*');users=u||[];const {data:o}=await supabaseClient.from('orders').select('*').in('status',['paid','picked','on the way','delivered','failed']).order('id',{ascending:false}).limit(200);orders=o||[];const {data:p}=await supabaseClient.from('products').select('*').limit(1000);allProducts=p||[];orders.sort((a,b)=>{const pr={paid:0,picked:1,'on the way':1,delivered:2,failed:3};return(pr[a.status]??4)-(pr[b.status]??4)||b.id-a.id});const paid=orders.filter(x=>x.status==='paid');if(paid.length>lastSeenOrderCount&&lastSeenOrderCount!==0)triggerNewOrderAlert();lastSeenOrderCount=paid.length;let vendors=users.filter(x=>String(x.role).toLowerCase().trim()==='vendor'),agents=users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent'),pendingV=vendors.filter(x=>(x.is_approved===false||x.is_approved===null)&&!x.paystack_subaccount_code),pendingA=agents.filter(x=>x.is_approved===false||x.is_approved===null),suspendedV=vendors.filter(x=>x.is_approved===false&&x.paystack_subaccount_code),activeV=vendors.filter(x=>x.is_approved===true);document.getElementById('cP').innerText=pendingV.length+pendingA.length;document.getElementById('cV').innerText=activeV.length;document.getElementById('cS').innerText=suspendedV.length;document.getElementById('cA').innerText=agents.length;document.getElementById('cO').innerText=orders.length;document.getElementById('pendingCount').innerText=pendingV.length+pendingA.length;calcSales();drawReturnsChart();updateStockOverview();document.getElementById('fcAll').innerText=orders.length;document.getElementById('fcPaid').innerText=orders.filter(x=>x.status==='paid').length;document.getElementById('fcOnway').innerText=orders.filter(x=>x.status==='picked'||x.status==='on the way').length;document.getElementById('fcDel').innerText=orders.filter(x=>x.status==='delivered').length;document.getElementById('fcFail').innerText=orders.filter(x=>x.status==='failed').length;updateOrdersTabAlert();render();setTimeout(()=>{const t=document.getElementById('mainTabs');if(t)t.scrollLeft=t.scrollWidth},300);}catch(e){document.getElementById('list').innerHTML=`<div class="text-red-500">ERROR: ${e.message}</div>`;}}
+function updateStockOverview(){let t=allProducts.length,l=allProducts.filter(pr=>{let s=Number(pr.stock??pr.stock_quantity??pr.quantity??0);return s>0&&s<=5}).length,o=allProducts.filter(pr=>Number(pr.stock??pr.stock_quantity??pr.quantity??0)<=0).length;document.getElementById('stTotal').innerText=t;document.getElementById('stLow').innerText=l;document.getElementById('stOut').innerText=o;}
+function getProductStock(pr){return Number(pr.stock??pr.stock_quantity??pr.quantity??pr.qty??0);}
+function getVendorProducts(email,id){return allProducts.filter(p=>(p.vendor_email&&p.vendor_email===email)||(p.vendor_id&&p.vendor_id===id)||(p.user_id&&p.user_id===id));}
+function calcSales(){let gross=orders.reduce((s,x)=>s+Number(x.total||0),0),sub=orders.reduce((s,x)=>s+Number(x.subtotal||0),0),del=orders.reduce((s,x)=>s+Number(x.delivery_fee||0),0),inc=Math.round(sub*0.10+del);document.getElementById('sales').innerText='₦'+Math.round(gross).toLocaleString();document.getElementById('income').innerText='₦'+inc.toLocaleString();let now=new Date(),todayStr=now.toDateString(),weekAgo=new Date();weekAgo.setDate(now.getDate()-7);let monthStart=new Date(now.getFullYear(),now.getMonth(),1),d=orders.filter(o=>new Date(o.created_at).toDateString()===todayStr),w=orders.filter(o=>new Date(o.created_at)>=weekAgo),m=orders.filter(o=>new Date(o.created_at)>=monthStart),dG=d.reduce((s,x)=>s+Number(x.total||0),0),wG=w.reduce((s,x)=>s+Number(x.total||0),0),mG=m.reduce((s,x)=>s+Number(x.total||0),0),dS=d.reduce((s,x)=>s+Number(x.subtotal||0),0),wS=w.reduce((s,x)=>s+Number(x.subtotal||0),0),mS=m.reduce((s,x)=>s+Number(x.subtotal||0),0),dD=d.reduce((s,x)=>s+Number(x.delivery_fee||0),0),wD=w.reduce((s,x)=>s+Number(x.delivery_fee||0),0),mD=m.reduce((s,x)=>s+Number(x.delivery_fee||0),0);document.getElementById('dSales').innerText='₦'+Math.round(dG).toLocaleString();document.getElementById('dIncome').innerText='₦'+Math.round(dS*0.10+dD).toLocaleString();document.getElementById('wSales').innerText='₦'+Math.round(wG).toLocaleString();document.getElementById('wIncome').innerText='₦'+Math.round(wS*0.10+wD).toLocaleString();document.getElementById('mSales').innerText='₦'+Math.round(mG).toLocaleString();document.getElementById('mIncome').innerText='₦'+Math.round(mS*0.10+mD).toLocaleString();}
+function drawReturnsChart(){const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat'],now=new Date(),day=now.getDay(),diff=day===0?-6:1-day,mon=new Date(now);mon.setDate(now.getDate()+diff);mon.setHours(0,0,0,0);let sales=[0,0,0,0,0,0],inc=[0,0,0,0,0,0];for(let i=0;i<6;i++){const ds=new Date(mon);ds.setDate(mon.getDate()+i);const de=new Date(ds);de.setDate(ds.getDate()+1);const dayO=orders.filter(o=>{const cd=new Date(o.created_at);return cd>=ds&&cd<de});sales[i]=Math.round(dayO.reduce((s,x)=>s+Number(x.total||0),0));inc[i]=Math.round(dayO.reduce((s,x)=>s+Number(x.subtotal||0),0)*0.10+dayO.reduce((s,x)=>s+Number(x.delivery_fee||0),0));}const ctx=document.getElementById('returnsChart').getContext('2d');if(returnsChart)returnsChart.destroy();returnsChart=new Chart(ctx,{type:'bar',data:{labels:dayNames,datasets:[{label:'Sales',data:sales,backgroundColor:'#16a34a',borderRadius:6},{label:'Income',data:inc,backgroundColor:'#f59e0b',borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:true,position:'bottom',labels:{font:{size:10},boxWidth:12}}},scales:{y:{beginAtZero:true,ticks:{font:{size:9},callback:v=>'₦'+v}},x:{ticks:{font:{size:10,weight:'bold'}}}}}});}
+function updateOrdersTabAlert(){const t=document.getElementById('btnO'),n=orders.filter(o=>o.status==='paid').length;if(n>0){t.classList.add('alert-tab');t.innerHTML=`Orders (<span id="cO">${orders.length}</span>) <span class="badge">${n}</span>`;}else{t.classList.remove('alert-tab');t.innerHTML=`Orders (<span id="cO">${orders.length}</span>)`;}}
+function triggerNewOrderAlert(){new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});if(navigator.vibrate)navigator.vibrate([200,100,200]);}
+function filterOrders(type){orderSubTab=type;document.querySelectorAll('#orderFilters button').forEach(b=>b.className='px-3 py-1.5 rounded-full bg-white border font-bold whitespace-nowrap');const m={all:'fAll',paid:'fPaid',onway:'fOnway',delivered:'fDel',failed:'fFail'};document.getElementById(m[type]).className='px-3 py-1.5 rounded-full bg-green-600 text-white font-bold whitespace-nowrap';const adv=document.getElementById('deliveredAdvanced');if(type==='delivered')adv.classList.remove('hidden');else{adv.classList.add('hidden');deliveredPeriodFilter='all';deliveredDateFilter='';}render();}
+function openAgentDetail(email){const u=users.find(x=>x.email===email);if(!u){alert('Not found');return;}const passport=u.passport_url||u.passport||u.photo_url||'',ninImg=u.nin_image||u.nin_url||'',gImg=u.guarantor_image||u.guarantor_nin_url||'';const html=`<div class="space-y-3"><div class="text-center">${passport?`<img src="${passport}" class="w-28 h-28 rounded-full mx-auto border-4 border-green-500 object-cover">`:`<div class="w-28 h-28 rounded-full mx-auto bg-gray-200 flex items-center justify-center text-4xl">👤</div>`}<h2 class="font-black text-[15px] mt-2">${u.full_name||'No Name'}</h2><p class="text-[11px] text-gray-500">${u.email}</p><span class="inline-block mt-1 px-3 py-0.5 rounded-full text-[10px] font-bold ${String(u.role).includes('delivery')?'bg-blue-500 text-white':'bg-green-500 text-white'}">${u.role}</span></div><hr><div class="bg-green-50 p-3 rounded-xl border"><b class="text-green-700">📱 Personal</b><br>Phone: <b>${u.phone||u.whatsapp||'N/A'}</b><br>WhatsApp: ${u.whatsapp||u.phone||'N/A'}<br>Location: ${u.location||u.address||'N/A'}<br>Status: <b class="${u.is_approved?'text-green-600':'text-red-600'}">${u.is_approved?'Active':'Suspended'}</b><br>Joined: ${u.created_at?new Date(u.created_at).toLocaleString():'N/A'}</div><div class="bg-blue-50 p-3 rounded-xl border"><b class="text-blue-700">🆔 NIN & Passport</b><br>NIN: <b>${u.nin||u.nin_number||'N/A'}</b><br><div class="flex gap-2 mt-2 flex-wrap">${passport?`<a href="${passport}" target="_blank" class="bg-green-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">🖼️ Passport</a>`:'No passport'}${ninImg?`<a href="${ninImg}" target="_blank" class="bg-blue-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">📄 NIN Card</a>`:''}</div></div><div class="bg-yellow-50 p-3 rounded-xl border"><b class="text-yellow-700">👨‍👩‍👦 Guarantor</b><br>Name: <b>${u.guarantor_name||'N/A'}</b><br>Phone: <b>${u.guarantor_phone||'N/A'}</b><br>Address: ${u.guarantor_address||'N/A'}<br>${gImg?`<a href="${gImg}" target="_blank" class="bg-yellow-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold mt-2 inline-block">📄 Guarantor ID</a>`:''}</div></div>`;document.getElementById('modalBody').innerHTML=html;document.getElementById('detailModal').classList.remove('hidden');}
+function closeModal(){document.getElementById('detailModal').classList.add('hidden');}
+function openCatalogModal(email){const u=users.find(x=>x.email===email);if(!u)return;const vP=getVendorProducts(email,u.id).sort((a,b)=>getProductStock(a)-getProductStock(b));document.getElementById('catalogTitle').innerText=`📦 ${u.full_name||email} — Catalog (${vP.length})`;if(vP.length===0)document.getElementById('catalogBody').innerHTML=`<div class="text-center py-10 text-gray-400">No products yet</div>`;else document.getElementById('catalogBody').innerHTML=`<div class="space-y-2">${vP.map(p=>{let s=getProductStock(p),c=s<=0?'bg-red-100 border-red-500 text-red-700':s<=5?'bg-yellow-100 border-yellow-500 text-yellow-800':'bg-green-50 border-green-200 text-green-700',img=p.image_url||p.image||'';return`<div class="border ${c} p-2 rounded-xl flex gap-2 items-center">${img?`<img src="${img}" class="w-12 h-12 rounded-lg object-cover border">`:`<div class="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center text-[10px]">No Img</div>`}<div class="flex-1 min-w-0"><div class="font-bold truncate text-[12px]">${p.name||p.product_name||'No name'}</div><div class="text-[11px]">₦${Number(p.price||0).toLocaleString()} • Stock: <b>${s}</b> ${s<=0?'❌ OUT':s<=5?'⚠️ LOW':'✅'}</div></div><button onclick="alertSingleStock('${email}',${p.id})" class="bg-green-600 text-white px-2 py-1 rounded-full text-[10px] font-bold">Alert</button></div>`}).join('')}</div>`;document.getElementById('catalogModal').classList.remove('hidden');}
+function closeCatalogModal(){document.getElementById('catalogModal').classList.add('hidden');}
+function alertSingleStock(e,p){const u=users.find(x=>x.email===e),pr=allProducts.find(x=>x.id===p);if(!u||!pr)return;let s=getProductStock(pr),n=pr.name||pr.product_name||'your product',ph=(u.phone||u.whatsapp||'').replace(/\D/g,'').replace(/^0/,'234'),msg=`Good afternoon ${u.full_name||'Vendor'}, your product *${n}* is remaining *${s} left* on Lokoja Grocery Mall. Please restock today. - Admin, Mary Plaza, Ganaja`;window.open(`https://wa.me/${ph}?text=${encodeURIComponent(msg)}`,'_blank');}
+function showAllLowStock(){let low=allProducts.filter(p=>getProductStock(p)<=5).sort((a,b)=>getProductStock(a)-getProductStock(b));if(low.length===0){alert('✅ No low stock!');return;}document.getElementById('catalogTitle').innerText=`⚠️ All Low Stock (${low.length})`;document.getElementById('catalogBody').innerHTML=`<div class="space-y-2">${low.map(p=>{let v=users.find(u=>u.email===p.vendor_email||u.id===p.vendor_id),s=getProductStock(p);return`<div class="border p-2 rounded-xl ${s<=0?'bg-red-50 border-red-300':'bg-yellow-50 border-yellow-300'}"><div class="font-bold text-[11px]">${p.name||p.product_name} — ${s} left ${s<=0?'❌ OUT':'⚠️ LOW'}</div><div class="text-[10px] text-gray-500">Vendor: ${v?.full_name||p.vendor_email||'N/A'} • ₦${Number(p.price||0).toLocaleString()}</div><button onclick="alertSingleStock('${p.vendor_email||v?.email}',${p.id})" class="mt-1 bg-green-600 text-white px-2 py-1 rounded-full text-[10px] font-bold">Alert Vendor</button></div>`}).join('')}</div>`;document.getElementById('catalogModal').classList.remove('hidden');}
+function toggleAdminDetails(id){const el=document.getElementById('admin-details-'+id),btn=document.getElementById('admin-btn-'+id);el.classList.toggle('hidden');if(btn)btn.innerText=el.classList.contains('hidden')?'▼ Show Items & Vendors':'▲ Hide Details';}
 function render(){
-  if(tab==='finance'){
-    let gross = orders.reduce((s,x)=>s+Number(x.total||0),0);
-    let subtotal = orders.reduce((s,x)=>s+Number(x.subtotal||0),0);
-    let deliveryTotal = orders.reduce((s,x)=>s+Number(x.delivery_fee||0),0);
-    let platformIncome = Math.round(subtotal*0.10 + deliveryTotal);
-    let vendorPayouts = Math.round(subtotal*0.90);
-    let vendors = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor' && x.is_approved===true);
-    let financeHTML = `
-      <div class="p-2 space-y-3">
-        <div class="bg-gradient-to-r from-green-600 to-green-500 text-white p-4 rounded-xl shadow">
-          <div class="text-[10px] opacity-80">YOUR PLATFORM INCOME (10% + 5% delivery)</div>
-          <div class="text-2xl font-black mt-1">₦${platformIncome.toLocaleString()}</div>
-          <div class="text-[11px] mt-2 bg-white/20 p-2 rounded-lg">Gross: ₦${gross.toLocaleString()} = Subtotal ₦${subtotal.toLocaleString()} + Delivery 5% ₦${deliveryTotal.toLocaleString()}<br>Income = 10% of subtotal (₦${Math.round(subtotal*0.10).toLocaleString()}) + Delivery (₦${deliveryTotal.toLocaleString()}) = ₦${platformIncome.toLocaleString()}</div>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div class="bg-white border p-3 rounded-xl text-center">
-            <div class="text-[10px] text-gray-400">Gross Sales</div>
-            <div class="text-[14px] font-black">₦${Math.round(gross).toLocaleString()}</div>
-            <div class="text-[9px] text-gray-400">Sub ₦${subtotal.toLocaleString()} + Del 5% ₦${deliveryTotal.toLocaleString()}</div>
-          </div>
-          <div class="bg-white border p-3 rounded-xl text-center">
-            <div class="text-[10px] text-gray-400">Paid to Vendors (90%)</div>
-            <div class="text-[14px] font-black text-blue-600">₦${vendorPayouts.toLocaleString()}</div>
-            <div class="text-[9px] text-gray-400">${vendors.length} vendors via subaccounts</div>
-          </div>
-        </div>
-        <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-xl text-[11px] leading-5">
-          <b class="text-yellow-700">💡 How Auto Split Works (90% + 5% delivery):</b><br>
-          1. Customer pays subtotal + 5% delivery<br>
-          2. Paystack splits: 90% → Vendor subaccount, 10% + 5% delivery → Your main account<br>
-          3. Settled T+1<br><br>
-          <b>✅ Delivery is 5% of every paid order, not flat ₦5k.</b>
-        </div>
-        <div class="bg-white border rounded-xl p-3">
-          <b class="text-[11px]">🏦 Your Vendors & Subaccounts</b>
-          <div class="mt-2 space-y-1 max-h-[200px] overflow-y-auto">
-            ${vendors.map(v=>`<div class="flex justify-between text-[11px] border-b py-1"><span>${v.full_name||v.email} <span class="text-green-600 font-bold text-[9px]">${v.paystack_subaccount_code||'No Sub'}</span></span><span class="font-bold">${v.bank_name||''}</span></div>`).join('') || '<div class="text-gray-400 text-[11px]">No active vendors</div>'}
-          </div>
-        </div>
-        <div class="bg-white border rounded-xl p-3">
-          <b class="text-[11px]">🔗 Paystack Dashboard Links</b>
-          <div class="flex gap-2 mt-2 flex-wrap">
-            <a href="https://dashboard.paystack.com/#/balance" target="_blank" class="bg-green-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">View Balance</a>
-            <a href="https://dashboard.paystack.com/#/transactions" target="_blank" class="bg-blue-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">Transactions</a>
-            <a href="https://dashboard.paystack.com/#/subaccounts" target="_blank" class="bg-purple-600 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">Subaccounts (${vendors.length})</a>
-            <a href="https://dashboard.paystack.com/#/settlements" target="_blank" class="bg-orange-500 text-white px-3 py-1.5 rounded-full text-[11px] font-bold">Settlements</a>
-          </div>
-        </div>
-      </div>
-    `;
-    document.getElementById('list').innerHTML = financeHTML;
-    return;
-  }
-
-  let data=[];
-  if(tab==='pending'){
-    // Pending = no subaccount yet
-    data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' && (x.is_approved===false || x.is_approved===null) &&!x.paystack_subaccount_code) || (String(x.role).toLowerCase().trim()==='delivery_agent' && (x.is_approved===false || x.is_approved===null)) );
-  }
-  if(tab==='vendors') data = users.filter(x=>String(x.role).toLowerCase().trim()==='vendor' && x.is_approved===true);
-  if(tab==='suspended'){
-    // Suspended = has subaccount but is_approved=false (or agents that were suspended)
-    data = users.filter(x=> (String(x.role).toLowerCase().trim()==='vendor' && x.is_approved===false && x.paystack_subaccount_code) );
-  }
-  if(tab==='agents') data = users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');
-  if(tab==='orders'){
-    if(orderSubTab==='all') data = orders;
-    if(orderSubTab==='paid') data = orders.filter(o=>o.status==='paid');
-    if(orderSubTab==='onway') data = orders.filter(o=>o.status==='picked' || o.status==='on the way');
-    if(orderSubTab==='delivered') data = orders.filter(o=>o.status==='delivered');
-    if(orderSubTab==='failed') data = orders.filter(o=>o.status==='failed');
-  }
-  document.getElementById('orderFilters').className = tab==='orders'? 'flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b' : 'hidden';
-
-  const adv=document.getElementById('deliveredAdvanced');
-if(tab==='orders'&&orderSubTab==='delivered'){adv.classList.remove('hidden');}else{adv.classList.add('hidden');}
-if(tab==='orders'&&orderSubTab==='delivered'){
-let filtered=data;
-if(deliveredDateFilter){
-filtered=filtered.filter(o=>{let d=new Date(o.delivered_at||o.updated_at||o.created_at);let sel=new Date(deliveredDateFilter);return d.toDateString()===sel.toDateString();});
-}else if(deliveredPeriodFilter==='D'){
-let t=new Date().toDateString();filtered=filtered.filter(o=>new Date(o.delivered_at||o.updated_at||o.created_at).toDateString()===t);
-}else if(deliveredPeriodFilter==='W'){
-let now=new Date();let s=new Date(now);s.setDate(now.getDate()-now.getDay()+1);s.setHours(0,0,0,0);let e=new Date(s);e.setDate(s.getDate()+6);e.setHours(23,59,59,999);filtered=filtered.filter(o=>{let d=new Date(o.delivered_at||o.updated_at||o.created_at);return d>=s&&d<=e;});
-}else if(deliveredPeriodFilter==='M'){
-let now=new Date();filtered=filtered.filter(o=>{let d=new Date(o.delivered_at||o.updated_at||o.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+if(tab==='finance'){let gross=orders.reduce((s,x)=>s+Number(x.total||0),0),sub=orders.reduce((s,x)=>s+Number(x.subtotal||0),0),del=orders.reduce((s,x)=>s+Number(x.delivery_fee||0),0),inc=Math.round(sub*0.10+del),payout=Math.round(sub*0.90),vendors=users.filter(x=>String(x.role).toLowerCase().trim()==='vendor'&&x.is_approved===true);document.getElementById('list').innerHTML=`<div class="p-2 space-y-3"><div class="bg-gradient-to-r from-green-600 to-green-500 text-white p-4 rounded-xl"><div class="text-[10px] opacity-80">YOUR PLATFORM INCOME (10% + 5%)</div><div class="text-2xl font-black mt-1">₦${inc.toLocaleString()}</div><div class="text-[11px] mt-2 bg-white/20 p-2 rounded-lg">Gross: ₦${gross.toLocaleString()} = Subtotal ₦${sub.toLocaleString()} + Delivery ₦${del.toLocaleString()}</div></div><div class="grid grid-cols-2 gap-2"><div class="bg-white border p-3 rounded-xl text-center"><div class="text-[10px] text-gray-400">Gross Sales</div><div class="text-[14px] font-black">₦${Math.round(gross).toLocaleString()}</div></div><div class="bg-white border p-3 rounded-xl text-center"><div class="text-[10px] text-gray-400">Paid to Vendors (90%)</div><div class="text-[14px] font-black text-blue-600">₦${payout.toLocaleString()}</div></div></div><div class="bg-white border rounded-xl p-3"><b class="text-[11px]">🏦 Vendors & Subaccounts</b><div class="mt-2 space-y-1 max-h-[200px] overflow-y-auto">${vendors.map(v=>`<div class="flex justify-between text-[11px] border-b py-1"><span>${v.full_name||v.email} <span class="text-green-600 font-bold text-[9px]">${v.paystack_subaccount_code||'No Sub'}</span></span><span>${v.bank_name||''}</span></div>`).join('')||'No active vendors'}</div></div></div>`;return;}
+if(tab==='delivery'){if(deliveryData.length===0){document.getElementById('list').innerHTML=`<div class="text-center py-10 text-gray-400 text-[11px]">Select month and click Load in the black box above<br>Then you go see all agents delivery reports here</div>`;return;}let html='';filteredDelivery.forEach(a=>{let succ=a.del+a.fail>0?((a.del/(a.del+a.fail))*100).toFixed(0):0;html+=`<div class="border rounded-lg p-3 mb-2 bg-white"><div class="flex justify-between items-start"><div><div class="font-black text-[12px]">${a.name}</div><div class="text-[10px] text-gray-500">${a.email} • ${a.phone||''}</div><div class="flex gap-1 mt-1 flex-wrap"><span class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded font-bold">✅ ${a.del} Delivered</span><span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded font-bold">❌ ${a.fail} Failed</span><span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold">₦${a.amt.toLocaleString()}</span><span class="bg-yellow-100 text-[10px] px-2 py-0.5 rounded font-bold">${succ}% Success</span></div></div><div class="flex flex-col gap-1"><button onclick="openD('${a.email}','${a.name}')" class="bg-gray-900 text-white px-3 py-1.5 rounded-full text-[10px] font-bold">👁️ View</button><button onclick="exportSingleDirect('${a.email}','${a.name}')" class="bg-green-600 text-white px-3 py-1 rounded-full text-[10px]">PDF</button></div></div></div>`;});document.getElementById('list').innerHTML=html;return;}
+let data=[];if(tab==='pending')data=users.filter(x=>(String(x.role).toLowerCase().trim()==='vendor'&&(x.is_approved===false||x.is_approved===null)&&!x.paystack_subaccount_code)||(String(x.role).toLowerCase().trim()==='delivery_agent'&&(x.is_approved===false||x.is_approved===null)));if(tab==='vendors')data=users.filter(x=>String(x.role).toLowerCase().trim()==='vendor'&&x.is_approved===true);if(tab==='suspended')data=users.filter(x=>String(x.role).toLowerCase().trim()==='vendor'&&x.is_approved===false&&x.paystack_subaccount_code);if(tab==='agents')data=users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');if(tab==='orders'){if(orderSubTab==='all')data=orders;if(orderSubTab==='paid')data=orders.filter(o=>o.status==='paid');if(orderSubTab==='onway')data=orders.filter(o=>o.status==='picked'||o.status==='on the way');if(orderSubTab==='delivered')data=orders.filter(o=>o.status==='delivered');if(orderSubTab==='failed')data=orders.filter(o=>o.status==='failed');}
+document.getElementById('orderFilters').className=tab==='orders'?'flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b':'hidden';
+const adv=document.getElementById('deliveredAdvanced');if(tab==='orders'&&orderSubTab==='delivered')adv.classList.remove('hidden');else adv.classList.add('hidden');
+if(tab==='orders'&&orderSubTab==='delivered'){let f=data;if(deliveredDateFilter)f=f.filter(o=>{let d=new Date(o.delivered_at||o.updated_at||o.created_at),s=new Date(deliveredDateFilter);return d.toDateString()===s.toDateString()});else if(deliveredPeriodFilter==='D'){let t=new Date().toDateString();f=f.filter(o=>new Date(o.delivered_at||o.updated_at||o.created_at).toDateString()===t);}else if(deliveredPeriodFilter==='W'){let now=new Date(),s=new Date(now);s.setDate(now.getDate()-now.getDay()+1);s.setHours(0,0,0,0);let e=new Date(s);e.setDate(s.getDate()+6);e.setHours(23,59,59,999);f=f.filter(o=>{let d=new Date(o.delivered_at||o.updated_at||o.created_at);return d>=s&&d<=e;});}else if(deliveredPeriodFilter==='M'){let now=new Date();f=f.filter(o=>{let d=new Date(o.delivered_at||o.updated_at||o.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});}data=f;document.getElementById('deliveredCount').innerText=data.length+' found';}
+if(data.length===0){document.getElementById('list').innerHTML=`<div class="text-center text-gray-400 py-10">No ${orderSubTab==='all'?'':orderSubTab} ${tab} yet</div>`;return;}
+let html='';if(tab==='pending'||tab==='vendors'||tab==='suspended'||tab==='agents'){data.forEach(u=>{let vP=getVendorProducts(u.email,u.id),low=vP.filter(p=>getProductStock(p)>0&&getProductStock(p)<=5).length,out=vP.filter(p=>getProductStock(p)<=0).length,catalog=tab==='vendors'?`<button onclick="openCatalogModal('${u.email}')" class="mt-2 ml-1 bg-black text-white px-4 py-1 rounded-full text-xs font-bold">📦 Catalog (${vP.length}) ${low>0?`<span class="bg-yellow-400 text-black px-1.5 rounded-full ml-1">${low} Low</span>`:''} ${out>0?`<span class="bg-red-500 text-white px-1.5 rounded-full ml-1">${out} OUT</span>`:''}</button>`:'',badge=String(u.role).toLowerCase().trim()==='delivery_agent'?`<span class="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px]">AGENT</span>`:`<span class="bg-green-500 text-white px-2 py-0.5 rounded text-[10px]">VENDOR</span>`,action='';if(tab==='pending')action=`<button id="btn-${u.email}" onclick="updateStatus('${u.email}',true)" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve</button>`;else if(tab==='suspended')action=`<button onclick="restoreVendor('${u.email}')" class="mt-2 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">Restore</button>`;else if(tab==='vendors')action=`<button onclick="suspendVendor('${u.email}')" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>`;else action=u.is_approved?`<button onclick="suspendVendor('${u.email}')" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>`:`<button onclick="restoreVendor('${u.email}')" class="mt-2 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">Restore</button>`;let view=`<button onclick="openAgentDetail('${u.email}')" class="mt-2 ml-1 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">👁️ View Full Info</button>`,dReport=String(u.role).toLowerCase().trim()==='delivery_agent'?`<button onclick="openD('${u.email}','${u.full_name||u.email}')" class="mt-2 ml-1 bg-gray-900 text-white px-4 py-1 rounded-full text-xs font-bold">📦 Delivery Report</button>`:'',sub=u.paystack_subaccount_code?`<div class="text-[10px] text-green-600 font-bold mt-1">✅ ${u.paystack_subaccount_code}</div>`:'';html+=`<div class="border rounded-lg p-3 mb-2"><div class="font-bold">${u.full_name||'null'} ${badge}</div><div class="text-xs text-gray-500">${u.email} • ${u.phone||u.whatsapp||''} • ${u.location||''}</div><div class="text-xs mt-1">Status: <b class="${u.is_approved?'text-green-600':'text-red-600'}">${u.is_approved?'Active':'Suspended'}</b> ${u.account_number?`• Acct: ${u.account_number} (${u.bank_name||''})`:''}</div>${sub}${action} ${view} ${dReport} ${catalog}</div>`;});}
+if(tab==='orders'){data.forEach(o=>{let col=o.status==='paid'?'text-orange-600':(o.status==='picked'||o.status==='on the way')?'text-blue-600':o.status==='delivered'?'text-green-600':'text-red-600',ag=users.find(u=>u.email===o.delivery_agent_email),agName=o.delivery_agent_name||ag?.full_name||o.delivery_agent_email||'N/A',agPhone=o.delivery_agent_phone||ag?.phone||'',agInfo=o.delivery_agent_email?`<div class="text-xs text-blue-600 font-bold truncate">🚚 Agent: ${agName} (${agPhone}) <button onclick="openAgentDetail('${o.delivery_agent_email}')" class="ml-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[9px]">View KYC</button></div>`:`<div class="text-xs text-orange-600 font-bold">⚠️ Waiting for Agent</div>`,isActive=(o.status==='picked'||o.status==='on the way'),timer=isActive?`<div class="admin-timer" data-start="${o.picked_at||o.delivery_started_at}">${formatAdminCountdown(o.picked_at||o.delivery_started_at)}</div>`:'',border=o.status==='paid'?'border-2 border-green-500 bg-green-50':'border',items='';if(o.items&&Array.isArray(o.items)&&o.items.length>0){items=`<div class="mt-2 bg-white border rounded-lg p-2"><b class="text-[11px] text-green-700">📦 Ordered Items & Vendors:</b><div class="mt-1 space-y-1">`+o.items.map(it=>{let vE=it.vendor_email||'N/A',v=users.find(u=>u.email===vE),vN=v?.full_name||vE,tot=(Number(it.price)||0)*(Number(it.qty||it.quantity)||1);return`<div class="flex justify-between text-[11px] border-b border-dashed py-1"><span class="flex-1"><b>${it.name||it.product_name||'Item'}</b> x${it.qty||it.quantity||1} <span class="text-gray-500">@ ₦${Number(it.price||0).toLocaleString()}</span><br><span class="text-[10px] text-blue-600">👤 Vendor: ${vN}</span></span><span class="font-bold">₦${tot.toLocaleString()}</span></div>`}).join('')+`<div class="text-[11px] mt-1 pt-1 flex justify-between"><span>Subtotal: <b>₦${Number(o.subtotal||0).toLocaleString()}</b></span><span>Delivery 5%: <b>₦${Number(o.delivery_fee||Math.round((o.subtotal||0)*0.05)).toLocaleString()}</b></span></div></div></div>`;}else items=`<div class="mt-2 text-[10px] text-gray-400 italic">No items data</div>`;html+=`<div class="${border} rounded-lg p-3 mb-3 min-w-0"><div class="flex justify-between gap-2"><div class="font-bold text-[12px] truncate">Order #${o.id} - <span class="${col}">${o.status.toUpperCase()}</span> ${o.status==='paid'?'🆕 NEW':''}</div><div class="font-bold text-green-700 text-[12px]">₦${Number(o.total||0).toLocaleString()}</div></div><div class="text-xs truncate">Customer: ${o.customer_name||o.customer_email} - ${o.customer_phone||''}</div><div class="text-xs text-gray-500 truncate">${o.customer_address||''}</div>${timer}<button onclick="toggleAdminDetails(${o.id})" id="admin-btn-${o.id}" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-[11px] font-black py-2 rounded-lg">▼ Show Items & Vendors</button><div id="admin-details-${o.id}" class="hidden">${agInfo}${items}<div class="text-[10px] text-gray-400 mt-1 flex justify-between"><span>${new Date(o.created_at).toLocaleString()}</span><span>Tx: ${o.tx_ref||'N/A'}</span></div></div></div>`;});}
+document.getElementById('list').innerHTML=html;
 }
-data=filtered;
-document.getElementById('deliveredCount').innerText=data.length+' found';
-}
-  if(data.length===0){ document.getElementById('list').innerHTML = `<div class="text-center text-gray-400 py-10">No ${orderSubTab==='all'?'':orderSubTab} ${tab} yet</div>`; return; }
-  let html='';
-  if(tab==='pending' || tab==='vendors' || tab==='suspended' || tab==='agents'){
-    data.forEach(u=>{
-      let vProds = getVendorProducts(u.email, u.id);
-      let lowCount = vProds.filter(p=> getProductStock(p)>0 && getProductStock(p)<=5).length;
-      let outCount = vProds.filter(p=> getProductStock(p)<=0).length;
-      let catalogBtn = tab==='vendors'? `<button onclick="openCatalogModal('${u.email}')" class="mt-2 ml-1 bg-black text-white px-4 py-1 rounded-full text-xs font-bold">📦 Catalog (${vProds.length}) ${lowCount>0? `<span class="bg-yellow-400 text-black px-1.5 rounded-full ml-1">${lowCount} Low</span>`:''} ${outCount>0? `<span class="bg-red-500 text-white px-1.5 rounded-full ml-1">${outCount} OUT</span>`:''}</button>` : '';
-      let roleBadge = String(u.role).toLowerCase().trim()==='delivery_agent'? `<span class="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px]">AGENT</span>` : `<span class="bg-green-500 text-white px-2 py-0.5 rounded text-[10px]">VENDOR</span>`;
-
-      // FIXED BUTTON LOGIC: No Paystack for suspend/restore
-      let actionBtn = '';
-      if(tab==='pending'){
-        actionBtn = `<button id="btn-${u.email}" onclick="updateStatus('${u.email}', true)" class="mt-2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-bold">Approve</button>`;
-      } else if(tab==='suspended'){
-        actionBtn = `<button onclick="restoreVendor('${u.email}')" class="mt-2 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">Restore</button>`;
-      } else if(tab==='vendors'){
-        actionBtn = `<button onclick="suspendVendor('${u.email}')" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>`;
-      } else {
-        // agents tab
-        actionBtn = u.is_approved? `<button onclick="suspendVendor('${u.email}')" class="mt-2 bg-red-600 text-white px-4 py-1 rounded-full text-xs font-bold">Suspend</button>` : `<button onclick="restoreVendor('${u.email}')" class="mt-2 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">Restore</button>`;
-      }
-
-      let viewBtn = `<button onclick="openAgentDetail('${u.email}')" class="mt-2 ml-1 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">👁️ View Full Info</button>`;
-      let subInfo = u.paystack_subaccount_code? `<div class="text-[10px] text-green-600 font-bold mt-1">✅ ${u.paystack_subaccount_code}</div>` : '';
-      html += `<div class="border rounded-lg p-3 mb-2"><div class="font-bold">${u.full_name || 'null'} ${roleBadge}</div><div class="text-xs text-gray-500">${u.email} • ${u.phone||u.whatsapp||''} • ${u.location||''}</div><div class="text-xs mt-1">Status: <b class="${u.is_approved? 'text-green-600':'text-red-600'}">${u.is_approved? 'Active':'Suspended'}</b> ${u.account_number? `• Acct: ${u.account_number} (${u.bank_name||''})`:''}</div>${subInfo}${actionBtn} ${viewBtn} ${catalogBtn}</div>`;
-    });
-  }
-  if(tab==='orders'){
-    data.forEach(o=>{
-      let statusColor = o.status==='paid'? 'text-orange-600' : (o.status==='picked' || o.status==='on the way')? 'text-blue-600' : o.status==='delivered'? 'text-green-600' : 'text-red-600';
-      let agentUser = users.find(u=>u.email===o.delivery_agent_email);
-      let agentDisplayName = o.delivery_agent_name || agentUser?.full_name || o.delivery_agent_email || 'N/A';
-      let agentDisplayPhone = o.delivery_agent_phone || agentUser?.phone || agentUser?.whatsapp || '';
-      let agentInfo = o.delivery_agent_email? `<div class="text-xs text-blue-600 font-bold truncate">🚚 Agent: ${agentDisplayName} (${agentDisplayPhone}) <button onclick="openAgentDetail('${o.delivery_agent_email}')" class="ml-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[9px] font-bold">View KYC</button></div>` : `<div class="text-xs text-orange-600 font-bold">⚠️ Waiting for Agent</div>`;
-      const startTime = o.picked_at || o.delivery_started_at;
-      const isActive = (o.status==='picked' || o.status==='on the way');
-      let timerHTML = isActive? `<div class="admin-timer" data-start="${startTime}">${formatAdminCountdown(startTime)}</div>` : '';
-      const newBorder = o.status==='paid'? 'border-2 border-green-500 bg-green-50' : 'border';
-      let itemsBreakdown = '';
-      if(o.items && Array.isArray(o.items) && o.items.length>0){
-        itemsBreakdown = `<div class="mt-2 bg-white border rounded-lg p-2"><b class="text-[11px] text-green-700">📦 Ordered Items & Vendors (Dispute Tracking):</b><div class="mt-1 space-y-1">` +
-          o.items.map(it=>{
-            const vEmail = it.vendor_email || o.vendor_email || 'N/A';
-            const vId = it.vendor_id || '';
-            const vendorUser = users.find(u=> u.email===vEmail || u.id===vId);
-            const vendorName = vendorUser?.full_name || vEmail;
-            const itemTotal = (Number(it.price)||0) * (Number(it.qty||it.quantity)||1);
-            return `<div class="flex justify-between text-[11px] border-b border-dashed py-1">
-              <span class="flex-1"><b>${it.name||it.product_name||'Item'}</b> x${it.qty||it.quantity||1} <span class="text-gray-500">@ ₦${Number(it.price||0).toLocaleString()}</span><br><span class="text-[10px] text-blue-600">👤 Vendor: ${vendorName}</span></span>
-              <span class="font-bold">₦${itemTotal.toLocaleString()}</span>
-            </div>`;
-          }).join('') +
-          `<div class="text-[11px] mt-1 pt-1 flex justify-between"><span>Subtotal: <b>₦${Number(o.subtotal||0).toLocaleString()}</b></span><span>Delivery 5%: <b>₦${Number(o.delivery_fee||Math.round((o.subtotal||0)*0.05)).toLocaleString()}</b></span></div>` +
-          `</div></div>`;
-      } else {
-        itemsBreakdown = `<div class="mt-2 text-[10px] text-gray-400 italic">No items data (old order)</div>`;
-      }
-      html += `<div class="${newBorder} rounded-lg p-3 mb-3 min-w-0">
-        <div class="flex justify-between gap-2"><div class="font-bold text-[12px] truncate">Order #${o.id} - <span class="${statusColor}">${o.status.toUpperCase()}</span> ${o.status==='paid'? '🆕 NEW FIRST':''}</div><div class="font-bold text-green-700 text-[12px] shrink-0">₦${Number(o.total||0).toLocaleString()}</div></div>
-        <div class="text-xs truncate">Customer: ${o.customer_name || o.customer_email} - ${o.customer_phone||''}</div>
-        <div class="text-xs text-gray-500 truncate">${o.customer_address||''}</div>
-        ${timerHTML}
-        <button onclick="toggleAdminDetails(${o.id})" id="admin-btn-${o.id}" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-[11px] font-black py-2 rounded-lg">
-          ▼ Show Items & Vendors
-        </button>
-        <div id="admin-details-${o.id}" class="hidden">
-          ${agentInfo}
-          ${itemsBreakdown}
-          <div class="text-[10px] text-gray-400 mt-1 flex justify-between"><span>${new Date(o.created_at).toLocaleString()}</span><span>Tx: ${o.tx_ref||'N/A'}</span></div>
-        </div>
-      </div>`;
-    });
-  }
-  document.getElementById('list').innerHTML = html;
-}
-
-function showTab(t){
-  tab=t;
-  ['P','V','S','A','O','F'].forEach(k=> document.getElementById('btn'+k).className = 'flex-1 p-3 font-bold text-gray-400 whitespace-nowrap');
-  const map={pending:'btnP',vendors:'btnV',suspended:'btnS',agents:'btnA',orders:'btnO',finance:'btnF'};
-  document.getElementById(map[t]).className = 'flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap';
-  if(t==='orders'){ document.getElementById('btnO').classList.remove('alert-tab'); setTimeout(()=>{ document.getElementById('mainTabs').scrollLeft = document.getElementById('mainTabs').scrollWidth; },100); }
-  if(t==='finance'){ setTimeout(()=>{ document.getElementById('mainTabs').scrollLeft = document.getElementById('mainTabs').scrollWidth; },100); }
-  render();
-}
-
-function getBankCode(bankName){
-  if(!bankName) return "999992";
-  const n = bankName.toLowerCase();
-  if(n.includes("opay")) return "999992";
-  if(n.includes("palm")) return "999991";
-  if(n.includes("kuda")) return "090267";
-  if(n.includes("monie")) return "50515";
-  if(n.includes("gtb") || n.includes("gtbank") || n.includes("guaranty")) return "058";
-  if(n.includes("access")) return "044";
-  if(n.includes("uba")) return "033";
-  if(n.includes("first")) return "011";
-  if(n.includes("zenith")) return "057";
-  if(n.includes("wema")) return "035";
-  if(n.includes("fcmb")) return "214";
-  if(n.includes("fidelity")) return "070";
-  if(n.includes("union")) return "032";
-  if(n.includes("stanbic")) return "221";
-  return "999992";
-}
-
-// FIXED: Only status flip, NO Paystack
-async function suspendVendor(email){
-  if(!confirm(`Suspend this vendor? Products will be HIDDEN.`)) return;
-  await supabaseClient.from('users').update({is_approved: false}).eq('email', email);
-  await supabaseClient.from('products').update({is_approved: false}).eq('vendor_email', email);
-  alert(`🚫 Suspended! Products HIDDEN!`);
-  load();
-}
-
-async function restoreVendor(email){
-  if(!confirm(`Restore this vendor? Products will be VISIBLE again using old subaccount.`)) return;
-  await supabaseClient.from('users').update({is_approved: true}).eq('email', email);
-  await supabaseClient.from('products').update({is_approved: true}).eq('vendor_email', email);
-  alert(`✅ Restored! Products VISIBLE! Keeps old subaccount, no duplicate.`);
-  load();
-}
-
-async function updateStatus(email,status){
-  const u=users.find(x=>x.email===email);
-  if(!u) return;
-  if(!status) return suspendVendor(email);
-  if(!confirm("Approve "+(u.full_name||email)+"?")) return;
-  
-  if(String(u.role).trim()==="vendor"){
-    try{
-      // FETCH FRESH DATA FROM SUPABASE - THIS FIXES DUPLICATE BUG
-      const {data: freshUser} = await supabaseClient.from('users').select('*').eq('email',email).single();
-      const checkUser = freshUser || u;
-      
-      if(checkUser.paystack_subaccount_code){
-        return restoreVendor(email);
-      }
-      
-      document.getElementById('list').innerHTML="<div class=text-center py-12>Creating Paystack subaccount...</div>";
-      const {data,error}=await supabaseClient.functions.invoke('create-vendor-subaccount',{body:{vendor:checkUser}});
-      if(error) throw new Error(error.message);
-      if(data.subaccount_code){
-        await supabaseClient.from('users').update({is_approved:true,paystack_subaccount_code:data.subaccount_code}).eq('email',email);
-      }else{
-        await supabaseClient.from('users').update({is_approved:true}).eq('email',email);
-      }
-      await supabaseClient.from('products').update({is_approved:true}).eq('vendor_email',email);
-      alert("APPROVED! Sub: "+(data.subaccount_code||"Kept")+" Email: "+(data.email_sent?"Sent":"Check"));
-    }catch(e){
-      alert("Failed: "+e.message);
-      load();
-      return;
-    }
-  }else{
-    await supabaseClient.from('users').update({is_approved:true}).eq('email',email);
-    alert("Approved!");
-  }
-    load();
-}
-setInterval(load, 80000);
-load();
-</script>
-</body>
-</html>
+function showTab(t){tab=t;['P','V','S','A','O','F','D'].forEach(k=>{let el=document.getElementById('btn'+k);if(el)el.className='flex-1 p-3 font-bold text-gray-400 whitespace-nowrap';});const m={pending:'btnP',vendors:'btnV',suspended:'btnS',agents:'btnA',orders:'btnO',finance:'btnF',delivery:'btnD'};document.getElementById(m[t]).className='flex-1 p-3 font-bold text-green-600 border-b-2 border-green-600 whitespace-nowrap';if(t==='delivery'){document.getElementById('orderFilters').className='hidden';document.getElementById('deliveredAdvanced').className='hidden';document.getElementById('deliveryFilters').classList.remove('hidden');if(deliveryData.length===0)document.getElementById('list').innerHTML=`<div class="text-center py-10 text-gray-400 text-[11px]">Select month and click Load above</div>`;else render();}else{document.getElementById('deliveryFilters').classList.add('hidden');if(t==='orders'){document.getElementById('orderFilters').className='flex gap-1 p-2 bg-gray-50 overflow-x-auto text-[11px] border-b';document.getElementById('mainTabs').scrollLeft=document.getElementById('mainTabs').scrollWidth;}}render();}
+async function suspendVendor(email){if(!confirm(`Suspend this vendor? Products will be HIDDEN.`))return;await supabaseClient.from('users').update({is_approved:false}).eq('email',email);await supabaseClient.from('products').update({is_approved:false}).eq('vendor_email',email);alert(`🚫 Suspended!`);load();}
+async function restoreVendor(email){if(!confirm(`Restore this vendor? Products will be VISIBLE again using old subaccount.`))return;await supabaseClient.from('users').update({is_approved:true}).eq('email',email);await supabaseClient.from('products').update({is_approved:true}).eq('vendor_email',email);alert(`✅ Restored!`);load();}
+async function updateStatus(email,status){const u=users.find(x=>x.email===email);if(!u)return;if(!status)return suspendVendor(email);if(!confirm("Approve "+(u.full_name||email)+"?"))return;if(String(u.role).trim()==="vendor"){try{const {data:fresh}=await supabaseClient.from('users').select('*').eq('email',email).single(),check=fresh||u;if(check.paystack_subaccount_code)return restoreVendor(email);document.getElementById('list').innerHTML="<div class=text-center py-12>Creating Paystack subaccount...</div>";const {data,error}=await supabaseClient.functions.invoke('create-vendor-subaccount',{body:{vendor:check}});if(error)throw new Error(error.message);if(data.subaccount_code)await supabaseClient.from('users').update({is_approved:true,paystack_subaccount_code:data.subaccount_code}).eq('email',email);else await supabaseClient.from('users').update({is_approved:true}).eq('email',email);await supabaseClient.from('products').update({is_approved:true}).eq('vendor_email',email);alert("APPROVED! Sub: "+(data.subaccount_code||"Kept"));}catch(e){alert("Failed: "+e.message);load();return;}}else{await supabaseClient.from('users').update({is_approved:true}).eq('email',email);alert("Approved!");}load();}
+// DELIVERY REPORTS FUNCTIONS
+async function loadDR(allTime=false){isAllTime=allTime;const mv=document.getElementById('reportMonth').value;if(!allTime&&!mv){alert('Select month');return;}curMonth=mv;let first,last,label;if(allTime){first=new Date(new Date().getFullYear(),0,1).toISOString();last=new Date().toISOString();label="ALL-TIME";}else{const[y,m]=mv.split('-').map(Number);first=new Date(y,m-1,1).toISOString();last=new Date(y,m,0,23,59,59).toISOString();label=new Date(y,m-1,1).toLocaleString('en-US',{month:'long',year:'numeric'});}document.getElementById('list').innerHTML='Loading '+label+'...';let res=[],td=0,tf=0,ta=0;const agents=users.filter(x=>String(x.role).toLowerCase().trim()==='delivery_agent');for(let ag of agents){let qD=supabaseClient.from('orders').select('total',{count:'exact'}).eq('delivery_agent_email',ag.email).eq('status','delivered'),qF=supabaseClient.from('orders').select('*',{count:'exact',head:true}).eq('delivery_agent_email',ag.email).eq('status','failed');if(!allTime){qD=qD.gte('delivered_at',first).lte('delivered_at',last);qF=qF.gte('updated_at',first).lte('updated_at',last);}const{count:cD,data:dD}=await qD;const{count:cF}=await qF;const amt=(dD||[]).reduce((a,b)=>a+Number(b.total||0),0);res.push({email:ag.email,name:(ag.full_name||ag.email).toUpperCase(),phone:ag.phone||'',del:cD||0,fail:cF||0,amt});td+=cD||0;tf+=cF||0;ta+=amt;}deliveryData=res;filteredDelivery=res;document.getElementById('deliverySummary').innerHTML=`<div class="bg-green-600 text-white p-2 rounded text-center"><p class="text-[8px]">DELIVERED</p><p class="font-black">${td}</p></div><div class="bg-red-600 text-white p-2 rounded text-center"><p class="text-[8px]">FAILED</p><p class="font-black">${tf}</p></div><div class="bg-blue-600 text-white p-2 rounded text-center"><p class="text-[8px]">AMOUNT</p><p class="font-black text-[10px]">₦${ta.toLocaleString()}</p></div><div class="bg-white text-black p-2 rounded text-center"><p class="text-[8px]">${label}</p><p class="font-black text-[10px]">${res.length} Agents</p></div>`;tab='delivery';render();}
+function filterDA(){const q=document.getElementById('agentSearch').value.toLowerCase();filteredDelivery=deliveryData.filter(a=>a.name.toLowerCase().includes(q)||a.email.toLowerCase().includes(q));render();}
+function openD(email,name){curDemail=email;curDname=name;document.getElementById('deliveryModal').classList.remove('hidden');document.getElementById('dTitle').innerText=name+" - "+(isAllTime?"All-Time":curMonth);document.getElementById('dBody').innerHTML='Loading...';(async()=>{let first,last;if(isAllTime){first=new Date(new Date().getFullYear(),0,1).toISOString();last=new Date().toISOString();}else{const[y,m]=curMonth.split('-').map(Number);first=new Date(y,m-1,1).toISOString();last=new Date(y,m,0,23,59,59).toISOString();}const{data:del}=await supabaseClient.from('orders').select('*').eq('delivery_agent_email',email).eq('status','delivered').gte('delivered_at',first).lte('delivered_at',last).order('delivered_at',{ascending:false}).limit(200);const{data:fail}=await supabaseClient.from('orders').select('*').eq('delivery_agent_email',email).eq('status','failed').gte('updated_at',first).lte('updated_at',last).order('updated_at',{ascending:false}).limit(200);dOrders=[...(del||[]).map(o=>({...o,_s:'DELIVERED'})),...(fail||[]).map(o=>({...o,_s:'FAILED'}))].sort((a,b)=>new Date(b.delivered_at||b.updated_at)-new Date(a.delivered_at||a.updated_at));document.getElementById('dBody').innerHTML=dOrders.length?dOrders.map(o=>`<div class="${o._s==='DELIVERED'?'bg-green-50 border-green-200':'bg-red-50 border-red-200'} border p-2 rounded-lg mb-2 text-[11px]"><div class="flex justify-between font-bold"><span>#${o.id}</span><span>₦${Number(o.total).toLocaleString()} • ${o._s}</span></div><p>👤 ${o.customer_name} • ${o.customer_phone}</p><p class="text-gray-600">🏠 ${o.customer_address||o.address||''}</p><p class="text-[10px] text-gray-500">${o._s==='DELIVERED'?new Date(o.delivered_at).toLocaleString():new Date(o.updated_at).toLocaleString()+' '+(o.failed_reason||'')}</p></div>`).join(''):'<p class="text-center py-10 text-gray-400">No orders</p>';})();}
+function filterDOrders(){const q=document.getElementById('orderSearch').value.toLowerCase();const f=q?dOrders.filter(o=>String(o.id).toLowerCase().includes(q)):dOrders;document.getElementById('dBody').innerHTML=f.map(o=>`<div class="bg-white border p-2 rounded-lg mb-2 text-[11px]"><b>#${o.id}</b> - ₦${Number(o.total).toLocaleString()} • ${o._s}<br>👤 ${o.customer_name}</div>`).join('');}
+function closeDModal(){document.getElementById('deliveryModal').classList.add('hidden');}
+async function exportSingle(){exportSingleDirect(curDemail,curDname);}
+async function exportSingleDirect(email,name){const{jsPDF}=window.jspdf,doc=new jsPDF();let first,last,label;if(isAllTime){first=new Date(new Date().getFullYear(),0,1).toISOString();last=new Date().toISOString();label="ALL-TIME";}else{const[y,m]=curMonth.split('-').map(Number);first=new Date(y,m-1,1).toISOString();last=new Date(y,m,0,23,59,59).toISOString();label=new Date(y,m-1,1).toLocaleString('en-US',{month:'long',year:'numeric'});}const{data:del}=await supabaseClient.from('orders').select('*').eq('delivery_agent_email',email).eq('status','delivered').gte('delivered_at',first).lte('delivered_at',last).order('delivered_at',{ascending:false}).limit(500);const{data:fail}=await supabaseClient.from('orders').select('*').eq('delivery_agent_email',email).eq('status','failed').gte('updated_at',first).lte('updated_at',last).order('updated_at',{ascending:false}).limit(500);const amt=(del||[]).reduce((a,b)=>a+Number(b.total||0),0);doc.setFillColor(22,101,52);doc.rect(0,0,210,25,'F');doc.setTextColor(255,255,255);doc.setFontSize(12);doc.text(`LGM - ${name} - ${label}`,10,15);doc.setTextColor(0,0,0);doc.setFontSize(10);doc.text(`Delivered:${del?.length||0} Failed:${fail?.length||0} Amount: N${amt.toLocaleString()}`,10,32);let y=40;[...(del||[]),...(fail||[])].forEach(o=>{if(y>280){doc.addPage();y=15;}doc.text(`#${o.id} | ${o.customer_name?.substring(0,15)} | N${o.total} | ${o.status} | ${new Date(o.delivered_at||o.updated_at).toLocaleDateString()}`,10,y);y+=6;});doc.save(`LGM_${name}_${label}.pdf`);}
+async function exportCombined(){const{jsPDF}=window.jspdf,doc=new jsPDF();let label=isAllTime?"ALL-TIME":curMonth||"All";doc.setFillColor(22,101,52);doc.rect(0,0,210,25,'F');doc.setTextColor(255,255,255);doc.text("LGM - All Agents Combined - "+label,10,15);doc.setTextColor(0,0,0);let y=30;filteredDelivery.forEach(a=>{if(y>280){doc.addPage();y=15;}doc.text(`${a.name} - ${a.email} | Del:${a.del} Fail:${a.fail} Amt:N${a.amt.toLocaleString()}`,10,y);y+=6;});doc.save(`LGM_All_Agents_${label}.pdf`);}
+(function(){const n=new Date();document.getElementById('reportMonth').value=n.toISOString().slice(0,7);})();
+setInterval(load,80000);load();
+</script></body></html>
