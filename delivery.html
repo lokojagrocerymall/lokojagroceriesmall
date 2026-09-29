@@ -2,63 +2,38 @@
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Delivery Dashboard</title><script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-  @keyframes pulse-red {0%,100%{background:#fee2e2;border-color:#ef4444}50%{background:#fecaca;border-color:#dc2626}}
-  @keyframes timer-pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@keyframes pulse-red {0%,100%{background:#fee2e2;border-color:#ef4444}50%{background:#fecaca;border-color:#dc2626}}
+@keyframes timer-pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
 .alert-card{animation:pulse-red 1s infinite;border:2px solid #ef4444!important}
 .badge{background:#ef4444;color:white;font-size:10px;padding:2px 6px;border-radius:9999px;margin-left:4px;font-weight:900}
 </style>
 </head>
 <body class="bg-gray-100">
-<header class="bg-white p-4 shadow flex justify-between items-center sticky top-0 z-10">
-  <b class="text-green-700">🚚 Delivery Dashboard</b>
-  <button onclick="localStorage.removeItem('lgm_user'); location.href='index.html';" class="bg-red-500 text-white px-3 py-1 rounded">Logout</button>
-</header>
+<header class="bg-white p-4 shadow flex justify-between items-center sticky top-0 z-10"><b class="text-green-700">🚚 Delivery Dashboard</b><button onclick="localStorage.removeItem('lgm_user'); location.href='index.html';" class="bg-red-500 text-white px-3 py-1 rounded">Logout</button></header>
 <div class="p-4 max-w-2xl mx-auto">
-  <div class="bg-white p-3 rounded-xl mb-4">
-    <p class="text-sm">Welcome, <b id="name">Loading...</b></p>
-    <p class="text-xs text-gray-600 font-bold">WhatsApp: <span id="phone">Loading...</span></p>
-    <p class="text-[10px] text-gray-400">Email: <span id="email"></span></p>
-  </div>
-  <div id="riderStats"></div>
-  <div id="deliveryCards" class="grid grid-cols-2 gap-3 mb-4"></div>
-  <h2 class="font-bold mb-3">Available Orders + My Active Deliveries <span id="orderBadge"></span></h2>
-  <div id="orders" class="mb-6">Loading...</div>
-  <h2 class="font-bold mb-3 text-gray-600">Completed Deliveries - Last 7 Days</h2>
-  <div id="completed">Loading...</div>
+<div class="bg-white p-3 rounded-xl mb-4"><p class="text-sm">Welcome, <b id="name">Loading...</b></p><p class="text-xs text-gray-600 font-bold">WhatsApp: <span id="phone">Loading...</span></p><p class="text-[10px] text-gray-400">Email: <span id="email"></span></p></div>
+<div id="riderStats"></div><div id="deliveryCards" class="grid grid-cols-2 gap-3 mb-3"></div>
+
+<div class="bg-white p-3 rounded-xl shadow mb-4 border-2 border-gray-800">
+<p class="text-xs font-black mb-2 tracking-widest">📊 REPORTS FOR DISPUTES & MONTHLY SUBMISSION</p>
+<div class="flex gap-2 items-center mb-2"><input type="month" id="reportMonth" class="border-2 border-gray-800 p-2 rounded-lg text-sm flex-1 font-bold"><button onclick="exportMonthlyPDF()" class="bg-gray-900 text-white px-4 py-2.5 rounded-lg font-black text-xs">📄 MONTH</button></div>
+<button onclick="exportAllTimePDF()" class="w-full bg-green-700 text-white py-3 rounded-lg font-black text-sm shadow">📚 EXPORT ALL-TIME REPORT (JAN - TODAY) - PDF</button>
+<p class="text-[10px] text-gray-500 mt-1">Month = specific dispute. All-Time = full audit for admin</p>
 </div>
 
-<!-- DELIVERED MODAL WITH SEARCH -->
-<div id="deliveredModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center p-3">
-  <div class="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-    <div class="p-4 bg-green-600 text-white flex justify-between items-center"><b>✅ Delivered Orders</b><button onclick="closeModal('deliveredModal')" class="bg-white text-green-600 px-3 py-1 rounded font-bold">X</button></div>
-    <div class="p-2 bg-gray-100 border-b"><input id="deliveredSearch" oninput="filterDelivered()" placeholder="🔍 Search by Order ID..." class="w-full p-2 rounded-lg border-2 border-green-300 text-sm focus:outline-none focus:border-green-600"></div>
-    <div id="deliveredList" class="p-3 overflow-y-auto flex-1">Loading...</div>
-  </div>
+<h2 class="font-bold mb-3">Available Orders + My Active Deliveries <span id="orderBadge"></span></h2><div id="orders" class="mb-6">Loading...</div>
+<h2 class="font-bold mb-3 text-gray-600">Completed Deliveries - Last 7 Days</h2><div id="completed">Loading...</div>
 </div>
-<!-- FAILED MODAL WITH SEARCH -->
-<div id="failedModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center p-3">
-  <div class="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-    <div class="p-4 bg-red-600 text-white flex justify-between items-center"><b>❌ Failed Deliveries</b><button onclick="closeModal('failedModal')" class="bg-white text-red-600 px-3 py-1 rounded font-bold">X</button></div>
-    <div class="p-2 bg-gray-100 border-b"><input id="failedSearch" oninput="filterFailed()" placeholder="🔍 Search by Order ID..." class="w-full p-2 rounded-lg border-2 border-red-300 text-sm focus:outline-none focus:border-red-600"></div>
-    <div id="failedList" class="p-3 overflow-y-auto flex-1">Loading...</div>
-  </div>
-</div>
+
+<div id="deliveredModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center p-3"><div class="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"><div class="p-4 bg-green-600 text-white flex justify-between items-center"><b>✅ Delivered Orders</b><button onclick="closeModal('deliveredModal')" class="bg-white text-green-600 px-3 py-1 rounded font-bold">X</button></div><div class="p-2 bg-gray-100 border-b"><input id="deliveredSearch" oninput="filterDelivered()" placeholder="🔍 Search by Order ID..." class="w-full p-2 rounded-lg border-2 border-green-300 text-sm"></div><div id="deliveredList" class="p-3 overflow-y-auto flex-1">Loading...</div></div></div>
+<div id="failedModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center p-3"><div class="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"><div class="p-4 bg-red-600 text-white flex justify-between items-center"><b>❌ Failed Deliveries</b><button onclick="closeModal('failedModal')" class="bg-white text-red-600 px-3 py-1 rounded font-bold">X</button></div><div class="p-2 bg-gray-100 border-b"><input id="failedSearch" oninput="filterFailed()" placeholder="🔍 Search by Order ID..." class="w-full p-2 rounded-lg border-2 border-red-300 text-sm"></div><div id="failedList" class="p-3 overflow-y-auto flex-1">Loading...</div></div></div>
 
 <script>
-const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
-const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let curUser = JSON.parse(localStorage.getItem('lgm_user')||'null');
-if(!curUser ||!curUser.email || String(curUser.role).toLowerCase().trim()!=='delivery_agent'){alert('Access Denied. Please login as Delivery Agent');location.href='index.html';}
-const TWO_HOURS_MS = 3 * 60 * 60 * 1000;
-let isCalling = false;
-let ordersCache = [];
-let lastAvailableCount = 0;
-let agentProfile = null;
-let vendorMap={};
-let allDeliveredOrders=[];
-let allFailedOrders=[];
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let curUser = JSON.parse(localStorage.getItem('lgm_user')||'null');if(!curUser ||!curUser.email || String(curUser.role).toLowerCase().trim()!=='delivery_agent'){alert('Access Denied. Please login as Delivery Agent');location.href='index.html';}
+const TWO_HOURS_MS = 3 * 60 * 60 * 1000;let isCalling = false;let ordersCache = [];let lastAvailableCount = 0;let agentProfile = null;let vendorMap={};let allDeliveredOrders=[];let allFailedOrders=[];
 function formatSeparatedName(raw){if(!raw) return '';let s=String(raw).trim().replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2');s=s.split(/\s+/).filter(Boolean).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');return s;}
 function cleanShopName(raw){if(!raw) return null;let n=String(raw).trim();if(!n) return null;if(n.includes('@')){let pre=n.split('@')[0].replace(/[0-9._-]/g,' ').trim().replace(/\s+/g,' ').trim();if(pre.length<3) return null;return pre.toUpperCase()+' STORE';}if(n.toLowerCase()==='lgm vendor') return null;return n.toUpperCase();}
 function getShopNameAndLocation(vendorEmail, fallbackName){let v = vendorMap[(vendorEmail||'').toLowerCase()];let shop = cleanShopName(v?.business_name || v?.shop_name || fallbackName) || cleanShopName(fallbackName) || 'STORE';let loc = (v?.location || v?.address || '').toUpperCase();if(loc){loc = loc.split(',')[0].trim();return `${shop} - ${loc}`;}return shop;}
@@ -66,120 +41,52 @@ async function loadAgentProfile(){try{const {data} = await supabaseClient.from('
 function formatCountdown(startTime){if(!startTime) return '<span style="font-size:22px;font-weight:900;color:#ea580c">⏰ Timer starting...</span>';const end = new Date(startTime).getTime() + TWO_HOURS_MS;const diff = end - new Date().getTime();if(diff <= 0) return '<span style="font-size:22px;font-weight:900;color:#dc2626;background:#fee2e2;padding:4px 10px;border-radius:8px">❌ TIME UP! CALL ADMIN</span>';const h = Math.floor(diff / 3600000);const m = Math.floor((diff % 3600000) / 60000);const s = Math.floor((diff % 60000) / 1000);return `<span style="font-size:32px;font-weight:900;color:#dc2626;letter-spacing:1px;animation:timer-pulse 1s infinite">${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s</span>`;}
 function formatPickedUpTime(startTime){if(!startTime) return '';return new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});}
 function triggerAlert(msg){new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});if(navigator.vibrate) navigator.vibrate([200,100,200]);}
-async function loadRiderStats(){
-  try{
-    const sevenDaysAgo=new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate()-7);
-    const {data}=await supabaseClient.from('orders').select('customer_rating').eq('delivery_agent_email',curUser.email).eq('status','delivered').not('customer_rating','is',null);
-    const ratings=data?.map(d=>d.customer_rating)||[];
-    const avg=ratings.length>0?(ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1):'0';
-    const {count:deliveredCount}=await supabaseClient.from('orders').select('*',{count:'exact',head:true}).eq('delivery_agent_email',curUser.email).eq('status','delivered').gte('delivered_at',sevenDaysAgo.toISOString());
-    const {count:failedCount}=await supabaseClient.from('orders').select('*',{count:'exact',head:true}).eq('delivery_agent_email',curUser.email).eq('status','failed').gte('updated_at',sevenDaysAgo.toISOString());
-    document.getElementById('riderStats').innerHTML=`<div class="bg-yellow-50 p-3 rounded-xl shadow mb-3 text-center border border-yellow-200"><p class="text-xs text-gray-600">Your Performance</p><p class="text-3xl font-bold text-yellow-600">${avg}⭐</p><p class="text-xs text-gray-500">${ratings.length} Customer Reviews</p></div>`;
-    document.getElementById('deliveryCards').innerHTML=`
-      <div onclick="openDelivered()" class="bg-green-50 border-2 border-green-500 p-3 rounded-xl text-center shadow cursor-pointer active:scale-95"><p class="text-[10px] font-black text-green-700 tracking-widest">✅ DELIVERED</p><p class="text-3xl font-black text-green-600 mt-1">${deliveredCount||0}</p><p class="text-[10px] text-gray-500 mt-1">Tap to view & search</p></div>
-      <div onclick="openFailed()" class="bg-red-50 border-2 border-red-500 p-3 rounded-xl text-center shadow cursor-pointer active:scale-95"><p class="text-[10px] font-black text-red-700 tracking-widest">❌ FAILED</p><p class="text-3xl font-black text-red-600 mt-1">${failedCount||0}</p><p class="text-[10px] text-gray-500 mt-1">Tap to view & search</p></div>
-    `;
-  }catch(e){console.log(e)}
-}
-function renderDeliveredList(list){
-  if(!list || list.length===0){document.getElementById('deliveredList').innerHTML='<p class="text-center text-gray-400 py-10">No matching order ID found</p>';return;}
-  document.getElementById('deliveredList').innerHTML=list.map(o=>`<div class="bg-green-50 border border-green-200 p-3 rounded-xl mb-2"><div class="flex justify-between"><b class="text-sm">Order #${o.id}</b><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div><p class="text-xs mt-1">👤 ${o.customer_name} • 📞 ${o.customer_phone}</p><p class="text-xs text-gray-600">🏠 ${o.customer_address||o.address||''}</p><p class="text-[10px] text-gray-500 mt-1">Delivered: ${new Date(o.delivered_at).toLocaleString()} ${o.customer_rating?'• '+ '⭐'.repeat(o.customer_rating):''}</p></div>`).join('');
-}
-function renderFailedList(list){
-  if(!list || list.length===0){document.getElementById('failedList').innerHTML='<p class="text-center text-gray-400 py-10">No matching order ID found</p>';return;}
-  document.getElementById('failedList').innerHTML=list.map(o=>`<div class="bg-red-50 border border-red-200 p-3 rounded-xl mb-2"><div class="flex justify-between"><b class="text-sm">Order #${o.id}</b><b class="text-red-700">₦${Number(o.total).toLocaleString()}</b></div><p class="text-xs mt-1">👤 ${o.customer_name} • 📞 ${o.customer_phone}</p><p class="text-xs text-gray-600">🏠 ${o.customer_address||o.address||''}</p><p class="text-[10px] text-red-600 mt-1">Failed: ${new Date(o.updated_at).toLocaleString()}</p><p class="text-[10px] text-gray-600">Reason: ${o.failed_reason||o.cancel_reason||'Not delivered'}</p><a href="tel:${o.customer_phone}" class="mt-2 block text-center bg-blue-600 text-white py-1 rounded text-xs font-bold">📞 Call Customer</a></div>`).join('');
-}
-function filterDelivered(){const q=document.getElementById('deliveredSearch').value.toLowerCase().trim();if(!q){renderDeliveredList(allDeliveredOrders);return;}const filtered=allDeliveredOrders.filter(o=>String(o.id).toLowerCase().includes(q));renderDeliveredList(filtered);}
-function filterFailed(){const q=document.getElementById('failedSearch').value.toLowerCase().trim();if(!q){renderFailedList(allFailedOrders);return;}const filtered=allFailedOrders.filter(o=>String(o.id).toLowerCase().includes(q));renderFailedList(filtered);}
-async function openDelivered(){
-  document.getElementById('deliveredModal').classList.remove('hidden');
-  document.getElementById('deliveredList').innerHTML='Loading...';
-  document.getElementById('deliveredSearch').value='';
-  const {data} = await supabaseClient.from('orders').select('*').eq('delivery_agent_email',curUser.email).eq('status','delivered').order('delivered_at',{ascending:false}).limit(100);
-  allDeliveredOrders=data||[];
-  renderDeliveredList(allDeliveredOrders);
-}
-async function openFailed(){
-  document.getElementById('failedModal').classList.remove('hidden');
-  document.getElementById('failedList').innerHTML='Loading...';
-  document.getElementById('failedSearch').value='';
-  const {data} = await supabaseClient.from('orders').select('*').eq('delivery_agent_email',curUser.email).eq('status','failed').order('updated_at',{ascending:false}).limit(100);
-  allFailedOrders=data||[];
-  renderFailedList(allFailedOrders);
-}
+async function loadRiderStats(){try{const sevenDaysAgo=new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate()-7);const {data}=await supabaseClient.from('orders').select('customer_rating').eq('delivery_agent_email',curUser.email).eq('status','delivered').not('customer_rating','is',null);const ratings=data?.map(d=>d.customer_rating)||[];const avg=ratings.length>0?(ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1):'0';const {count:deliveredCount}=await supabaseClient.from('orders').select('*',{count:'exact',head:true}).eq('delivery_agent_email',curUser.email).eq('status','delivered').gte('delivered_at',sevenDaysAgo.toISOString());const {count:failedCount}=await supabaseClient.from('orders').select('*',{count:'exact',head:true}).eq('delivery_agent_email',curUser.email).eq('status','failed').gte('updated_at',sevenDaysAgo.toISOString());document.getElementById('riderStats').innerHTML=`<div class="bg-yellow-50 p-3 rounded-xl shadow mb-3 text-center border border-yellow-200"><p class="text-xs text-gray-600">Your Performance</p><p class="text-3xl font-bold text-yellow-600">${avg}⭐</p><p class="text-xs text-gray-500">${ratings.length} Customer Reviews</p></div>`;document.getElementById('deliveryCards').innerHTML=`<div onclick="openDelivered()" class="bg-green-50 border-2 border-green-500 p-3 rounded-xl text-center shadow cursor-pointer active:scale-95"><p class="text-[10px] font-black text-green-700 tracking-widest">✅ DELIVERED</p><p class="text-3xl font-black text-green-600 mt-1">${deliveredCount||0}</p><p class="text-[10px] text-gray-500 mt-1">Tap to view</p></div><div onclick="openFailed()" class="bg-red-50 border-2 border-red-500 p-3 rounded-xl text-center shadow cursor-pointer active:scale-95"><p class="text-[10px] font-black text-red-700 tracking-widest">❌ FAILED</p><p class="text-3xl font-black text-red-600 mt-1">${failedCount||0}</p><p class="text-[10px] text-gray-500 mt-1">Tap to view</p></div>`;}catch(e){console.log(e)}}
+function renderDeliveredList(list){if(!list||list.length===0){document.getElementById('deliveredList').innerHTML='<p class="text-center text-gray-400 py-10">No matching order ID found</p>';return;}document.getElementById('deliveredList').innerHTML=list.map(o=>`<div class="bg-green-50 border border-green-200 p-3 rounded-xl mb-2"><div class="flex justify-between"><b class="text-sm">Order #${o.id}</b><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div><p class="text-xs mt-1">👤 ${o.customer_name} • 📞 ${o.customer_phone}</p><p class="text-xs text-gray-600">🏠 ${o.customer_address||o.address||''}</p><p class="text-[10px] text-gray-500 mt-1">Delivered: ${new Date(o.delivered_at).toLocaleString()} ${o.customer_rating?'• '+ '⭐'.repeat(o.customer_rating):''}</p></div>`).join('');}
+function renderFailedList(list){if(!list||list.length===0){document.getElementById('failedList').innerHTML='<p class="text-center text-gray-400 py-10">No matching order ID found</p>';return;}document.getElementById('failedList').innerHTML=list.map(o=>`<div class="bg-red-50 border border-red-200 p-3 rounded-xl mb-2"><div class="flex justify-between"><b class="text-sm">Order #${o.id}</b><b class="text-red-700">₦${Number(o.total).toLocaleString()}</b></div><p class="text-xs mt-1">👤 ${o.customer_name} • 📞 ${o.customer_phone}</p><p class="text-xs text-gray-600">🏠 ${o.customer_address||o.address||''}</p><p class="text-[10px] text-red-600 mt-1">Failed: ${new Date(o.updated_at).toLocaleString()}</p><p class="text-[10px] text-gray-600">Reason: ${o.failed_reason||o.cancel_reason||'Not delivered'}</p><a href="tel:${o.customer_phone}" class="mt-2 block text-center bg-blue-600 text-white py-1 rounded text-xs font-bold">📞 Call Customer</a></div>`).join('');}
+function filterDelivered(){const q=document.getElementById('deliveredSearch').value.toLowerCase().trim();if(!q){renderDeliveredList(allDeliveredOrders);return;}renderDeliveredList(allDeliveredOrders.filter(o=>String(o.id).toLowerCase().includes(q)));}
+function filterFailed(){const q=document.getElementById('failedSearch').value.toLowerCase().trim();if(!q){renderFailedList(allFailedOrders);return;}renderFailedList(allFailedOrders.filter(o=>String(o.id).toLowerCase().includes(q)));}
+async function openDelivered(){document.getElementById('deliveredModal').classList.remove('hidden');document.getElementById('deliveredList').innerHTML='Loading...';document.getElementById('deliveredSearch').value='';const {data}=await supabaseClient.from('orders').select('*').eq('delivery_agent_email',curUser.email).eq('status','delivered').order('delivered_at',{ascending:false}).limit(100);allDeliveredOrders=data||[];renderDeliveredList(allDeliveredOrders);}
+async function openFailed(){document.getElementById('failedModal').classList.remove('hidden');document.getElementById('failedList').innerHTML='Loading...';document.getElementById('failedSearch').value='';const {data}=await supabaseClient.from('orders').select('*').eq('delivery_agent_email',curUser.email).eq('status','failed').order('updated_at',{ascending:false}).limit(100);allFailedOrders=data||[];renderFailedList(allFailedOrders);}
 function closeModal(id){document.getElementById(id).classList.add('hidden');}
-async function fetchOrders(){
+function buildPDF(doc, title, delivered, failed, monthLabel){
+  const totalDelivered = (delivered||[]).length;const totalFailed = (failed||[]).length;const totalAmount = (delivered||[]).reduce((a,b)=>a+Number(b.total||0),0);const successRate = totalDelivered+totalFailed>0? ((totalDelivered/(totalDelivered+totalFailed))*100).toFixed(1):'0';
+  doc.setFillColor(22,101,52); doc.rect(0,0,210,28,'F');doc.setTextColor(255,255,255); doc.setFontSize(16); doc.setFont('helvetica','bold');doc.text('LGM GROCERY MALL - DELIVERY REPORT',10,12);doc.setFontSize(10); doc.setFont('helvetica','normal');doc.text(`Agent: ${document.getElementById('name').innerText} | ${curUser.email}`,10,18);doc.text(`Phone: ${document.getElementById('phone').innerText} | ${title}: ${monthLabel}`,10,23);
+  doc.setTextColor(0,0,0); doc.setFontSize(12); doc.setFont('helvetica','bold');doc.text(title.toUpperCase()+' SUMMARY',10,38);doc.setFontSize(10); doc.setFont('helvetica','normal');doc.text(`Total Delivered: ${totalDelivered} orders`,10,45);doc.text(`Total Failed: ${totalFailed} orders`,10,51);doc.text(`Total Amount Delivered: N${totalAmount.toLocaleString()}`,10,57);doc.text(`Success Rate: ${successRate}%`,10,63);doc.text(`Generated: ${new Date().toLocaleString()}`,10,69);
+  let y=80; doc.setFillColor(220,252,231); doc.rect(10,y-6,190,8,'F');doc.setFont('helvetica','bold'); doc.setFontSize(9);doc.text('Order ID',12,y); doc.text('Customer',35,y); doc.text('Amount',95,y); doc.text('Status',120,y); doc.text('Date',145,y);y+=6; doc.setFont('helvetica','normal');
+  const all = [...(delivered||[]).map(o=>({...o,_s:'DELIVERED'})),...(failed||[]).map(o=>({...o,_s:'FAILED'}))].sort((a,b)=>new Date(b.delivered_at||b.updated_at)-new Date(a.delivered_at||a.updated_at));
+  for(let o of all){if(y>275){doc.addPage(); y=15;}const date = o._s==='DELIVERED'? new Date(o.delivered_at).toLocaleDateString(): new Date(o.updated_at).toLocaleDateString();doc.text(String(o.id).substring(0,10),12,y);doc.text(String(o.customer_name||'').substring(0,18),35,y);doc.text('N'+Number(o.total).toLocaleString(),95,y);doc.text(o._s,120,y);doc.text(date,145,y);y+=6;}
+  if(all.length===0){doc.text('No orders for '+monthLabel,12,y);}
+  doc.setFontSize(8); doc.setTextColor(100,100,100);doc.text('LGM Grocery Mall | Powered by LGM Delivery System | '+title+' - '+monthLabel,10,285);return all;
+}
+async function exportMonthlyPDF(){
   try{
-    const { data:availableOrders } = await supabaseClient.from('orders').select('*').eq('status','paid').eq('payment_status', true).is('delivery_agent_email', null).order('created_at',{ascending:false});
-    if(availableOrders.length > lastAvailableCount && lastAvailableCount!== 0){ triggerAlert(`🚨 New Order #${availableOrders[0].id} is Available!`); }
-    lastAvailableCount = availableOrders.length;
-    document.getElementById('orderBadge').innerHTML = availableOrders.length > 0? `<span class="badge">${availableOrders.length}</span>` : '';
-    const { data:myActive } = await supabaseClient.from('orders').select('*').eq('status','on the way').eq('delivery_agent_email', curUser.email).order('created_at',{ascending:false});
-    const orderMap = new Map();
-    [...(availableOrders||[]),...(myActive||[])].forEach(o => orderMap.set(o.id, o));
-    ordersCache = Array.from(orderMap.values());
-    try{
-      const allVendorEmails = [...new Set(ordersCache.flatMap(o=>(o.items||[]).map(i=>i.vendor_email).filter(Boolean)).map(e=>e.toLowerCase()))];
-      if(allVendorEmails.length){
-        const {data:vendors} = await supabaseClient.from('users').select('email,business_name,shop_name,location,address').in('email', allVendorEmails);
-        (vendors||[]).forEach(v=>{ vendorMap[v.email.toLowerCase()] = v; });
-      }
-    }catch(e){ console.log('vendor fetch', e) }
-  }catch(e){ console.log(e) }
+    const monthInput = document.getElementById('reportMonth').value;if(!monthInput){alert('Please select a month first');return;}
+    const [year, month] = monthInput.split('-').map(Number);const monthName = new Date(year, month-1, 1).toLocaleString('en-US',{month:'long',year:'numeric'});
+    const firstDay = new Date(year, month-1, 1, 0,0,0).toISOString();const lastDay = new Date(year, month, 0, 23,59,59).toISOString();
+    const { jsPDF } = window.jspdf;const doc = new jsPDF();alert('Generating PDF for '+monthName+'... please wait');
+    const {data:delivered} = await supabaseClient.from('orders').select('*').eq('delivery_agent_email',curUser.email).eq('status','delivered').gte('delivered_at',firstDay).lte('delivered_at',lastDay).order('delivered_at',{ascending:false});
+    const {data:failed} = await supabaseClient.from('orders').select('*').eq('delivery_agent_email',curUser.email).eq('status','failed').gte('updated_at',firstDay).lte('updated_at',lastDay).order('updated_at',{ascending:false});
+    buildPDF(doc, 'Monthly Report', delivered, failed, monthName);
+    doc.save(`LGM_Monthly_${curUser.email.split('@')[0]}_${month}_${year}.pdf`);
+  }catch(e){console.log(e); alert('PDF Error: '+e.message);}
 }
-function renderOrders(){
-  if(!ordersCache || ordersCache.length===0){document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No active orders</p>';return;}
-  document.getElementById('orders').innerHTML = ordersCache.map(o=>{
-    const addr = o.customer_address || o.address || 'N/A';
-    let vendorsHtml = '';
-    if(o.items && o.items.length>0){
-      vendorsHtml = `<div class="mt-2 bg-green-50 border border-green-200 rounded-lg p-2"><b class="text-[11px] text-green-700">🏪 Pickup Vendors (FULL ADDRESS):</b><div class="mt-1 space-y-1">`+
-      o.items.map(it=>{
-        const full = getShopNameAndLocation(it.vendor_email, it.vendor_business_name);
-        return `<div class="text-[11px] font-black text-green-800 border-b border-dashed border-green-200 py-1">📦 ${it.name||'Item'} x${it.qty||1}<br>🏪 ${full}</div>`;
-      }).join('')+`</div></div>`;
-    }
-    if(o.status === 'paid' &&!o.delivery_agent_email){
-      return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-green-400 alert-card">
-        <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
-        <div class="mt-2 p-2 bg-gray-50 rounded-lg"><p class="text-sm font-bold">👤 ${o.customer_name}</p><p class="text-xs">📞 ${o.customer_phone}</p><p class="text-xs">🏠 ${addr}</p></div>
-        ${vendorsHtml}
-        <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">🚚 Pick Up Order - Start 3HR Timer</button>
-      </div>`;
-    } else {
-      return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-orange-400" id="order-${o.id}">
-        <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
-        <div class="mt-2 p-2 bg-gray-50 rounded-lg"><p class="text-sm font-bold">👤 ${o.customer_name}</p><p class="text-xs">📞 ${o.customer_phone}</p><p class="text-xs">🏠 ${addr}</p></div>
-        ${vendorsHtml}
-        <div style="background:linear-gradient(135deg,#ffffff,#fef3c7);border:3px solid #f59e0b;padding:16px;border-radius:16px;margin-top:12px;text-align:center;box-shadow:0 6px 20px rgba(245,158,11,0.35)">
-          <div style="font-size:11px;font-weight:900;letter-spacing:2px;color:#92400e;background:#fde68a;display:inline-block;padding:3px 12px;border-radius:20px">⏰ YOU ARE DELIVERING - TIME LEFT</div>
-          <div style="margin-top:8px"><span class="countdown" data-start="${o.delivery_started_at}">${formatCountdown(o.delivery_started_at)}</span></div>
-          <div style="font-size:12px;font-weight:800;color:#78350f;margin-top:6px">Picked at: ${formatPickedUpTime(o.delivery_started_at)} • Deliver before fail!</div>
-        </div>
-        <a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-3 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
-        <div class="mt-2 p-2 bg-blue-50 rounded-lg text-center border-blue-200"><p class="text-xs text-blue-700 font-bold">Waiting for Customer to Confirm Delivery</p></div>
-      </div>`;
-    }
-  }).join('');
-}
-async function loadCompleted(){
+async function exportAllTimePDF(){
   try{
-    const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const { data:completed } = await supabaseClient.from('orders').select('*').eq('status','delivered').eq('delivery_agent_email', curUser.email).gte('delivered_at', sevenDaysAgo.toISOString()).order('delivered_at',{ascending:false});
-    if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }
-    else {
-      document.getElementById('completed').innerHTML = completed.map(o=>{
-        const deliveredDate = new Date(o.delivered_at).toLocaleString();
-        const stars = o.customer_rating? '⭐'.repeat(o.customer_rating) : 'No rating yet';
-        return `<div class="bg-white p-3 rounded-xl shadow mb-2 border-gray-200 opacity-90"><div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div><p class="text-xs"><b>Customer:</b> ${o.customer_name}</p><p class="text-xs text-gray-500"><b>Delivered:</b> ${deliveredDate}</p><p class="text-xs text-yellow-600 font-bold mt-1">${stars}</p></div>`;
-      }).join('');
-    }
-  }catch(e){ console.log(e) }
+    const { jsPDF } = window.jspdf;const doc = new jsPDF();alert('Generating ALL-TIME report... please wait, this may take a few seconds');
+    const {data:delivered} = await supabaseClient.from('orders').select('*').eq('delivery_agent_email',curUser.email).eq('status','delivered').order('delivered_at',{ascending:false}).limit(1000);
+    const {data:failed} = await supabaseClient.from('orders').select('*').eq('delivery_agent_email',curUser.email).eq('status','failed').order('updated_at',{ascending:false}).limit(1000);
+    buildPDF(doc, 'All-Time Report', delivered, failed, 'Jan Till Today');
+    const now=new Date();doc.save(`LGM_AllTime_${curUser.email.split('@')[0]}_${now.getFullYear()}.pdf`);
+  }catch(e){console.log(e); alert('PDF Error: '+e.message);}
 }
+async function fetchOrders(){try{const { data:availableOrders } = await supabaseClient.from('orders').select('*').eq('status','paid').eq('payment_status', true).is('delivery_agent_email', null).order('created_at',{ascending:false});if(availableOrders.length > lastAvailableCount && lastAvailableCount!== 0){ triggerAlert(`🚨 New Order #${availableOrders[0].id} is Available!`); }lastAvailableCount = availableOrders.length;document.getElementById('orderBadge').innerHTML = availableOrders.length > 0? `<span class="badge">${availableOrders.length}</span>` : '';const { data:myActive } = await supabaseClient.from('orders').select('*').eq('status','on the way').eq('delivery_agent_email', curUser.email).order('created_at',{ascending:false});const orderMap = new Map();[...(availableOrders||[]),...(myActive||[])].forEach(o => orderMap.set(o.id, o));ordersCache = Array.from(orderMap.values());try{const allVendorEmails = [...new Set(ordersCache.flatMap(o=>(o.items||[]).map(i=>i.vendor_email).filter(Boolean)).map(e=>e.toLowerCase()))];if(allVendorEmails.length){const {data:vendors} = await supabaseClient.from('users').select('email,business_name,shop_name,location,address').in('email', allVendorEmails);(vendors||[]).forEach(v=>{ vendorMap[v.email.toLowerCase()] = v; });}}catch(e){ console.log('vendor fetch', e) }}catch(e){ console.log(e) }}
+function renderOrders(){if(!ordersCache || ordersCache.length===0){document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No active orders</p>';return;}document.getElementById('orders').innerHTML = ordersCache.map(o=>{const addr = o.customer_address || o.address || 'N/A';let vendorsHtml = '';if(o.items && o.items.length>0){vendorsHtml = `<div class="mt-2 bg-green-50 border border-green-200 rounded-lg p-2"><b class="text-[11px] text-green-700">🏪 Pickup Vendors (FULL ADDRESS):</b><div class="mt-1 space-y-1">`+ o.items.map(it=>{const full = getShopNameAndLocation(it.vendor_email, it.vendor_business_name);return `<div class="text-[11px] font-black text-green-800 border-b border-dashed border-green-200 py-1">📦 ${it.name||'Item'} x${it.qty||1}<br>🏪 ${full}</div>`;}).join('')+`</div></div>`;}if(o.status === 'paid' &&!o.delivery_agent_email){return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-green-400 alert-card"><div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div><div class="mt-2 p-2 bg-gray-50 rounded-lg"><p class="text-sm font-bold">👤 ${o.customer_name}</p><p class="text-xs">📞 ${o.customer_phone}</p><p class="text-xs">🏠 ${addr}</p></div>${vendorsHtml}<button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">🚚 Pick Up Order - Start 3HR Timer</button></div>`;} else {return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-orange-400" id="order-${o.id}"><div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div><div class="mt-2 p-2 bg-gray-50 rounded-lg"><p class="text-sm font-bold">👤 ${o.customer_name}</p><p class="text-xs">📞 ${o.customer_phone}</p><p class="text-xs">🏠 ${addr}</p></div>${vendorsHtml}<div style="background:linear-gradient(135deg,#ffffff,#fef3c7);border:3px solid #f59e0b;padding:16px;border-radius:16px;margin-top:12px;text-align:center;box-shadow:0 6px 20px rgba(245,158,11,0.35)"><div style="font-size:11px;font-weight:900;letter-spacing:2px;color:#92400e;background:#fde68a;display:inline-block;padding:3px 12px;border-radius:20px">⏰ YOU ARE DELIVERING - TIME LEFT</div><div style="margin-top:8px"><span class="countdown" data-start="${o.delivery_started_at}">${formatCountdown(o.delivery_started_at)}</span></div><div style="font-size:12px;font-weight:800;color:#78350f;margin-top:6px">Picked at: ${formatPickedUpTime(o.delivery_started_at)} • Deliver before fail!</div></div><a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-3 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a><div class="mt-2 p-2 bg-blue-50 rounded-lg text-center border-blue-200"><p class="text-xs text-blue-700 font-bold">Waiting for Customer to Confirm Delivery</p></div></div>`;}}).join('');}
+async function loadCompleted(){try{const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);const { data:completed } = await supabaseClient.from('orders').select('*').eq('status','delivered').eq('delivery_agent_email', curUser.email).gte('delivered_at', sevenDaysAgo.toISOString()).order('delivered_at',{ascending:false});if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }else {document.getElementById('completed').innerHTML = completed.map(o=>{const deliveredDate = new Date(o.delivered_at).toLocaleString();const stars = o.customer_rating? '⭐'.repeat(o.customer_rating) : 'No rating yet';return `<div class="bg-white p-3 rounded-xl shadow mb-2 border-gray-200 opacity-90"><div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div><p class="text-xs"><b>Customer:</b> ${o.customer_name}</p><p class="text-xs text-gray-500"><b>Delivered:</b> ${deliveredDate}</p><p class="text-xs text-yellow-600 font-bold mt-1">${stars}</p></div>`;}).join('');}}catch(e){ console.log(e) }}
 async function loadOrders(){await loadRiderStats();await fetchOrders();renderOrders();await loadCompleted();}
 async function pickup(id){let rawName = agentProfile?.full_name || [agentProfile?.first_name, agentProfile?.middle_name, agentProfile?.last_name].filter(Boolean).join(' ') || curUser.name || curUser.email.split('@')[0];const realName = formatSeparatedName(rawName);const realPhone = agentProfile?.phone || agentProfile?.whatsapp || curUser.phone || '';const { data, error } = await supabaseClient.from('orders').update({ status:'on the way', delivery_started_at:new Date().toISOString(), picked_at:new Date().toISOString(), delivery_agent_email: curUser.email, delivery_agent_name: realName, delivery_agent_phone: realPhone }).eq('id',id).eq('status','paid').is('delivery_agent_email', null).select();if(error ||!data || data.length === 0) alert('ERROR: This order was just picked by another agent');else { alert('Order picked up! 3 Hour countdown started.'); loadOrders(); }}
 function logout(){ localStorage.removeItem('lgm_user'); location.href='index.html'; }
-loadAgentProfile().then(()=> loadOrders());
+loadAgentProfile().then(()=>{const now = new Date(); document.getElementById('reportMonth').value = now.toISOString().slice(0,7);loadOrders();});
 setInterval(()=>{ document.querySelectorAll('.countdown').forEach(el => { el.innerHTML = formatCountdown(el.dataset.start); }); }, 1000);
 setInterval(()=>{ if(!isCalling) fetchOrders().then(renderOrders).then(loadCompleted); }, 10000);
 </script></body></html>
