@@ -20,12 +20,10 @@
     <p class="text-xs text-gray-600 font-bold">WhatsApp: <span id="phone">Loading...</span></p>
     <p class="text-[10px] text-gray-400">Email: <span id="email"></span></p>
   </div>
-
   <div id="riderStats"></div>
-
+  <div id="deliveryCards" class="grid grid-cols-2 gap-3 mb-4"></div>
   <h2 class="font-bold mb-3">Available Orders + My Active Deliveries <span id="orderBadge"></span></h2>
   <div id="orders" class="mb-6">Loading...</div>
-
   <h2 class="font-bold mb-3 text-gray-600">Completed Deliveries - Last 7 Days</h2>
   <div id="completed">Loading...</div>
 </div>
@@ -33,101 +31,35 @@
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
 let curUser = JSON.parse(localStorage.getItem('lgm_user')||'null');
-if(!curUser ||!curUser.email || String(curUser.role).toLowerCase().trim()!=='delivery_agent'){
-  alert('Access Denied. Please login as Delivery Agent');
-  location.href='index.html';
-}
-
+if(!curUser ||!curUser.email || String(curUser.role).toLowerCase().trim()!=='delivery_agent'){alert('Access Denied. Please login as Delivery Agent');location.href='index.html';}
 const TWO_HOURS_MS = 3 * 60 * 60 * 1000;
 let isCalling = false;
 let ordersCache = [];
 let lastAvailableCount = 0;
 let agentProfile = null;
-let vendorMap={}; // FIX: shop name + location
-
-function formatSeparatedName(raw){
-  if(!raw) return '';
-  let s = String(raw).trim().replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2');
-  s = s.split(/\s+/).filter(Boolean).map(w=> w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-  return s;
-}
-
-// FIX: clean shop name - NEVER email
-function cleanShopName(raw){
-  if(!raw) return null;
-  let n=String(raw).trim();
-  if(!n) return null;
-  if(n.includes('@')){
-    let pre=n.split('@')[0].replace(/[0-9._-]/g,' ').trim().replace(/\s+/g,' ').trim();
-    if(pre.length<3) return null;
-    return pre.toUpperCase()+' STORE';
-  }
-  if(n.toLowerCase()==='lgm vendor') return null;
-  return n.toUpperCase();
-}
-function getShopNameAndLocation(vendorEmail, fallbackName){
-  let v = vendorMap[(vendorEmail||'').toLowerCase()];
-  let shop = cleanShopName(v?.business_name || v?.shop_name || fallbackName) || cleanShopName(fallbackName) || 'STORE';
-  let loc = (v?.location || v?.address || '').toUpperCase();
-  if(loc){
-    loc = loc.split(',')[0].trim();
-    return `${shop} - ${loc}`; // FULL ADDRESS FOR DELIVERY: e.g. MAMA G SUPERMARKET - GANAJA
-  }
-  return shop;
-}
-
-async function loadAgentProfile(){
-  try{
-    const {data} = await supabaseClient.from('users').select('*').eq('email', curUser.email).single();
-    if(data){
-      agentProfile = data;
-      let rawName = data.full_name || [data.first_name, data.middle_name, data.last_name].filter(Boolean).join(' ') || curUser.name || curUser.email.split('@')[0];
-      const fullName = formatSeparatedName(rawName);
-      const waNumber = data.phone || data.whatsapp || curUser.phone || 'No number';
-      document.getElementById('name').innerText = fullName;
-      document.getElementById('phone').innerText = waNumber;
-      document.getElementById('email').innerText = data.email;
-      curUser.name = fullName;
-      curUser.phone = waNumber;
-      localStorage.setItem('lgm_user', JSON.stringify(curUser));
-    } else {
-      document.getElementById('name').innerText = formatSeparatedName(curUser.name || curUser.email);
-      document.getElementById('phone').innerText = curUser.phone || 'No number';
-      document.getElementById('email').innerText = curUser.email;
-    }
-  }catch(e){
-    document.getElementById('name').innerText = formatSeparatedName(curUser.name || curUser.email);
-    document.getElementById('email').innerText = curUser.email;
-  }
-}
-
-function formatCountdown(startTime){
-  if(!startTime) return '<span style="font-size:22px;font-weight:900;color:#ea580c">⏰ Timer starting...</span>';
-  const end = new Date(startTime).getTime() + TWO_HOURS_MS;
-  const diff = end - new Date().getTime();
-  if(diff <= 0) return '<span style="font-size:22px;font-weight:900;color:#dc2626;background:#fee2e2;padding:4px 10px;border-radius:8px">❌ TIME UP! CALL ADMIN</span>';
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
-  return `<span style="font-size:32px;font-weight:900;color:#dc2626;letter-spacing:1px;animation:timer-pulse 1s infinite">${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s</span>`;
-}
-function formatPickedUpTime(startTime){
-  if(!startTime) return '';
-  return new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
-}
-function triggerAlert(msg){
-  new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
-  if(navigator.vibrate) navigator.vibrate([200,100,200]);
-}
+let vendorMap={};
+function formatSeparatedName(raw){if(!raw) return '';let s=String(raw).trim().replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2');s=s.split(/\s+/).filter(Boolean).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');return s;}
+function cleanShopName(raw){if(!raw) return null;let n=String(raw).trim();if(!n) return null;if(n.includes('@')){let pre=n.split('@')[0].replace(/[0-9._-]/g,' ').trim().replace(/\s+/g,' ').trim();if(pre.length<3) return null;return pre.toUpperCase()+' STORE';}if(n.toLowerCase()==='lgm vendor') return null;return n.toUpperCase();}
+function getShopNameAndLocation(vendorEmail, fallbackName){let v = vendorMap[(vendorEmail||'').toLowerCase()];let shop = cleanShopName(v?.business_name || v?.shop_name || fallbackName) || cleanShopName(fallbackName) || 'STORE';let loc = (v?.location || v?.address || '').toUpperCase();if(loc){loc = loc.split(',')[0].trim();return `${shop} - ${loc}`;}return shop;}
+async function loadAgentProfile(){try{const {data} = await supabaseClient.from('users').select('*').eq('email', curUser.email).single();if(data){agentProfile = data;let rawName = data.full_name || [data.first_name, data.middle_name, data.last_name].filter(Boolean).join(' ') || curUser.name || curUser.email.split('@')[0];const fullName = formatSeparatedName(rawName);const waNumber = data.phone || data.whatsapp || curUser.phone || 'No number';document.getElementById('name').innerText = fullName;document.getElementById('phone').innerText = waNumber;document.getElementById('email').innerText = data.email;curUser.name = fullName;curUser.phone = waNumber;localStorage.setItem('lgm_user', JSON.stringify(curUser));} else {document.getElementById('name').innerText = formatSeparatedName(curUser.name || curUser.email);document.getElementById('phone').innerText = curUser.phone || 'No number';document.getElementById('email').innerText = curUser.email;}}catch(e){document.getElementById('name').innerText = formatSeparatedName(curUser.name || curUser.email);document.getElementById('email').innerText = curUser.email;}}
+function formatCountdown(startTime){if(!startTime) return '<span style="font-size:22px;font-weight:900;color:#ea580c">⏰ Timer starting...</span>';const end = new Date(startTime).getTime() + TWO_HOURS_MS;const diff = end - new Date().getTime();if(diff <= 0) return '<span style="font-size:22px;font-weight:900;color:#dc2626;background:#fee2e2;padding:4px 10px;border-radius:8px">❌ TIME UP! CALL ADMIN</span>';const h = Math.floor(diff / 3600000);const m = Math.floor((diff % 3600000) / 60000);const s = Math.floor((diff % 60000) / 1000);return `<span style="font-size:32px;font-weight:900;color:#dc2626;letter-spacing:1px;animation:timer-pulse 1s infinite">${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s</span>`;}
+function formatPickedUpTime(startTime){if(!startTime) return '';return new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});}
+function triggerAlert(msg){new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});if(navigator.vibrate) navigator.vibrate([200,100,200]);}
 async function loadRiderStats(){
   try{
-    const {data} = await supabaseClient.from('orders').select('customer_rating').eq('delivery_agent_email', curUser.email).eq('status', 'delivered').not('customer_rating', 'is', null);
-    const ratings = data?.map(d=>d.customer_rating) || [];
-    const avg = ratings.length > 0? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '0';
-    document.getElementById('riderStats').innerHTML = `<div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border-yellow-200"><p class="text-xs text-gray-600">Your Performance</p><p class="text-3xl font-bold text-yellow-600">${avg}⭐</p><p class="text-xs text-gray-500">${ratings.length} Customer Reviews</p></div>`;
-  }catch(e){ console.log(e) }
+    const sevenDaysAgo=new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate()-7);
+    const {data}=await supabaseClient.from('orders').select('customer_rating').eq('delivery_agent_email',curUser.email).eq('status','delivered').not('customer_rating','is',null);
+    const ratings=data?.map(d=>d.customer_rating)||[];
+    const avg=ratings.length>0?(ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1):'0';
+    const {count:deliveredCount}=await supabaseClient.from('orders').select('*',{count:'exact',head:true}).eq('delivery_agent_email',curUser.email).eq('status','delivered').gte('delivered_at',sevenDaysAgo.toISOString());
+    const {count:failedCount}=await supabaseClient.from('orders').select('*',{count:'exact',head:true}).eq('delivery_agent_email',curUser.email).eq('status','failed').gte('updated_at',sevenDaysAgo.toISOString());
+    document.getElementById('riderStats').innerHTML=`<div class="bg-yellow-50 p-3 rounded-xl shadow mb-3 text-center border border-yellow-200"><p class="text-xs text-gray-600">Your Performance</p><p class="text-3xl font-bold text-yellow-600">${avg}⭐</p><p class="text-xs text-gray-500">${ratings.length} Customer Reviews</p></div>`;
+    document.getElementById('deliveryCards').innerHTML=`
+      <div class="bg-green-50 border-2 border-green-500 p-3 rounded-xl text-center shadow"><p class="text-[10px] font-black text-green-700 tracking-widest">✅ DELIVERED</p><p class="text-3xl font-black text-green-600 mt-1">${deliveredCount||0}</p><p class="text-[10px] text-gray-500 mt-1">Last 7 days</p></div>
+      <div class="bg-red-50 border-2 border-red-500 p-3 rounded-xl text-center shadow"><p class="text-[10px] font-black text-red-700 tracking-widest">❌ FAILED DELIVERY</p><p class="text-3xl font-black text-red-600 mt-1">${failedCount||0}</p><p class="text-[10px] text-gray-500 mt-1">Last 7 days</p></div>
+    `;
+  }catch(e){console.log(e)}
 }
 async function fetchOrders(){
   try{
@@ -139,7 +71,6 @@ async function fetchOrders(){
     const orderMap = new Map();
     [...(availableOrders||[]),...(myActive||[])].forEach(o => orderMap.set(o.id, o));
     ordersCache = Array.from(orderMap.values());
-    // FIX: fetch vendor full info for these orders
     try{
       const allVendorEmails = [...new Set(ordersCache.flatMap(o=>(o.items||[]).map(i=>i.vendor_email).filter(Boolean)).map(e=>e.toLowerCase()))];
       if(allVendorEmails.length){
