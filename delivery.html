@@ -45,8 +45,8 @@ let isCalling = false;
 let ordersCache = [];
 let lastAvailableCount = 0;
 let agentProfile = null;
+let vendorMap={}; // FIX: shop name + location
 
-// === FIX: SEPARATE FULL NAME AS FILLED IN SIGNUP ===
 function formatSeparatedName(raw){
   if(!raw) return '';
   let s = String(raw).trim().replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2');
@@ -54,24 +54,41 @@ function formatSeparatedName(raw){
   return s;
 }
 
+// FIX: clean shop name - NEVER email
+function cleanShopName(raw){
+  if(!raw) return null;
+  let n=String(raw).trim();
+  if(!n) return null;
+  if(n.includes('@')){
+    let pre=n.split('@')[0].replace(/[0-9._-]/g,' ').trim().replace(/\s+/g,' ').trim();
+    if(pre.length<3) return null;
+    return pre.toUpperCase()+' STORE';
+  }
+  if(n.toLowerCase()==='lgm vendor') return null;
+  return n.toUpperCase();
+}
+function getShopNameAndLocation(vendorEmail, fallbackName){
+  let v = vendorMap[(vendorEmail||'').toLowerCase()];
+  let shop = cleanShopName(v?.business_name || v?.shop_name || fallbackName) || cleanShopName(fallbackName) || 'STORE';
+  let loc = (v?.location || v?.address || '').toUpperCase();
+  if(loc){
+    loc = loc.split(',')[0].trim();
+    return `${shop} - ${loc}`; // FULL ADDRESS FOR DELIVERY: e.g. MAMA G SUPERMARKET - GANAJA
+  }
+  return shop;
+}
+
 async function loadAgentProfile(){
   try{
-    const {data} = await supabaseClient.from('users')
-    .select('*')
-    .eq('email', curUser.email)
-    .single();
-
+    const {data} = await supabaseClient.from('users').select('*').eq('email', curUser.email).single();
     if(data){
       agentProfile = data;
       let rawName = data.full_name || [data.first_name, data.middle_name, data.last_name].filter(Boolean).join(' ') || curUser.name || curUser.email.split('@')[0];
       const fullName = formatSeparatedName(rawName);
       const waNumber = data.phone || data.whatsapp || curUser.phone || 'No number';
-
       document.getElementById('name').innerText = fullName;
       document.getElementById('phone').innerText = waNumber;
       document.getElementById('email').innerText = data.email;
-
-      // Save for pickup
       curUser.name = fullName;
       curUser.phone = waNumber;
       localStorage.setItem('lgm_user', JSON.stringify(curUser));
@@ -81,13 +98,11 @@ async function loadAgentProfile(){
       document.getElementById('email').innerText = curUser.email;
     }
   }catch(e){
-    console.log(e);
     document.getElementById('name').innerText = formatSeparatedName(curUser.name || curUser.email);
     document.getElementById('email').innerText = curUser.email;
   }
 }
 
-// === BOLD VISIBLE TIMER FOR DELIVERY ===
 function formatCountdown(startTime){
   if(!startTime) return '<span style="font-size:22px;font-weight:900;color:#ea580c">⏰ Timer starting...</span>';
   const end = new Date(startTime).getTime() + TWO_HOURS_MS;
@@ -98,71 +113,57 @@ function formatCountdown(startTime){
   const s = Math.floor((diff % 60000) / 1000);
   return `<span style="font-size:32px;font-weight:900;color:#dc2626;letter-spacing:1px;animation:timer-pulse 1s infinite">${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s</span>`;
 }
-
 function formatPickedUpTime(startTime){
   if(!startTime) return '';
   return new Date(startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
 }
-
 function triggerAlert(msg){
   new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
   if(navigator.vibrate) navigator.vibrate([200,100,200]);
 }
-
 async function loadRiderStats(){
   try{
-    const {data} = await supabaseClient.from('orders')
-.select('customer_rating')
-.eq('delivery_agent_email', curUser.email)
-.eq('status', 'delivered')
-.not('customer_rating', 'is', null);
+    const {data} = await supabaseClient.from('orders').select('customer_rating').eq('delivery_agent_email', curUser.email).eq('status', 'delivered').not('customer_rating', 'is', null);
     const ratings = data?.map(d=>d.customer_rating) || [];
     const avg = ratings.length > 0? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '0';
-    document.getElementById('riderStats').innerHTML = `
-      <div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border-yellow-200">
-        <p class="text-xs text-gray-600">Your Performance</p>
-        <p class="text-3xl font-bold text-yellow-600">${avg}⭐</p>
-        <p class="text-xs text-gray-500">${ratings.length} Customer Reviews</p>
-      </div>
-    `;
+    document.getElementById('riderStats').innerHTML = `<div class="bg-yellow-50 p-3 rounded-xl shadow mb-4 text-center border-yellow-200"><p class="text-xs text-gray-600">Your Performance</p><p class="text-3xl font-bold text-yellow-600">${avg}⭐</p><p class="text-xs text-gray-500">${ratings.length} Customer Reviews</p></div>`;
   }catch(e){ console.log(e) }
 }
-
 async function fetchOrders(){
   try{
-    const { data:availableOrders } = await supabaseClient.from('orders')
-.select('*')
-.eq('status','paid')
-.eq('payment_status', true)
-.is('delivery_agent_email', null)
-.order('created_at',{ascending:false});
-
-    if(availableOrders.length > lastAvailableCount && lastAvailableCount!== 0){
-      triggerAlert(`🚨 New Order #${availableOrders[0].id} is Available!`);
-    }
+    const { data:availableOrders } = await supabaseClient.from('orders').select('*').eq('status','paid').eq('payment_status', true).is('delivery_agent_email', null).order('created_at',{ascending:false});
+    if(availableOrders.length > lastAvailableCount && lastAvailableCount!== 0){ triggerAlert(`🚨 New Order #${availableOrders[0].id} is Available!`); }
     lastAvailableCount = availableOrders.length;
     document.getElementById('orderBadge').innerHTML = availableOrders.length > 0? `<span class="badge">${availableOrders.length}</span>` : '';
-
-    const { data:myActive } = await supabaseClient.from('orders')
-.select('*')
-.eq('status','on the way')
-.eq('delivery_agent_email', curUser.email)
-.order('created_at',{ascending:false});
-
+    const { data:myActive } = await supabaseClient.from('orders').select('*').eq('status','on the way').eq('delivery_agent_email', curUser.email).order('created_at',{ascending:false});
     const orderMap = new Map();
     [...(availableOrders||[]),...(myActive||[])].forEach(o => orderMap.set(o.id, o));
     ordersCache = Array.from(orderMap.values());
+    // FIX: fetch vendor full info for these orders
+    try{
+      const allVendorEmails = [...new Set(ordersCache.flatMap(o=>(o.items||[]).map(i=>i.vendor_email).filter(Boolean)).map(e=>e.toLowerCase()))];
+      if(allVendorEmails.length){
+        const {data:vendors} = await supabaseClient.from('users').select('email,business_name,shop_name,location,address').in('email', allVendorEmails);
+        (vendors||[]).forEach(v=>{ vendorMap[v.email.toLowerCase()] = v; });
+      }
+    }catch(e){ console.log('vendor fetch', e) }
   }catch(e){ console.log(e) }
 }
-
 function renderOrders(){
   if(!ordersCache || ordersCache.length===0){
     document.getElementById('orders').innerHTML='<p class="text-center text-gray-400 py-8">No active orders</p>';
     return;
   }
-
   document.getElementById('orders').innerHTML = ordersCache.map(o=>{
     const addr = o.customer_address || o.address || 'N/A';
+    let vendorsHtml = '';
+    if(o.items && o.items.length>0){
+      vendorsHtml = `<div class="mt-2 bg-green-50 border border-green-200 rounded-lg p-2"><b class="text-[11px] text-green-700">🏪 Pickup Vendors (FULL ADDRESS):</b><div class="mt-1 space-y-1">`+
+      o.items.map(it=>{
+        const full = getShopNameAndLocation(it.vendor_email, it.vendor_business_name);
+        return `<div class="text-[11px] font-black text-green-800 border-b border-dashed border-green-200 py-1">📦 ${it.name||'Item'} x${it.qty||1}<br>🏪 ${full}</div>`;
+      }).join('')+`</div></div>`;
+    }
     if(o.status === 'paid' &&!o.delivery_agent_email){
       return `<div class="bg-white p-4 rounded-xl shadow mb-3 border-2 border-green-400 alert-card">
         <div class="flex justify-between items-center"><h3 class="font-bold">Order #${o.id}</h3><b class="text-green-700">₦${Number(o.total).toLocaleString()}</b></div>
@@ -171,7 +172,8 @@ function renderOrders(){
           <p class="text-xs">📞 ${o.customer_phone}</p>
           <p class="text-xs">🏠 ${addr}</p>
         </div>
-        <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">🚚 Pick Up Order - Start 2HR Timer</button>
+        ${vendorsHtml}
+        <button onclick="pickup('${o.id}')" class="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-bold">🚚 Pick Up Order - Start 3HR Timer</button>
       </div>`;
     }
     else {
@@ -182,13 +184,12 @@ function renderOrders(){
           <p class="text-xs">📞 ${o.customer_phone}</p>
           <p class="text-xs">🏠 ${addr}</p>
         </div>
-
+        ${vendorsHtml}
         <div style="background:linear-gradient(135deg,#ffffff,#fef3c7);border:3px solid #f59e0b;padding:16px;border-radius:16px;margin-top:12px;text-align:center;box-shadow:0 6px 20px rgba(245,158,11,0.35)">
           <div style="font-size:11px;font-weight:900;letter-spacing:2px;color:#92400e;background:#fde68a;display:inline-block;padding:3px 12px;border-radius:20px">⏰ YOU ARE DELIVERING - TIME LEFT</div>
           <div style="margin-top:8px"><span class="countdown" data-start="${o.delivery_started_at}">${formatCountdown(o.delivery_started_at)}</span></div>
           <div style="font-size:12px;font-weight:800;color:#78350f;margin-top:6px">Picked at: ${formatPickedUpTime(o.delivery_started_at)} • Deliver before fail!</div>
         </div>
-
         <a href="tel:${o.customer_phone}" onmousedown="isCalling=true" onmouseup="isCalling=false" class="mt-3 block w-full text-center bg-blue-600 text-white py-2 rounded-lg font-bold">📞 Call Customer</a>
         <div class="mt-2 p-2 bg-blue-50 rounded-lg text-center border-blue-200">
           <p class="text-xs text-blue-700 font-bold">Waiting for Customer to Confirm Delivery</p>
@@ -197,72 +198,36 @@ function renderOrders(){
     }
   }).join('');
 }
-
 async function loadCompleted(){
   try{
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const { data:completed } = await supabaseClient.from('orders')
-.select('*')
-.eq('status','delivered')
-.eq('delivery_agent_email', curUser.email)
-.gte('delivered_at', sevenDaysAgo.toISOString())
-.order('delivered_at',{ascending:false});
+    const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const { data:completed } = await supabaseClient.from('orders').select('*').eq('status','delivered').eq('delivery_agent_email', curUser.email).gte('delivered_at', sevenDaysAgo.toISOString()).order('delivered_at',{ascending:false});
     if(!completed || completed.length===0){ document.getElementById('completed').innerHTML='<p class="text-center text-gray-400 py-4">No completed deliveries yet</p>'; }
     else {
       document.getElementById('completed').innerHTML = completed.map(o=>{
         const deliveredDate = new Date(o.delivered_at).toLocaleString();
         const stars = o.customer_rating? '⭐'.repeat(o.customer_rating) : 'No rating yet';
-        return `<div class="bg-white p-3 rounded-xl shadow mb-2 border-gray-200 opacity-90">
-          <div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div>
-          <p class="text-xs"><b>Customer:</b> ${o.customer_name}</p>
-          <p class="text-xs text-gray-500"><b>Delivered:</b> ${deliveredDate}</p>
-          <p class="text-xs text-yellow-600 font-bold mt-1">${stars}</p>
-        </div>`;
+        return `<div class="bg-white p-3 rounded-xl shadow mb-2 border-gray-200 opacity-90"><div class="flex justify-between"><h3 class="font-bold text-sm">Order #${o.id}</h3><b class="text-green-700 text-sm">₦${Number(o.total).toLocaleString()}</b></div><p class="text-xs"><b>Customer:</b> ${o.customer_name}</p><p class="text-xs text-gray-500"><b>Delivered:</b> ${deliveredDate}</p><p class="text-xs text-yellow-600 font-bold mt-1">${stars}</p></div>`;
       }).join('');
     }
   }catch(e){ console.log(e) }
 }
-
 async function loadOrders(){
   await loadRiderStats();
   await fetchOrders();
   renderOrders();
   await loadCompleted();
 }
-
 async function pickup(id){
   let rawName = agentProfile?.full_name || [agentProfile?.first_name, agentProfile?.middle_name, agentProfile?.last_name].filter(Boolean).join(' ') || curUser.name || curUser.email.split('@')[0];
   const realName = formatSeparatedName(rawName);
   const realPhone = agentProfile?.phone || agentProfile?.whatsapp || curUser.phone || '';
-
-  const { data, error } = await supabaseClient.from('orders').update({
-    status:'on the way',
-    delivery_started_at:new Date().toISOString(),
-    picked_at:new Date().toISOString(),
-    delivery_agent_email: curUser.email,
-    delivery_agent_name: realName,
-    delivery_agent_phone: realPhone
-  }).eq('id',id).eq('status','paid').is('delivery_agent_email', null).select();
-
+  const { data, error } = await supabaseClient.from('orders').update({ status:'on the way', delivery_started_at:new Date().toISOString(), picked_at:new Date().toISOString(), delivery_agent_email: curUser.email, delivery_agent_name: realName, delivery_agent_phone: realPhone }).eq('id',id).eq('status','paid').is('delivery_agent_email', null).select();
   if(error ||!data || data.length === 0) alert('ERROR: This order was just picked by another agent');
-  else {
-    alert('Order picked up! 3 Hour countdown started.');
-    loadOrders();
-  }
+  else { alert('Order picked up! 3 Hour countdown started.'); loadOrders(); }
 }
-
 function logout(){ localStorage.removeItem('lgm_user'); location.href='index.html'; }
-
 loadAgentProfile().then(()=> loadOrders());
-
-setInterval(()=>{
-  document.querySelectorAll('.countdown').forEach(el => {
-    el.innerHTML = formatCountdown(el.dataset.start);
-  });
-}, 1000);
-
-setInterval(()=>{
-  if(!isCalling) fetchOrders().then(renderOrders).then(loadCompleted);
-}, 10000);
+setInterval(()=>{ document.querySelectorAll('.countdown').forEach(el => { el.innerHTML = formatCountdown(el.dataset.start); }); }, 1000);
+setInterval(()=>{ if(!isCalling) fetchOrders().then(renderOrders).then(loadCompleted); }, 10000);
 </script></body></html>
