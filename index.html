@@ -208,7 +208,7 @@ async function payWithPaystack(){
     handler.openIframe();
   }catch(err){
     console.error(err);
-    alert('Init failed: '+err.message+'\n\nDid you create the Edge Function init-multivendor-pay? I will give you its code next.');
+    alert('Init failed: '+err.message);
     payBtn.disabled=false;
     payBtn.innerText=`Pay Now With Paystack - ₦${grandTotal.toLocaleString()}`;
   }
@@ -226,21 +226,11 @@ async function saveOrder(tx_ref,name,phone,address,grandTotal){
       delivery_fee:delivery,total:grandTotal,payment_status:true,status:'paid'
     }).select().single();
     if(error)throw error;
-    const vendorEmails=[...new Set(cart.map(i=>i.vendor_email).filter(Boolean))];
-    let enrichedCart=cart;
-    try{
-      const {data: vendors} = await supabaseClient.from('users').select('email,full_name,account_number,bank_name,bank_code').in('email', vendorEmails);
-      const map={}; (vendors||[]).forEach(v=>map[v.email.toLowerCase()]=v);
-      enrichedCart=cart.map(i=>{
-        const v=map[(i.vendor_email||'').toLowerCase()]||{};
-        return {...i, vendor_name: v.full_name||i.vendor_name||i.vendor_email, account_number: v.account_number||i.account_number, bank_name: v.bank_name||i.bank_name, bank_code: v.bank_code||i.bank_code };
-      });
-    }catch(e){ console.log('vendor enrich skip', e); }
     localStorage.removeItem('lgm_cart');localStorage.removeItem('cart');updateCart();
     try{await supabaseClient.from('carts').delete().eq('customer_id',curUser.id);}catch(e){}
     try{await supabaseClient.from('vendor_orders').insert({order_id:order.id,vendor_id:cart[0]?.vendor_id||null,vendor_email:cart[0]?.vendor_email||null,items:cart,subtotal:sub,status:'new'});}catch(vErr){}
     try{await supabaseClient.from('delivery_assignments').insert({order_id:order.id,status:'pending_pickup',customer_id:curUser.id,customer_address:address,customer_phone:phone,items_summary:cart.map(i=>`${i.name}x${i.qty}`).join(', ')});}catch(dErr){}
-    alert('✅ Payment Successful! Order #'+order.id+' - '+[...new Set(cart.map(i=>i.vendor_email))].length+' vendors paid 90% via Split!');
+    alert('✅ Payment Successful! Order #'+order.id);
     window.location.replace('customer.html');
   }catch(err){
     console.error(err);
@@ -250,7 +240,8 @@ async function saveOrder(tx_ref,name,phone,address,grandTotal){
 }
 async function loadProducts(){
   try{
-    const {data: activeVendors, error: vError} = await supabaseClient.from('users').select('email').eq('role','vendor').eq('is_approved', true);
+    // FIXED: use safe_users not users (blocked by RLS)
+    const {data: activeVendors, error: vError} = await supabaseClient.from('safe_users').select('email').eq('role','vendor').eq('is_approved', true);
     if(vError) throw vError;
     const activeEmails = (activeVendors||[]).map(u=> String(u.email).toLowerCase().trim());
     if(activeEmails.length===0){document.getElementById('productsGrid').innerHTML='<div class="col-span-2 text-center text-sm text-gray-400 py-10">No active vendors</div>';return;}
@@ -305,32 +296,53 @@ let passVisible=false;
 function showDeliveryLogin(){document.getElementById('deliveryModal').classList.remove('hidden');}
 function hideDeliveryLogin(){document.getElementById('deliveryModal').classList.add('hidden');document.getElementById('d_error').innerText='';}
 function togglePassword(){const p=document.getElementById('d_password');passVisible=!passVisible;p.type=passVisible?'text':'password';}
-async function forgotPassword(){const email=document.getElementById('d_email').value.trim();const e=document.getElementById('d_error');if(!email){e.innerText="Enter email first";return;}if(!confirm(`Send reset to ${email}?`))return;const{error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:'https://y-mall.vercel.app/'});if(error){e.innerText='Error: '+error.message;}else{e.className="text-green-600 text-sm mt-3 text-center";e.innerText='Reset link sent!';}}
+async function forgotPassword(){
+  const email=document.getElementById('d_email').value.trim();
+  const e=document.getElementById('d_error');
+  if(!email){e.innerText="Enter email first";return;}
+  if(!confirm(`Send reset to ${email}?`))return;
+  const{error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:'https://y-mall.vercel.app/'});
+  if(error){e.innerText='Error: '+error.message;}else{e.className="text-green-600 text-sm mt-3 text-center";e.innerText='Reset link sent!';}
+}
 async function deliveryLogin(){
-  const errorEl=document.getElementById('d_error');const btn=document.getElementById('loginBtn');
+  const errorEl=document.getElementById('d_error');
+  const btn=document.getElementById('loginBtn');
   errorEl.innerText="Checking...";btn.disabled=true;
   const email=document.getElementById('d_email').value.trim().toLowerCase();
   const password=document.getElementById('d_password').value.trim();
   if(!email||!password){errorEl.innerText="Enter email and password";btn.disabled=false;return;}
   try{
-    const{data:authData,error:authError}=await supabaseClient.auth.signInWithPassword({email,password});
-    if(authError)throw authError;
-    const userId=authData.user.id;
-    let{data:user}=await supabaseClient.from('users').select('*').eq('id',userId).maybeSingle();
-    if(!user){
-      const{data:newUser}=await supabaseClient.from('users').insert({id:userId,email:authData.user.email,full_name:authData.user_metadata?.full_name||'User',role:authData.user_metadata?.role||'customer',is_approved:true}).select().single();
-      user=newUser;
-    }
-    if(user.role!=='customer'&&user.role!=='admin'&&user.is_approved===false){
-      await supabaseClient.auth.signOut();
-      errorEl.className="text-yellow-600 text-sm mt-3 text-center font-bold";
-      errorEl.innerText=`⏳ Pending`;btn.disabled=false;return;
-    }
-    localStorage.setItem('lgm_user',JSON.stringify(user));
+    // FIXED: Use secure edge function (users table is now blocked)
+    const res = await fetch('https://yhfxmrpqaccbllszoxyf.supabase.co/functions/v1/secure-login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    const j = await res.json();
+    if(!res.ok) throw new Error(j.error || 'Login failed');
+    const user = j;
+    // Keep full object for compatibility
+    const fullUser = {
+      email: user.email,
+      full_name: user.full_name,
+      role: user.role,
+      phone: user.phone,
+      is_approved: user.is_approved,
+      id: user.id || user.email
+    };
+    localStorage.setItem('lgm_user', JSON.stringify(fullUser));
     errorEl.className="text-green-600 text-sm mt-3 text-center";
     errorEl.innerText="Login OK: "+user.role;
-    setTimeout(()=>{if(user.role==='admin')location.href='admin.html';else if(user.role==='vendor')location.href='vendor.html';else if(user.role==='delivery_agent')location.href='delivery.html';else location.href='customer.html';},800);
-  }catch(err){errorEl.className="text-red-500 text-sm mt-3 text-center";errorEl.innerText="Error: "+err.message;btn.disabled=false;}
+    setTimeout(()=>{
+      if(user.role==='admin') location.href='admin.html';
+      else if(user.role==='vendor') location.href='vendor.html';
+      else if(user.role==='delivery_agent') location.href='delivery.html';
+      else location.href='customer.html';
+    },800);
+  }catch(err){
+    errorEl.className="text-red-500 text-sm mt-3 text-center";
+    errorEl.innerText="Error: "+err.message;btn.disabled=false;
+  }
 }
 window.addEventListener('load',()=>{if(window.location.hash==='#login'){showDeliveryLogin();}});
 </script>
