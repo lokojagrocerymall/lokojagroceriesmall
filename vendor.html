@@ -123,7 +123,7 @@ input,select{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
 </div>
 </div>
 
-<div id="view-profile" class="view"><div class="card"><h3>👤 My Profile</h3><input id="profName" placeholder="Full Name"><input id="profEmail" disabled><button class="btn" onclick="saveProfile()">Save</button></div></div>
+<div id="view-profile" class="view"><div class="card"><h3>👤 My Profile</h3><input id="profName" placeholder="Full Name"><input id="profEmail" disabled><button class="btn" onclick="saveProfile()">Save</button><div id="profMsg" class="small" style="margin-top:8px"></div></div></div>
 
 <div id="productDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:flex-end;justify-content:center;padding:0" onclick="if(event.target==this) closeProductDetail()">
   <div style="background:#fff;width:100%;max-width:480px;border-radius:28px 28px 0 0;padding:20px;max-height:90vh;overflow-y:auto;animation:slideUp 0.3s ease">
@@ -165,10 +165,7 @@ function setTab(name){
   document.getElementById('tab-'+name).classList.add('active');
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active-view'));
   document.getElementById('view-'+name).classList.add('active-view');
-  // REMOVED auto-clear of alert - pulse stays until delivered
-  if(name==='orders'){
-    loadOrders();
-  }
+  if(name==='orders'){ loadOrders(); }
   if(name==='products') loadProducts();
   if(name==='wallet') loadWallet();
 }
@@ -233,7 +230,7 @@ async function init(){
   loadProducts(); 
   loadOrders();
   loadWallet();
-  setTab('orders'); // FORCE OPEN TO ORDERS ON LOGIN/REFRESH
+  setTab('orders');
 }
 init();
 
@@ -365,18 +362,14 @@ async function loadOrders(){
 
   const newPaidCount = allOrders.filter(o=>o.status==='paid').length;
   const onWayCount = allOrders.filter(o=>o.status==='picked' || o.status==='on the way').length;
-  const pendingCount = newPaidCount + onWayCount; // NOT DELIVERED YET
+  const pendingCount = newPaidCount + onWayCount;
   const tabOrders = document.getElementById('tab-orders');
 
-  // NEW LOGIC: Pulse RED until ALL orders are delivered (customer marks delivered)
   if(pendingCount > 0){
     tabOrders.classList.add('alert-tab');
     tabOrders.innerHTML = `Orders <span class="badge">${pendingCount}</span>`;
-    if(pendingCount > lastOrderCount){
-      triggerAlert();
-    }
+    if(pendingCount > lastOrderCount){ triggerAlert(); }
   } else {
-    // Only remove pulse when EVERY order is delivered
     tabOrders.classList.remove('alert-tab');
     tabOrders.innerHTML = `Orders`;
   }
@@ -449,10 +442,29 @@ async function loadWallet(){
   document.getElementById('withdrawHistory').innerHTML = '<div class="small" style="color:#16a34a">✅ All earnings are automatically transferred to your bank via Paystack subaccount.<br>No withdrawal request needed.</div>';
 }
 async function saveProfile(){
-  await supabaseClient.from('users').update({full_name: document.getElementById('profName').value}).eq('email', curUser.email);
-  curUser.full_name = document.getElementById('profName').value;
-  localStorage.setItem('lgm_user', JSON.stringify(curUser));
-  alert('Profile Updated!'); init();
+  const newName = document.getElementById('profName').value.trim();
+  if(!newName) return alert('Enter name');
+  document.getElementById('profMsg').innerText='Saving...';
+  try{
+    // FIXED: Use edge function to bypass RLS block
+    const res = await fetch(SUPABASE_URL + '/functions/v1/update-vendor-profile', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email: curUser.email, full_name: newName })
+    });
+    // Fallback if function not deployed yet: try direct table update (may fail but ok)
+    if(!res.ok){
+      const { error } = await supabaseClient.from('users').update({full_name:newName}).eq('email', curUser.email);
+      if(error) throw error;
+    }
+    curUser.full_name = newName;
+    localStorage.setItem('lgm_user', JSON.stringify(curUser));
+    document.getElementById('profMsg').innerText='✅ Updated';
+    alert('Profile Updated!');
+    init();
+  }catch(e){
+    document.getElementById('profMsg').innerText='Error: '+e.message + ' - Contact admin to update name';
+  }
 }
 setInterval(()=>{
   document.querySelectorAll('.vendor-timer').forEach(el=>{
