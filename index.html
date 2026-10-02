@@ -65,14 +65,13 @@ footer{padding-bottom: max(40px, env(safe-area-inset-bottom));}
 <h2 class="font-black mb-3">Shop by Category</h2>
 <div class="grid grid-cols-3 gap-3">
 <button onclick="goCat('Foodstuff')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🍚<br>Foodstuff</button>
-<button onclick="goCat('Drinks')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🥤<br>Drinks</button>
+<button onclick="goCat('Drinks & Beverages')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🥤<br>Drinks & Beverages</button>
 <button onclick="goCat('Household')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🏠<br>Household</button>
 <button onclick="goCat('Meat & Fish')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🐟<br>Meat & Fish</button>
 <button onclick="goCat('Grains')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🌾<br>Grains</button>
 <button onclick="goCat('Spices & Seasoning')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🧂<br>Spices & Seasoning</button>
 <button onclick="goCat('Oil & Condiments')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🛢️<br>Oil & Condiments</button>
 <button onclick="goCat('Fruits & Vegetables')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">🥬<br>Fruits & Vegetables</button>
-<button onclick="goCat('Beverages')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">☕<br>Beverages</button>
 <button onclick="goCat('Baby & Personal Care')" class="bg-white p-4 rounded-2xl shadow-sm text-center font-bold text-sm">👶<br>Baby & Personal Care</button>
 </div>
 </div>
@@ -244,7 +243,6 @@ async function saveOrder(tx_ref,name,phone,address,grandTotal){
 }
 async function loadProducts(){
   try{
-    // FIXED: use safe_users not users (blocked by RLS)
     const {data: activeVendors, error: vError} = await supabaseClient.from('safe_users').select('email').eq('role','vendor').eq('is_approved', true);
     if(vError) throw vError;
     const activeEmails = (activeVendors||[]).map(u=> String(u.email).toLowerCase().trim());
@@ -316,7 +314,6 @@ async function deliveryLogin(){
   const password=document.getElementById('d_password').value.trim();
   if(!email||!password){errorEl.innerText="Enter email and password";btn.disabled=false;return;}
   try{
-    // FIXED: Use secure edge function (users table is now blocked)
     const res = await fetch('https://yhfxmrpqaccbllszoxyf.supabase.co/functions/v1/secure-login', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
@@ -325,7 +322,6 @@ async function deliveryLogin(){
     const j = await res.json();
     if(!res.ok) throw new Error(j.error || 'Login failed');
     const user = j;
-    // Keep full object for compatibility
     const fullUser = {
       email: user.email,
       full_name: user.full_name,
