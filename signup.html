@@ -60,15 +60,15 @@
     </div>
 
     <div id="deliveryFields" class="hidden space-y-4">
-      <p class="text-sm font-bold text-green-600">Delivery Verification *</p>
-      <div><label class="text-sm font-semibold">Passport Photograph *</label><input id="passportPhoto" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
-      <div><label class="text-sm font-semibold">NIN Slip / Card *</label><input id="ninCard" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
-      <p class="text-sm font-bold text-green-600">Guarantor Information *</p>
+      <p class="text-sm font-bold text-green-600">Delivery Verification _</p>
+      <div><label class="text-sm font-semibold">Passport Photograph _</label><input id="passportPhoto" type="file" accept="image/_" class="w-full p-2 border rounded-lg"></div>
+      <div><label class="text-sm font-semibold">NIN Slip / Card _</label><input id="ninCard" type="file" accept="image/_" class="w-full p-2 border rounded-lg"></div>
+      <p class="text-sm font-bold text-green-600">Guarantor Information _</p>
       <input id="guarantorName" type="text" placeholder="Guarantor Full Name" class="w-full p-3 border rounded-lg">
       <input id="guarantorPhone" type="tel" placeholder="Guarantor WhatsApp Number" class="w-full p-3 border rounded-lg">
       <input id="guarantorAddress" type="text" placeholder="Guarantor Address" class="w-full p-3 border rounded-lg">
-      <div><label class="text-sm font-semibold">Guarantor Passport *</label><input id="guarantorPassport" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
-      <div><label class="text-sm font-semibold">Guarantor NIN *</label><input id="guarantorNIN" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
+      <div><label class="text-sm font-semibold">Guarantor Passport _</label><input id="guarantorPassport" type="file" accept="image/_" class="w-full p-2 border rounded-lg"></div>
+      <div><label class="text-sm font-semibold">Guarantor NIN _</label><input id="guarantorNIN" type="file" accept="image/_" class="w-full p-2 border rounded-lg"></div>
       <p class="text-sm font-bold text-green-600">Vehicle</p>
       <div class="flex gap-4">
         <label><input type="radio" name="vehicle" value="yes" checked> Yes, I am Driver & Rider</label>
@@ -85,159 +85,159 @@
 <script>
 const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
 const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = http://supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentRole = 'customer';
 let allBanksLoaded = false;
 
 const LOKOJA_AREAS = ["200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs","Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC","FUL Adankolo","FUL Felele","Fentolu","Felele","Gadumo","Ganaja","Ganaja Junction","Government Day","Government House","GRA","Hydro Junction","Jimgbe","Kabawa","Kabba Junction","Karaworo","Kporoka","Kpata Market","Maigeri Palace","NATACO","NUJ","NTA","New Market","New Stadium","Old Market","Old Poly Qtrs","Otokiti","Phase 1","Phase 2","Police Clinic","Poly","Post Office","Sarkin Noma","Shetima","Zenith Bank","Zango","Zone 8"];
 
-window.onload = () => {
-  const select = document.getElementById('location');
-  LOKOJA_AREAS.forEach(area => { select.innerHTML += `<option value="${area}">${area}</option>`; });
+http://window.onload = () => {
+  const select = http://document.getElementById('location');
+  LOKOJA_AREAS.forEach(area => { http://select.innerHTML += `<option value="${area}">${area}</option>`; });
   selectRole('customer');
-  document.querySelectorAll('input[name="vehicle"]').forEach(radio => { radio.addEventListener('change', checkVehicle); });
+  http://document.querySelectorAll('input[name="vehicle"]').forEach(radio => { http://radio.addEventListener('change', checkVehicle); });
 }
 
 function togglePassword(id) {
-  const input = document.getElementById(id);
-  const eye = document.getElementById('eye-' + id);
-  input.type = input.type === "password"? "text" : "password";
-  eye.textContent = input.type === "password"? "👁️" : "🙈";
+  const input = http://document.getElementById(id);
+  const eye = http://document.getElementById('eye-' + id);
+  http://input.type = http://input.type === "password"? "text" : "password";
+  http://eye.textContent = http://input.type === "password"? "👁️" : "🙈";
 }
 
 function checkVehicle(){
-  const btn = document.getElementById('submitBtn');
-  const vehicle = document.querySelector('input[name="vehicle"]:checked')?.value;
+  const btn = http://document.getElementById('submitBtn');
+  const vehicle = http://document.querySelector('input[name="vehicle"]:checked')?.value;
   if(currentRole === 'delivery_agent' && vehicle === 'no'){
-    btn.disabled = true;
-    btn.classList.remove('bg-green-600','bg-yellow-500');
-    btn.classList.add('bg-gray-400','cursor-not-allowed');
+    http://btn.disabled = true;
+    http://btn.classList.remove('bg-green-600','bg-yellow-500');
+    http://btn.classList.add('bg-gray-400','cursor-not-allowed');
   } else {
-    btn.disabled = false;
-    btn.classList.add('bg-green-600');
-    btn.classList.remove('bg-gray-400','cursor-not-allowed','bg-yellow-500');
+    http://btn.disabled = false;
+    http://btn.classList.add('bg-green-600');
+    http://btn.classList.remove('bg-gray-400','cursor-not-allowed','bg-yellow-500');
   }
 }
 
 async function loadAllBanks(){
   if(allBanksLoaded) return;
-  const bankSelect = document.getElementById('bankName');
-  bankSelect.innerHTML = '<option value="">Loading all banks...</option>';
+  const bankSelect = http://document.getElementById('bankName');
+  http://bankSelect.innerHTML = '<option value="">Loading all banks...</option>';
   try{
     throw new Error('use fallback');
   } catch(e){
     const comprehensiveBanks = [
       {name:"9 Payment Service Bank",code:"120001"},{name:"Abbey Mortgage Bank",code:"801"},{name:"Access Bank",code:"044"},{name:"ALAT by WEMA",code:"035A"},{name:"Carbon",code:"565"},{name:"Citibank Nigeria",code:"023"},{name:"Ecobank",code:"050"},{name:"Fidelity Bank",code:"070"},{name:"First Bank",code:"011"},{name:"First City Monument Bank",code:"214"},{name:"Globus Bank",code:"00103"},{name:"GTBank",code:"058"},{name:"Jaiz Bank",code:"301"},{name:"Keystone Bank",code:"082"},{name:"Kuda Bank",code:"50211"},{name:"Lotus Bank",code:"303"},{name:"Moniepoint MFB",code:"50515"},{name:"Opay",code:"999992"},{name:"PalmPay",code:"999991"},{name:"Parallex Bank",code:"526"},{name:"Polaris Bank",code:"076"},{name:"Providus Bank",code:"101"},{name:"Rubies MFB",code:"125"},{name:"Safe Haven MFB",code:"51113"},{name:"Stanbic IBTC",code:"221"},{name:"Standard Chartered",code:"068"},{name:"Sterling Bank",code:"232"},{name:"TAJ Bank",code:"302"},{name:"Titan Trust Bank",code:"102"},{name:"UBA",code:"033"},{name:"Union Bank",code:"032"},{name:"Unity Bank",code:"215"},{name:"VFD Microfinance Bank",code:"566"},{name:"Wema Bank",code:"035"},{name:"Zenith Bank",code:"057"}
     ];
-    bankSelect.innerHTML = '<option value="">Select Bank</option>';
-    comprehensiveBanks.sort((a,b)=>a.name.localeCompare(b.name)).forEach(bank=>{
-      bankSelect.innerHTML += `<option value="${bank.code}" data-name="${bank.name}">${bank.name}</option>`;
+    http://bankSelect.innerHTML = '<option value="">Select Bank</option>';
+    http://comprehensiveBanks.sort((a,b)=>a.name.localeCompare(b.name)).forEach(bank=>{
+      http://bankSelect.innerHTML += `<option value="${bank.code}" data-name="${bank.name}">${bank.name}</option>`;
     });
     allBanksLoaded = true;
   }
 }
 
 function setupBankVerification(){
-  const bankSelect = document.getElementById('bankName');
-  const accInput = document.getElementById('accountNumber');
-  bankSelect.onchange = function(){
-    const selected = this.options[this.selectedIndex];
+  const bankSelect = http://document.getElementById('bankName');
+  const accInput = http://document.getElementById('accountNumber');
+  http://bankSelect.onchange = function(){
+    const selected = http://this.options[this.selectedIndex];
     if(!selected.value) return;
-    document.getElementById('bankCode').value = this.value;
-    document.getElementById('bankNameText').value = selected.getAttribute('data-name');
-    document.getElementById('verifyStatus').classList.add('hidden');
-    document.getElementById('accountName').value = "";
+    http://document.getElementById('bankCode').value = http://this.value;
+    http://document.getElementById('bankNameText').value = http://selected.getAttribute('data-name');
+    http://document.getElementById('verifyStatus').classList.add('hidden');
+    http://document.getElementById('accountName').value = "";
   };
-  accInput.addEventListener('input', function(){
-    this.value = this.value.replace(/\D/g,'');
-    document.getElementById('verifyStatus').classList.add('hidden');
+  http://accInput.addEventListener('input', function(){
+    http://this.value = http://this.value.replace(/\D/g,'');
+    http://document.getElementById('verifyStatus').classList.add('hidden');
   });
 }
 
 // --- UPDATED: Now shows real Paystack error + verification optional ---
 async function verifyAccountManual(){
-  const accInput = document.getElementById('accountNumber');
-  const nameInput = document.getElementById('accountName');
-  const statusEl = document.getElementById('verifyStatus');
-  const btn = document.getElementById('verifyBtn');
-  const accountNumber = accInput.value.trim();
-  const bankCode = document.getElementById('bankCode').value || document.getElementById('bankName').value;
+  const accInput = http://document.getElementById('accountNumber');
+  const nameInput = http://document.getElementById('accountName');
+  const statusEl = http://document.getElementById('verifyStatus');
+  const btn = http://document.getElementById('verifyBtn');
+  const accountNumber = http://accInput.value.trim();
+  const bankCode = http://document.getElementById('bankCode').value || http://document.getElementById('bankName').value;
   if(!bankCode){ alert("Please select bank first"); return; }
   if(accountNumber.length!== 10){ alert("Enter 10-digit account number"); return; }
-  btn.innerText = "⏳..."; btn.disabled = true;
-  statusEl.classList.remove('hidden');
-  statusEl.textContent = "⏳ Verifying...";
-  statusEl.className = "text-xs p-2 rounded bg-orange-100 text-orange-600";
-  nameInput.value = "";
+  http://btn.innerText = "⏳..."; http://btn.disabled = true;
+  http://statusEl.classList.remove('hidden');
+  http://statusEl.textContent = "⏳ Verifying...";
+  http://statusEl.className = "text-xs p-2 rounded bg-orange-100 text-orange-600";
+  http://nameInput.value = "";
   try {
-    const { data, error } = await supabaseClient.functions.invoke('verify-bank', {
+    const { data, error } = await http://supabaseClient.functions.invoke('verify-bank', {
       body: { account_number: accountNumber, bank_code: bankCode }
     });
     if(error) throw error;
-    if(data && data.verified && data.account_name){
-      nameInput.value = data.account_name;
-      statusEl.textContent = "✅ Verified: " + data.account_name;
-      statusEl.className = "text-xs p-2 rounded bg-green-100 text-green-700 font-bold";
+    if(data && http://data.verified && http://data.account_name){
+      http://nameInput.value = http://data.account_name;
+      http://statusEl.textContent = "✅ Verified: " + http://data.account_name;
+      http://statusEl.className = "text-xs p-2 rounded bg-green-100 text-green-700 font-bold";
     } else {
-      statusEl.textContent = "⚠️ " + (data?.message || "Could not verify - you can still signup, we will verify manually");
-      statusEl.className = "text-xs p-2 rounded bg-yellow-100 text-yellow-700";
+      http://statusEl.textContent = "⚠️ " + (data?.message || "Could not verify - you can still signup, we will verify manually");
+      http://statusEl.className = "text-xs p-2 rounded bg-yellow-100 text-yellow-700";
       // OPTIONAL: Auto-fill with placeholder so signup can continue
-      // nameInput.value = "To be verified manually";
+      // http://nameInput.value = "To be verified manually";
     }
   } catch(e){
-    statusEl.textContent = "⚠️ Network issue - you can still signup: " + e.message;
-    statusEl.className = "text-xs p-2 rounded bg-yellow-100 text-yellow-700";
+    http://statusEl.textContent = "⚠️ Network issue - you can still signup: " + http://e.message;
+    http://statusEl.className = "text-xs p-2 rounded bg-yellow-100 text-yellow-700";
   }
-  btn.innerText = "Verify"; btn.disabled = false;
+  http://btn.innerText = "Verify"; http://btn.disabled = false;
 }
 
 function selectRole(role){
   currentRole = role;
   ['btnCustomer','btnVendor','btnDeliveryAgent'].forEach(id=>{
-    document.getElementById(id).classList.remove('border-green-600','bg-green-50');
-    document.getElementById(id).classList.add('border-gray-200');
+    http://document.getElementById(id).classList.remove('border-green-600','bg-green-50');
+    http://document.getElementById(id).classList.add('border-gray-200');
   });
-  if(role === 'customer') document.getElementById('btnCustomer').classList.add('border-green-600','bg-green-50');
-  if(role === 'vendor') document.getElementById('btnVendor').classList.add('border-green-600','bg-green-50');
-  if(role === 'delivery_agent') document.getElementById('btnDeliveryAgent').classList.add('border-green-600','bg-green-50');
+  if(role === 'customer') http://document.getElementById('btnCustomer').classList.add('border-green-600','bg-green-50');
+  if(role === 'vendor') http://document.getElementById('btnVendor').classList.add('border-green-600','bg-green-50');
+  if(role === 'delivery_agent') http://document.getElementById('btnDeliveryAgent').classList.add('border-green-600','bg-green-50');
 
   ['customerAddressField','addressField','shopNameField','bankFields','deliveryFields'].forEach(id=>document.getElementById(id).classList.add('hidden'));
   ['customerAddress','address','shopName','bankName','accountNumber','accountName','guarantorName','guarantorPhone','guarantorAddress','passportPhoto','ninCard','guarantorPassport','guarantorNIN'].forEach(id=>document.getElementById(id).required = false);
 
   if(role === 'customer'){
-    document.getElementById('customerAddressField').classList.remove('hidden');
-    document.getElementById('customerAddress').required = true;
+    http://document.getElementById('customerAddressField').classList.remove('hidden');
+    http://document.getElementById('customerAddress').required = true;
   }
   if(role === 'vendor'){
-    document.getElementById('addressField').classList.remove('hidden');
-    document.getElementById('address').required = true;
-    document.getElementById('shopNameField').classList.remove('hidden');
-    document.getElementById('shopName').required = true;
-    document.getElementById('bankFields').classList.remove('hidden');
-    document.getElementById('bankName').required = true;
-    document.getElementById('accountNumber').required = true;
+    http://document.getElementById('addressField').classList.remove('hidden');
+    http://document.getElementById('address').required = true;
+    http://document.getElementById('shopNameField').classList.remove('hidden');
+    http://document.getElementById('shopName').required = true;
+    http://document.getElementById('bankFields').classList.remove('hidden');
+    http://document.getElementById('bankName').required = true;
+    http://document.getElementById('accountNumber').required = true;
     // UPDATED: accountName NOT required anymore
-    document.getElementById('accountName').required = false;
+    http://document.getElementById('accountName').required = false;
     loadAllBanks();
     setupBankVerification();
   }
   if(role === 'delivery_agent'){
-    document.getElementById('addressField').classList.remove('hidden');
-    document.getElementById('address').required = true;
-    document.getElementById('bankFields').classList.remove('hidden');
-    document.getElementById('bankName').required = true;
-    document.getElementById('accountNumber').required = true;
+    http://document.getElementById('addressField').classList.remove('hidden');
+    http://document.getElementById('address').required = true;
+    http://document.getElementById('bankFields').classList.remove('hidden');
+    http://document.getElementById('bankName').required = true;
+    http://document.getElementById('accountNumber').required = true;
     // UPDATED: accountName NOT required anymore
-    document.getElementById('accountName').required = false;
-    document.getElementById('deliveryFields').classList.remove('hidden');
-    document.getElementById('passportPhoto').required = true;
-    document.getElementById('ninCard').required = true;
-    document.getElementById('guarantorName').required = true;
-    document.getElementById('guarantorPhone').required = true;
-    document.getElementById('guarantorAddress').required = true;
-    document.getElementById('guarantorPassport').required = true;
-    document.getElementById('guarantorNIN').required = true;
+    http://document.getElementById('accountName').required = false;
+    http://document.getElementById('deliveryFields').classList.remove('hidden');
+    http://document.getElementById('passportPhoto').required = true;
+    http://document.getElementById('ninCard').required = true;
+    http://document.getElementById('guarantorName').required = true;
+    http://document.getElementById('guarantorPhone').required = true;
+    http://document.getElementById('guarantorAddress').required = true;
+    http://document.getElementById('guarantorPassport').required = true;
+    http://document.getElementById('guarantorNIN').required = true;
     loadAllBanks();
     setupBankVerification();
     checkVehicle();
@@ -246,25 +246,26 @@ function selectRole(role){
 
 async function uploadFile(file, path){
   if(!file) return '';
-  const { data, error } = await supabaseClient.storage.from('delivery_docs').upload(path, file, {upsert: true});
+  const { data, error } = await http://supabaseClient.storage.from('delivery_docs').upload(path, file, {upsert: true});
   if(error) throw error;
-  const { data: urlData } = supabaseClient.storage.from('delivery_docs').getPublicUrl(path);
-  return urlData.publicUrl;
+  const { data: urlData } = http://supabaseClient.storage.from('delivery_docs').getPublicUrl(path);
+  return http://urlData.publicUrl;
 }
 
 async function signup(e){
-  e.preventDefault();
-  const btn = document.getElementById('submitBtn');
-  const msg = document.getElementById('msg');
-  btn.disabled = true; btn.innerText = "Creating..."; msg.innerText = "";
+  http://e.preventDefault();
+  const btn = http://document.getElementById('submitBtn');
+  const msg = http://document.getElementById('msg');
+  http://btn.disabled = true; http://btn.innerText = "Creating..."; http://msg.innerText = "";
   try{
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    const password = document.getElementById('password').value.trim();
-    const fullName = document.getElementById('fullName').value;
-    const finalAddress = currentRole === 'customer'? document.getElementById('customerAddress').value : document.getElementById('address').value;
+    const email = http://document.getElementById('email').value.trim().toLowerCase();
+    const password = http://document.getElementById('password').value.trim();
+    const fullName = http://document.getElementById('fullName').value;
+    const finalAddress = currentRole === 'customer'? http://document.getElementById('customerAddress').value : http://document.getElementById('address').value;
+    const shopNameVal = currentRole === 'vendor'? (document.getElementById('shopName').value || '').trim() : null;
 
     if(currentRole === 'delivery_agent'){
-      const vehicle = document.querySelector('input[name="vehicle"]:checked')?.value;
+      const vehicle = http://document.querySelector('input[name="vehicle"]:checked')?.value;
       if(vehicle === 'no') throw new Error("You must have a vehicle to be a Delivery Agent");
       if(!document.getElementById('passportPhoto').files[0]) throw new Error("Please upload Passport Photograph");
       if(!document.getElementById('ninCard').files[0]) throw new Error("Please upload NIN Slip");
@@ -272,13 +273,13 @@ async function signup(e){
       if(!document.getElementById('guarantorNIN').files[0]) throw new Error("Please upload Guarantor NIN");
     }
     // UPDATED: Verification optional - removed blocking check
-    let { data, error: authError } = await supabaseClient.auth.signUp({
+    let { data, error: authError } = await http://supabaseClient.auth.signUp({
       email, password,
       options: { data: { full_name: fullName, role: currentRole }}
     });
-    if(authError && authError.message.includes("already registered")){
-      msg.innerText = "Email exists. Logging you in...";
-      const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({email, password});
+    if(authError && http://authError.message.includes("already registered")){
+      http://msg.innerText = "Email exists. Logging you in...";
+      const { data: loginData, error: loginError } = await http://supabaseClient.auth.signInWithPassword({email, password});
       if(loginError) throw new Error("This email is already registered. Use the correct password or login.");
       data = loginData;
     } else if(authError) {
@@ -286,42 +287,42 @@ async function signup(e){
     }
     let passport_url='', nin_url='', g_passport='', g_nin='';
     if(currentRole === 'delivery_agent'){
-      const uid = data.user.id;
+      const uid = http://data.user.id;
       passport_url = await uploadFile(document.getElementById('passportPhoto').files[0], `delivery/${uid}/passport.jpg`);
-      nin_url = await uploadFile(document.getElementById('ninCard').files[0], `delivery/${uid}/nin.jpg`);
+      nin_url = await uploadFile(document.getElementById('ninCard').files, `delivery/${uid}/nin.jpg`);
       g_passport = await uploadFile(document.getElementById('guarantorPassport').files[0], `delivery/${uid}/g_passport.jpg`);
-      g_nin = await uploadFile(document.getElementById('guarantorNIN').files[0], `delivery/${uid}/g_nin.jpg`);
+      g_nin = await uploadFile(document.getElementById('guarantorNIN').files, `delivery/${uid}/g_nin.jpg`);
     }
-    const bankCodeVal = document.getElementById('bankCode').value || document.getElementById('bankName').value || null;
-    const bankNameVal = document.getElementById('bankNameText').value || null;
-    const { error } = await supabaseClient.from('users').upsert({
-      id: data.user.id,
+    const bankCodeVal = http://document.getElementById('bankCode').value || http://document.getElementById('bankName').value || null;
+    const bankNameVal = http://document.getElementById('bankNameText').value || null;
+    const { error } = await http://supabaseClient.from('users').upsert({
+      id: http://data.user.id,
       email, full_name: fullName,
-      location: document.getElementById('location').value, address: finalAddress,
-      landmark: document.getElementById('landmark').value, phone: document.getElementById('phone').value,
+      location: http://document.getElementById('location').value, address: finalAddress,
+      landmark: http://document.getElementById('landmark').value, phone: http://document.getElementById('phone').value,
       role: currentRole,
-      business_name: document.getElementById('shopName')?.value || null,
+      business_name: shopNameVal || null,
       bank_name: bankNameVal,
       bank_code: bankCodeVal,
-      account_number: document.getElementById('accountNumber').value || null,
-      account_name: document.getElementById('accountName').value || null,
-      guarantor_name: document.getElementById('guarantorName').value || null,
-      guarantor_phone: document.getElementById('guarantorPhone').value || null,
-      guarantor_address: document.getElementById('guarantorAddress').value || null,
-      has_vehicle: document.querySelector('input[name="vehicle"]:checked')?.value || 'no',
+      account_number: http://document.getElementById('accountNumber').value || null,
+      account_name: http://document.getElementById('accountName').value || null,
+      guarantor_name: http://document.getElementById('guarantorName').value || null,
+      guarantor_phone: http://document.getElementById('guarantorPhone').value || null,
+      guarantor_address: http://document.getElementById('guarantorAddress').value || null,
+      has_vehicle: http://document.querySelector('input[name="vehicle"]:checked')?.value || 'no',
       passport_url, nin_url, guarantor_passport_url: g_passport, guarantor_nin_url: g_nin,
       is_approved: currentRole === 'customer'? true : false
     }, { onConflict: 'id' });
     if(error) throw error;
-    msg.className = "text-center text-sm mt-2 text-green-600 font-bold";
-    msg.innerText = "Success! Redirecting to login...";
-    setTimeout(() => { window.location.href = 'index.html#login'; }, 1500);
+    http://msg.className = "text-center text-sm mt-2 text-green-600 font-bold";
+    http://msg.innerText = "Success! Redirecting to login...";
+    setTimeout(() => { http://window.location.href = 'index.html#login'; }, 1500);
   } catch(err){
-    msg.className = "text-center text-sm mt-2 text-red-500";
-    msg.innerText = "Error: " + err.message;
-    btn.disabled = false; btn.innerText = "Continue";
-    btn.classList.remove('bg-yellow-500');
-    btn.classList.add('bg-green-600');
+    http://msg.className = "text-center text-sm mt-2 text-red-500";
+    http://msg.innerText = "Error: " + http://err.message;
+    http://btn.disabled = false; http://btn.innerText = "Continue";
+    http://btn.classList.remove('bg-yellow-500');
+    http://btn.classList.add('bg-green-600');
     checkVehicle();
   }
 }
