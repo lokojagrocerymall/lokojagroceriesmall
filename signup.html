@@ -1,83 +1,329 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lokoja Grocery Mall - Sign Up</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,-apple-system,sans-serif;background:#f1f5f9;padding:18px;color:#111827}
-.wrap{max-width:420px;margin:0 auto}
-.logo{text-align:center;margin-bottom:18px}
-.logo .t{font-size:26px;font-weight:900;color:#166534}
-.logo .s{font-size:13px;color:#6b7280}
-.card{background:#fff;border-radius:18px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,0.07)}
-.card h1{font-size:22px;text-align:center;color:#166534;margin-bottom:6px}
-.card p{font-size:13px;color:#6b7280;text-align:center;margin-bottom:16px}
-label{font-size:12px;font-weight:800;margin-top:12px;display:block;color:#374151}
-input,select{width:100%;padding:13px;border:1px solid #d1d5db;border-radius:12px;font-size:15px;margin-top:6px;background:#fff;outline:none}
-input:focus,select:focus{border-color:#16a34a;box-shadow:0 0 0 3px #dcfce7}
-button{width:100%;background:#16a34a;color:#fff;border:0;padding:15px;border-radius:12px;font-size:16px;font-weight:900;margin-top:20px;cursor:pointer}
-button:disabled{opacity:0.5}
-#err{color:#dc2626;font-size:13px;font-weight:700;text-align:center;margin-top:12px;min-height:18px}
-#ok{color:#16a34a;font-size:13px;font-weight:700;text-align:center;margin-top:12px;min-height:18px}
-.foot{text-align:center;margin-top:14px;font-size:13px}
-.foot a{color:#166534;font-weight:800;text-decoration:none}
-.topbar{background:#facc15;text-align:center;padding:7px;font-size:12px;font-weight:900;border-radius:10px;margin-bottom:16px}
-</style>
-</head>
-<body>
-<div class="wrap">
-<div class="logo"><div class="t">Lokoja Grocery Mall</div><div class="s">Fresh groceries from local vendors</div></div>
-<div class="topbar">⏰ OPEN: Mon-Sat 8AM-6PM • Sunday CLOSED</div>
-<div class="card">
-<h1>Create Account</h1>
-<p>Join as Vendor or Customer</p>
-<label>Role</label>
-<select id="role">
-<option value="vendor">Vendor</option>
-<option value="customer">Customer</option>
-</select>
-<label>Full Name</label>
-<input id="name" placeholder="Full Name">
-<label>Phone</label>
-<input id="phone" placeholder="080...">
-<label>Email</label>
-<input id="email" type="email" placeholder="you@email.com">
-<label>Password (min 6 chars)</label>
-<input id="password" type="password" placeholder="Password">
-<button id="btn" onclick="signup()">Create Account</button>
-<div id="err"></div>
-<div id="ok"></div>
-<div class="foot">Already have account? <a href="index.html#login">Login</a></div>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Join Lokoja Grocery Mall</title><script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+<div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
+  <h1 class="text-2xl font-bold text-center text-green-600">Join Lokoja Grocery Mall</h1>
+  <p class="text-center text-gray-500 text-sm mb-4">I want to join as</p>
+
+  <div class="flex gap-2 mb-4">
+    <button type="button" onclick="selectRole('customer')" id="btnCustomer" class="flex-1 p-2 rounded-lg border-2 border-green-600 bg-green-50">
+      🛒<br><b>Customer</b>
+    </button>
+    <button type="button" onclick="selectRole('vendor')" id="btnVendor" class="flex-1 p-2 rounded-lg border-2 border-gray-200">
+      🏪<br><b>Vendor</b>
+    </button>
+    <button type="button" onclick="selectRole('delivery_agent')" id="btnDeliveryAgent" class="flex-1 p-2 rounded-lg border-2 border-gray-200">
+      🚚<br><b>Delivery<br>Agent</b>
+    </button>
+  </div>
+
+  <form id="signupForm" onsubmit="signup(event)" class="space-y-3">
+    <input id="fullName" type="text" placeholder="Full Name" required class="w-full p-3 border rounded-lg">
+    <select id="location" required class="w-full p-3 border rounded-lg bg-white"><option value="">Select Location in Lokoja</option></select>
+    <input id="landmark" type="text" placeholder="Nearest Bus Stop / Landmark" required class="w-full p-3 border rounded-lg">
+    <input id="phone" type="tel" placeholder="WhatsApp Number" required class="w-full p-3 border rounded-lg">
+    <input id="email" type="email" placeholder="Email" required class="w-full p-3 border rounded-lg">
+    <div class="relative">
+      <input id="password" type="password" placeholder="Password - At least 6 characters" required minlength="6" class="w-full p-3 border rounded-lg pr-10">
+      <button type="button" onclick="togglePassword('password')" class="absolute right-3 top-3 text-gray-500"><span id="eye-password">👁️</span></button>
+    </div>
+
+    <div id="customerAddressField" class="hidden">
+      <input id="customerAddress" type="text" placeholder="Delivery Address" class="w-full p-3 border rounded-lg">
+      <p class="text-xs text-gray-500 mt-1">Where should we deliver your orders?</p>
+    </div>
+
+    <div id="addressField" class="hidden">
+      <input id="address" type="text" placeholder="Shop/House Address" class="w-full p-3 border rounded-lg">
+    </div>
+
+    <div id="shopNameField" class="hidden">
+      <input id="shopName" type="text" placeholder="Shop Name / Business Name e.g Emiguni Store" class="w-full p-3 border rounded-lg">
+    </div>
+
+    <div id="bankFields" class="space-y-3 hidden">
+      <p class="text-sm font-bold text-green-600">Bank Details for Payout</p>
+      <select id="bankName" class="w-full p-3 border rounded-lg bg-white">
+        <option value="">Select Bank</option>
+      </select>
+      <div class="flex gap-2">
+        <input id="accountNumber" type="text" placeholder="Account Number (10 digits)" maxlength="10" inputmode="numeric" class="flex-1 p-3 border rounded-lg">
+        <button type="button" id="verifyBtn" onclick="verifyAccountManual()" class="bg-black text-white px-4 rounded-lg text-sm font-bold">Verify</button>
+      </div>
+      <input id="accountName" type="text" placeholder="Account Name - auto fills after verify" readonly class="w-full p-3 border rounded-lg bg-gray-50">
+      <input type="hidden" id="bankCode">
+      <input type="hidden" id="bankNameText">
+      <p id="verifyStatus" class="text-xs hidden p-2 rounded"></p>
+    </div>
+
+    <div id="deliveryFields" class="hidden space-y-4">
+      <p class="text-sm font-bold text-green-600">Delivery Verification *</p>
+      <div><label class="text-sm font-semibold">Passport Photograph *</label><input id="passportPhoto" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
+      <div><label class="text-sm font-semibold">NIN Slip / Card *</label><input id="ninCard" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
+      <p class="text-sm font-bold text-green-600">Guarantor Information *</p>
+      <input id="guarantorName" type="text" placeholder="Guarantor Full Name" class="w-full p-3 border rounded-lg">
+      <input id="guarantorPhone" type="tel" placeholder="Guarantor WhatsApp Number" class="w-full p-3 border rounded-lg">
+      <input id="guarantorAddress" type="text" placeholder="Guarantor Address" class="w-full p-3 border rounded-lg">
+      <div><label class="text-sm font-semibold">Guarantor Passport *</label><input id="guarantorPassport" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
+      <div><label class="text-sm font-semibold">Guarantor NIN *</label><input id="guarantorNIN" type="file" accept="image/*" class="w-full p-2 border rounded-lg"></div>
+      <p class="text-sm font-bold text-green-600">Vehicle</p>
+      <div class="flex gap-4">
+        <label><input type="radio" name="vehicle" value="yes" checked> Yes, I am Driver & Rider</label>
+        <label><input type="radio" name="vehicle" value="no"> No</label>
+      </div>
+    </div>
+
+    <button id="submitBtn" type="submit" class="w-full bg-green-600 text-white py-3 rounded-full font-bold">Continue</button>
+    <p id="msg" class="text-center text-sm mt-2"></p>
+  </form>
+  <p class="text-center text-sm mt-3">Already have account? <a href="index.html#login" onclick="localStorage.setItem('openLogin','1')" class="text-purple-600 font-bold">Login</a></p>
 </div>
-</div>
+
 <script>
-const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZnhtcnBxYWNjYmxsc3pveHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMDE5NDgsImV4cCI6MjEwNDY3Nzk0OH0.H46FH9BkDWAl2w7j699Z9x_XoZiRS1wFOTn7LeKUF4A";
-const URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
-async function signup(){
-  const err=document.getElementById('err');const ok=document.getElementById('ok');
-  err.textContent='';ok.textContent='';
-  const role=document.getElementById('role').value;
-  const name=document.getElementById('name').value.trim();
-  const phone=document.getElementById('phone').value.trim();
-  const email=document.getElementById('email').value.trim().toLowerCase();
-  const password=document.getElementById('password').value.trim();
-  if(!name||!phone||!email||!password){err.textContent='Fill all fields';return}
-  if(password.length<6){err.textContent='Password min 6 chars';return}
-  const btn=document.getElementById('btn');btn.disabled=true;btn.textContent='Creating...';
+const SUPABASE_URL="https://yhfxmrpqaccbllszoxyf.supabase.co";
+const SUPABASE_KEY="sb_publishable_3uO2j_zawoVShgZrdrkeYA_P2jSIes9";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentRole = 'customer';
+let allBanksLoaded = false;
+
+const LOKOJA_AREAS = ["200 Units","500 Unit","Adankolo","Adankolo Junction","Adankolo Newlayout","Anebo Qtrs","Barracks","C - Division","CBN","Commissioners Qtrs","Como","Crusher","Dunamis","FMC","FUL Adankolo","FUL Felele","Fentolu","Felele","Gadumo","Ganaja","Ganaja Junction","Government Day","Government House","GRA","Hydro Junction","Jimgbe","Kabawa","Kabba Junction","Karaworo","Kporoka","Kpata Market","Maigeri Palace","NATACO","NUJ","NTA","New Market","New Stadium","Old Market","Old Poly Qtrs","Otokiti","Phase 1","Phase 2","Police Clinic","Poly","Post Office","Shetima","Zenith Bank","Zango","Zone 8"];
+
+window.onload = () => {
+  const select = document.getElementById('location');
+  LOKOJA_AREAS.forEach(area => { select.innerHTML += `<option value="${area}">${area}</option>`; });
+  selectRole('customer');
+  document.querySelectorAll('input[name="vehicle"]').forEach(radio => { radio.addEventListener('change', checkVehicle); });
+}
+
+function togglePassword(id) {
+  const input = document.getElementById(id);
+  const eye = document.getElementById('eye-' + id);
+  input.type = input.type === "password"? "text" : "password";
+  eye.textContent = input.type === "password"? "👁️" : "🙈";
+}
+
+function checkVehicle(){
+  const btn = document.getElementById('submitBtn');
+  const vehicle = document.querySelector('input[name="vehicle"]:checked')?.value;
+  if(currentRole === 'delivery_agent' && vehicle === 'no'){
+    btn.disabled = true;
+    btn.classList.remove('bg-green-600','bg-yellow-500');
+    btn.classList.add('bg-gray-400','cursor-not-allowed');
+  } else {
+    btn.disabled = false;
+    btn.classList.add('bg-green-600');
+    btn.classList.remove('bg-gray-400','cursor-not-allowed','bg-yellow-500');
+  }
+}
+
+async function loadAllBanks(){
+  if(allBanksLoaded) return;
+  const bankSelect = document.getElementById('bankName');
+  bankSelect.innerHTML = '<option value="">Loading all banks...</option>';
   try{
-    const r=await fetch(URL+"/functions/v1/secure-signup",{
-      method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},
-      body:JSON.stringify({email,password,full_name:name,phone,role})
+    throw new Error('use fallback');
+  } catch(e){
+    const comprehensiveBanks = [
+      {name:"9 Payment Service Bank",code:"120001"},{name:"Abbey Mortgage Bank",code:"801"},{name:"Access Bank",code:"044"},{name:"ALAT by WEMA",code:"035A"},{name:"Carbon",code:"565"},{name:"Citibank Nigeria",code:"023"},{name:"Ecobank",code:"050"},{name:"Fidelity Bank",code:"070"},{name:"First Bank",code:"011"},{name:"First City Monument Bank",code:"214"},{name:"Globus Bank",code:"00103"},{name:"GTBank",code:"058"},{name:"Jaiz Bank",code:"301"},{name:"Keystone Bank",code:"082"},{name:"Kuda Bank",code:"50211"},{name:"Lotus Bank",code:"303"},{name:"Moniepoint MFB",code:"50515"},{name:"Opay",code:"999992"},{name:"PalmPay",code:"999991"},{name:"Parallex Bank",code:"526"},{name:"Polaris Bank",code:"076"},{name:"Providus Bank",code:"101"},{name:"Rubies MFB",code:"125"},{name:"Safe Haven MFB",code:"51113"},{name:"Stanbic IBTC",code:"221"},{name:"Standard Chartered",code:"068"},{name:"Sterling Bank",code:"232"},{name:"TAJ Bank",code:"302"},{name:"Titan Trust Bank",code:"102"},{name:"UBA",code:"033"},{name:"Union Bank",code:"032"},{name:"Unity Bank",code:"215"},{name:"VFD Microfinance Bank",code:"566"},{name:"Wema Bank",code:"035"},{name:"Zenith Bank",code:"057"}
+    ];
+    bankSelect.innerHTML = '<option value="">Select Bank</option>';
+    comprehensiveBanks.sort((a,b)=>a.name.localeCompare(b.name)).forEach(bank=>{
+      bankSelect.innerHTML += `<option value="${bank.code}" data-name="${bank.name}">${bank.name}</option>`;
     });
-    const data=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(data.error||'Signup failed');
-    ok.textContent='✅ Success! '+ (data.email||email) +' created as '+role;
-    err.textContent='';
-    setTimeout(()=>{location.href='index.html#login'},1500);
-  }catch(e){err.textContent='Error: '+e.message;btn.disabled=false;btn.textContent='Create Account';}
+    allBanksLoaded = true;
+  }
+}
+
+function setupBankVerification(){
+  const bankSelect = document.getElementById('bankName');
+  const accInput = document.getElementById('accountNumber');
+  bankSelect.onchange = function(){
+    const selected = this.options[this.selectedIndex];
+    if(!selected.value) return;
+    document.getElementById('bankCode').value = this.value;
+    document.getElementById('bankNameText').value = selected.getAttribute('data-name');
+    document.getElementById('verifyStatus').classList.add('hidden');
+    document.getElementById('accountName').value = "";
+  };
+  accInput.addEventListener('input', function(){
+    this.value = this.value.replace(/\D/g,'');
+    document.getElementById('verifyStatus').classList.add('hidden');
+  });
+}
+
+// --- UPDATED: Now shows real Paystack error + verification optional ---
+async function verifyAccountManual(){
+  const accInput = document.getElementById('accountNumber');
+  const nameInput = document.getElementById('accountName');
+  const statusEl = document.getElementById('verifyStatus');
+  const btn = document.getElementById('verifyBtn');
+  const accountNumber = accInput.value.trim();
+  const bankCode = document.getElementById('bankCode').value || document.getElementById('bankName').value;
+  if(!bankCode){ alert("Please select bank first"); return; }
+  if(accountNumber.length!== 10){ alert("Enter 10-digit account number"); return; }
+  btn.innerText = "⏳..."; btn.disabled = true;
+  statusEl.classList.remove('hidden');
+  statusEl.textContent = "⏳ Verifying...";
+  statusEl.className = "text-xs p-2 rounded bg-orange-100 text-orange-600";
+  nameInput.value = "";
+  try {
+    const { data, error } = await supabaseClient.functions.invoke('verify-bank', {
+      body: { account_number: accountNumber, bank_code: bankCode }
+    });
+    if(error) throw error;
+    if(data && data.verified && data.account_name){
+      nameInput.value = data.account_name;
+      statusEl.textContent = "✅ Verified: " + data.account_name;
+      statusEl.className = "text-xs p-2 rounded bg-green-100 text-green-700 font-bold";
+    } else {
+      statusEl.textContent = "⚠️ " + (data?.message || "Could not verify - you can still signup, we will verify manually");
+      statusEl.className = "text-xs p-2 rounded bg-yellow-100 text-yellow-700";
+      // OPTIONAL: Auto-fill with placeholder so signup can continue
+      // nameInput.value = "To be verified manually";
+    }
+  } catch(e){
+    statusEl.textContent = "⚠️ Network issue - you can still signup: " + e.message;
+    statusEl.className = "text-xs p-2 rounded bg-yellow-100 text-yellow-700";
+  }
+  btn.innerText = "Verify"; btn.disabled = false;
+}
+
+function selectRole(role){
+  currentRole = role;
+  ['btnCustomer','btnVendor','btnDeliveryAgent'].forEach(id=>{
+    document.getElementById(id).classList.remove('border-green-600','bg-green-50');
+    document.getElementById(id).classList.add('border-gray-200');
+  });
+  if(role === 'customer') document.getElementById('btnCustomer').classList.add('border-green-600','bg-green-50');
+  if(role === 'vendor') document.getElementById('btnVendor').classList.add('border-green-600','bg-green-50');
+  if(role === 'delivery_agent') document.getElementById('btnDeliveryAgent').classList.add('border-green-600','bg-green-50');
+
+  ['customerAddressField','addressField','shopNameField','bankFields','deliveryFields'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  ['customerAddress','address','shopName','bankName','accountNumber','accountName','guarantorName','guarantorPhone','guarantorAddress','passportPhoto','ninCard','guarantorPassport','guarantorNIN'].forEach(id=>document.getElementById(id).required = false);
+
+  if(role === 'customer'){
+    document.getElementById('customerAddressField').classList.remove('hidden');
+    document.getElementById('customerAddress').required = true;
+  }
+  if(role === 'vendor'){
+    document.getElementById('addressField').classList.remove('hidden');
+    document.getElementById('address').required = true;
+    document.getElementById('shopNameField').classList.remove('hidden');
+    document.getElementById('shopName').required = true;
+    document.getElementById('bankFields').classList.remove('hidden');
+    document.getElementById('bankName').required = true;
+    document.getElementById('accountNumber').required = true;
+    // UPDATED: accountName NOT required anymore
+    document.getElementById('accountName').required = false;
+    loadAllBanks();
+    setupBankVerification();
+  }
+  if(role === 'delivery_agent'){
+    document.getElementById('addressField').classList.remove('hidden');
+    document.getElementById('address').required = true;
+    document.getElementById('bankFields').classList.remove('hidden');
+    document.getElementById('bankName').required = true;
+    document.getElementById('accountNumber').required = true;
+    // UPDATED: accountName NOT required anymore
+    document.getElementById('accountName').required = false;
+    document.getElementById('deliveryFields').classList.remove('hidden');
+    document.getElementById('passportPhoto').required = true;
+    document.getElementById('ninCard').required = true;
+    document.getElementById('guarantorName').required = true;
+    document.getElementById('guarantorPhone').required = true;
+    document.getElementById('guarantorAddress').required = true;
+    document.getElementById('guarantorPassport').required = true;
+    document.getElementById('guarantorNIN').required = true;
+    loadAllBanks();
+    setupBankVerification();
+    checkVehicle();
+  }
+}
+
+async function uploadFile(file, path){
+  if(!file) return '';
+  const { data, error } = await supabaseClient.storage.from('delivery_docs').upload(path, file, {upsert: true});
+  if(error) throw error;
+  const { data: urlData } = supabaseClient.storage.from('delivery_docs').getPublicUrl(path);
+  return urlData.publicUrl;
+}
+
+async function signup(e){
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  const msg = document.getElementById('msg');
+  btn.disabled = true; btn.innerText = "Creating..."; msg.innerText = "";
+  try{
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value.trim();
+    const fullName = document.getElementById('fullName').value;
+    const finalAddress = currentRole === 'customer'? document.getElementById('customerAddress').value : document.getElementById('address').value;
+
+    if(currentRole === 'delivery_agent'){
+      const vehicle = document.querySelector('input[name="vehicle"]:checked')?.value;
+      if(vehicle === 'no') throw new Error("You must have a vehicle to be a Delivery Agent");
+      if(!document.getElementById('passportPhoto').files[0]) throw new Error("Please upload Passport Photograph");
+      if(!document.getElementById('ninCard').files[0]) throw new Error("Please upload NIN Slip");
+      if(!document.getElementById('guarantorPassport').files[0]) throw new Error("Please upload Guarantor Passport");
+      if(!document.getElementById('guarantorNIN').files[0]) throw new Error("Please upload Guarantor NIN");
+    }
+    // UPDATED: Verification optional - removed blocking check
+    let { data, error: authError } = await supabaseClient.auth.signUp({
+      email, password,
+      options: { data: { full_name: fullName, role: currentRole }}
+    });
+    if(authError && authError.message.includes("already registered")){
+      msg.innerText = "Email exists. Logging you in...";
+      const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({email, password});
+      if(loginError) throw new Error("This email is already registered. Use the correct password or login.");
+      data = loginData;
+    } else if(authError) {
+      throw authError;
+    }
+    let passport_url='', nin_url='', g_passport='', g_nin='';
+    if(currentRole === 'delivery_agent'){
+      const uid = data.user.id;
+      passport_url = await uploadFile(document.getElementById('passportPhoto').files[0], `delivery/${uid}/passport.jpg`);
+      nin_url = await uploadFile(document.getElementById('ninCard').files[0], `delivery/${uid}/nin.jpg`);
+      g_passport = await uploadFile(document.getElementById('guarantorPassport').files[0], `delivery/${uid}/g_passport.jpg`);
+      g_nin = await uploadFile(document.getElementById('guarantorNIN').files[0], `delivery/${uid}/g_nin.jpg`);
+    }
+    const bankCodeVal = document.getElementById('bankCode').value || document.getElementById('bankName').value || null;
+    const bankNameVal = document.getElementById('bankNameText').value || null;
+    const { error } = await supabaseClient.from('users').upsert({
+      id: data.user.id,
+      email, full_name: fullName,
+      location: document.getElementById('location').value, address: finalAddress,
+      landmark: document.getElementById('landmark').value, phone: document.getElementById('phone').value,
+      role: currentRole,
+      business_name: document.getElementById('shopName')?.value || null,
+      bank_name: bankNameVal,
+      bank_code: bankCodeVal,
+      account_number: document.getElementById('accountNumber').value || null,
+      account_name: document.getElementById('accountName').value || null,
+      guarantor_name: document.getElementById('guarantorName').value || null,
+      guarantor_phone: document.getElementById('guarantorPhone').value || null,
+      guarantor_address: document.getElementById('guarantorAddress').value || null,
+      has_vehicle: document.querySelector('input[name="vehicle"]:checked')?.value || 'no',
+      passport_url, nin_url, guarantor_passport_url: g_passport, guarantor_nin_url: g_nin,
+      is_approved: currentRole === 'customer'? true : false
+    }, { onConflict: 'id' });
+    if(error) throw error;
+    msg.className = "text-center text-sm mt-2 text-green-600 font-bold";
+    msg.innerText = "Success! Redirecting to login...";
+    setTimeout(() => { window.location.href = 'index.html#login'; }, 1500);
+  } catch(err){
+    msg.className = "text-center text-sm mt-2 text-red-500";
+    msg.innerText = "Error: " + err.message;
+    btn.disabled = false; btn.innerText = "Continue";
+    btn.classList.remove('bg-yellow-500');
+    btn.classList.add('bg-green-600');
+    checkVehicle();
+  }
 }
 </script>
-</body>
-</html>
+</body></html>
